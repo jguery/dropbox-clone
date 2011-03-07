@@ -1,0 +1,2 @@
+Ces schémas ont été dessiné sur l'éditeur de diagrammes Dia (disponible sur la logithèque Ubuntu).
+Vous pouvez les modifier grâce à ce soft.
