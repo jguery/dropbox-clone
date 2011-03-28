@@ -1,12 +1,18 @@
 #include "file.h"
 
-//Permet de créer un objet fichier en passant sont localPath et son realPath
+//Permet de créer un objet fichier en passant son localPath et son realPath
 //Le fichier doit exister sur le disque dur
+//On crée enfaite une synchronisation, pas un vrai fichier
 File *File::createFile(QString localPath,QString realPath)
 {
-	if(localPath.isEmpty() || realPath.isEmpty()) return NULL;
+        if(localPath.isEmpty() || realPath.isEmpty())
+            return NULL;
+
+        //Récupère la signature (le hash) du fichier
 	QByteArray *hash=File::hashFile(localPath);
-	if(hash==NULL) return NULL;
+        if(hash==NULL)
+            return NULL;
+
 	return new File(localPath,realPath,hash);
 }
 
@@ -16,43 +22,59 @@ File *File::createFile(QString localPath,QString realPath)
 QByteArray *File::hashFile(QString path)
 {
 	QFile f(path);
-	if(!f.open(QIODevice::ReadOnly)) return NULL;
+        if(!f.open(QIODevice::ReadOnly))
+            return NULL;
+
 	QByteArray *hash=new QByteArray(f.readAll());
 	f.close();
+
 	return hash;
 }
 
 
 //Permet de charger le fichier depuis un noeud xml. Attention il faut que la signature du fichier qui se trouve dans le xml
-//soit égale à sa signature actuelle. Autrement il faut que le fichier n'est pas été modifié à l'insu du programme
+//soit égale à sa signature actuelle. Autrement il faut que le fichier n'ait pas été modifié à l'insu du programme
 File *File::loadFile(QDomNode noeud)
 {
-	if(noeud.toElement().tagName()!="file") return NULL;
+        if(noeud.toElement().tagName()!="file")
+            return NULL;
+
 	QString localPath=noeud.toElement().attribute("localPath","");
 	QString realPath=noeud.toElement().attribute("realPath","");
-	if(localPath.isEmpty() || realPath.isEmpty()) return NULL;
+        if(localPath.isEmpty() || realPath.isEmpty())
+            return NULL;
+
+        //Récupère le hash du fichier (sa valeur actuelle)
 	QByteArray *hash=hashFile(localPath);
-	if(hash==NULL) return NULL;
+        if(hash==NULL)
+            return NULL;
+
 	QByteArray *h;
-	if(noeud.childNodes().length()==0)
+        //Récupère le hash du fichier, contenu dans le xml
+        //C'est le premier et le seul fils du noeud représentant le fichier
+        if(noeud.childNodes().length()==0) //Le hash est vide ( = "" )
 	{
 		h=new QByteArray();
 	}
-	else if(!noeud.firstChild().isText())
+        else if(!noeud.firstChild().isText())   //Si ce fils n'est pas du texte...
 	{
-		delete h;delete hash;
-		return NULL;
+                delete h;  delete hash;
+                return NULL;    //On annule tout
 	}
-	else
+        else    //Récupère le texte contenu dans le fils, c'est le hash
 	{
 		h=new QByteArray(noeud.firstChild().toText().data().toAscii());
 	}
+
+        //Vérifie que le hash actuel et celui contenu dans le xml sont égaux
 	if((*hash)!=(*h))
 	{
 		delete hash;delete h;
 		return NULL;
 	}
 	delete h;
+
+        //C'est bien égal, on crée l'objet
 	return new File(localPath,realPath,hash);
 }
 
@@ -66,6 +88,7 @@ bool File::hasBeenRemoved()
 }
 
 //Détecte si oui ou non le fichier a été modifié
+//Pour cela, on compare les signatures actuelle et dans le xml
 bool File::hasBeenUpdated()
 {
 	QByteArray *h=File::hashFile(localPath);
@@ -96,9 +119,12 @@ File::File(QString localPath,QString realPath,QByteArray *hash): Media(localPath
 QDomElement File::toXml(QDomDocument *document)
 {
 	QDomElement element=document->createElement("file");
+
 	element.setAttribute("localPath",localPath);
 	element.setAttribute("realPath",realPath);
+
 	element.appendChild(document->createTextNode(QString(*hash)));
+
 	return element;
 }
 
@@ -106,7 +132,8 @@ QDomElement File::toXml(QDomDocument *document)
 //Retourne si oui ou non le chemin passé en parametre correspond au fichier
 Media *File::findMediaByLocalPath(QString localPath)
 {
-	if(this->localPath==localPath) return this;
+        if(this->localPath==localPath)
+            return this;
 	return NULL;
 }
 
@@ -114,7 +141,8 @@ Media *File::findMediaByLocalPath(QString localPath)
 //Retourne si oui ou non le chemin realPath passé correspond au realPath du fichier
 Media *File::findMediaByRealPath(QString realPath)
 {
-	if(this->realPath==realPath) return this;
+        if(this->realPath==realPath)
+            return this;
 	return NULL;
 }
 

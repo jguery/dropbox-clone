@@ -32,11 +32,13 @@ public:
 
 	//Une méthode pour mettre à jour sa signature (par exemple après une modif)
 	void updateContent();
+
 	//Destructeur
 	virtual ~File();
 private:
 	//Un constructeur privé pour qu'on ne puisse pas créer des fichiers non valides. (passons plutôt par createFile ou loadFile)
 	File(QString localPath,QString realPath,QByteArray *hash);
+
 	//Contient la signature (le hash) du fichier
 	QByteArray *hash;
 };
