@@ -5,20 +5,33 @@
 //Pour allouer un objet de type hddInterface
 HddInterface *HddInterface::createHddInterface(ConfigurationData *configurationData, NetworkInterface *networkInterface,QStandardItemModel *model)
 {
-	if(configurationData==NULL) return NULL;
-	if(networkInterface==NULL) return NULL;
-	if(model==NULL) return NULL;
+        if(configurationData==NULL)
+            return NULL;
+
+        if(networkInterface==NULL)
+            return NULL;
+
+        if(model==NULL)
+            return NULL;
+
 	return new HddInterface(configurationData,networkInterface,model);
 }
 
 
 //Le constructeur
-HddInterface::HddInterface(ConfigurationData *configurationData, NetworkInterface *networkInterface,QStandardItemModel *model):QObject()
+HddInterface::HddInterface(ConfigurationData *configurationData,
+                           NetworkInterface *networkInterface,
+                           QStandardItemModel *model) : QObject()
 {
 	this->networkInterface=networkInterface;
 	this->model=model;
 	this->configurationData=configurationData;
+
 	this->configurationData->getConfigurationFile()->setSignalListener(this);
+
+
+        //Connecte les signaux de réceptions de messages de l'interface réseau à des slots de cette classe
+        //Le traitement des messages est donc fait ICI
 	QObject::connect(networkInterface,SIGNAL(receiveCreatedMediaMessage(Dir*,QString)),this,SLOT(receiveCreatedMediaMessageAction(Dir*,QString)));
 	QObject::connect(networkInterface,SIGNAL(receiveModifiedFileMessage(File*,QByteArray)),this,SLOT(receiveModifiedFileMessageAction(File*,QByteArray)));
 	QObject::connect(networkInterface,SIGNAL(receiveRemovedMediaMessage(Media*)),this,SLOT(receiveRemovedMediaMessageAction(Media*)));
@@ -27,18 +40,20 @@ HddInterface::HddInterface(ConfigurationData *configurationData, NetworkInterfac
 
 
 //Lorsqu'un média est créé...
+//Principalement appelée par Dir::directoryChangedAction (car le watcher est installé dans cette classe)
 void HddInterface::mediaHasBeenCreated(Media *m)
 {
 	QString realPath=m->getRealPath();
 	if(m->isDirectory()) realPath=realPath+"/";
 	networkInterface->sendMediaCreated(realPath);
+
 	if(m->isDirectory())
 	{
 		Dir *d=(Dir*)m;
 		d->setSignalListener(this);
 	}
 	Widget::addRowToTable("Le media "+m->getLocalPath()+" a été créé",model);
-	configurationData->save();
+        configurationData->save();
 }
 
 
