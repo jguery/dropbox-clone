@@ -120,8 +120,11 @@ bool NetworkInterface::sendFileModified(QString realPath,QByteArray content)
 //Pour envoyer un message de média créé
 bool NetworkInterface::sendMediaCreated(QString realPath)
 {
-	if(!socket->isWritable()) return false;
-	if(realPath.isEmpty()) return false;
+        if(!socket->isWritable())
+            return false;
+        if(realPath.isEmpty())
+            return false;
+
 	QByteArray *message=Messages::createMediaCreatedMessage(realPath);
 	return socket->sendMessage(message);
 }

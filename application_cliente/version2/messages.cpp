@@ -12,7 +12,7 @@ QByteArray *Messages::createFileContentMessage(QString realPath, QByteArray cont
 	return new QByteArray(document.toByteArray());
 }
 
-//Averir de la création d'un nouveau Media
+//Avertir de la création d'un nouveau Media
 QByteArray *Messages::createMediaCreatedMessage(QString realPath)
 {
 	QDomDocument document;

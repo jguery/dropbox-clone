@@ -7,15 +7,18 @@ Widget::Widget(): QWidget()
 	//On initialise la fenetre et ses composants
         this->setWindowTitle("Serveur");
 	setFixedSize(640,480);
+
 	QTableView *tableView=new QTableView();
 	tableView->setEditTriggers(QAbstractItemView::NoEditTriggers);
 	this->model=new QStandardItemModel(0,2,tableView);
+
 	QStringList list;
 	list<<"Evenement"<<"Heure";
 	model->setHorizontalHeaderLabels(list);
 	tableView->setModel(model);
 	tableView->horizontalHeader()->setStretchLastSection(true);
 	tableView->setColumnWidth(0,500);
+
 	QHBoxLayout *layout = new QHBoxLayout;
 	layout->addWidget(tableView);
 	this->setLayout(layout);
