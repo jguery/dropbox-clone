@@ -24,26 +24,26 @@ Widget::Widget(): QWidget()
 
 	//On créé la configuration réseau
 	ConfigurationNetwork *configurationNetwork=ConfigurationNetwork::createConfigurationNetwork("127.0.0.1",4321);
-	if(configurationNetwork) addRowToTable("La configuration réseau a été crée",model);
+        if(configurationNetwork) addRowToTable(tr("La configuration réseau a été crée"),model);
 	else {addRowToTable("Echec de la création de la configuration réseau",model);return;}
 
 	//On créé la configuration d'identification
 	ConfigurationIdentification *configurationIdentification=ConfigurationIdentification::createConfigurationIdentification("hky","hky");
-	if(configurationIdentification) addRowToTable("La configuration d'identification' a été crée",model);
-	else {addRowToTable("Echec de la création de la configuration d'indentification",model);return;}
+        if(configurationIdentification) addRowToTable(tr("La configuration d'identification' a été crée"),model);
+        else { addRowToTable("Echec de la création de la configuration d'indentification",model);return;}
 
 	//On créé la configuration de fichier
 	QList<Dir*> *depots=new QList<Dir*>();
-	Dir *d1=Dir::createDir("/home/hky/test/a","/sd/1/");depots->append(d1);
+        Dir *d1=Dir::createDir("/home/julien/test/a","/sd/1/"); depots->append(d1);
 	if(!d1){addRowToTable("Echec de la création du repertoire 1",model);return;}
-	//Dir *d2=Dir::createDir("/home/hky/test/b","/sd/1/");depots->append(d2);
+        //Dir *d2=Dir::createDir("/home/julien/test/b","/sd/1/");depots->append(d2);
 	//if(!d2){addRowToTable("Echec de la création du repertoire 2",model);return;}
 	ConfigurationFile *configurationFile=ConfigurationFile::createConfigurationFile(depots);
 	if(configurationFile) addRowToTable("Les configurations des repertoires surveillés ont été créés",model);
 	else {addRowToTable("Echec de la création des configurations de repertoires surveillés",model);return;}
 
 	//On créé la configuration totale
-	this->configurationData=ConfigurationData::createConfigurationData(configurationNetwork,configurationIdentification,configurationFile,"/home/hky/test/config1.xml");
+        this->configurationData=ConfigurationData::createConfigurationData(configurationNetwork,configurationIdentification,configurationFile,"/home/julien/test/config1.xml");
 	/*
 	//On charge la configuration totale
 	this->configurationData=ConfigurationData::loadConfigurationData("/home/hky/test/config.xml");
@@ -52,7 +52,7 @@ Widget::Widget(): QWidget()
 	*/
 	//On créé l'interface réseau
 	this->networkInterface=NetworkInterface::createNetworkInterface(configurationData);
-	if(networkInterface) addRowToTable("L'interface réseau a été crée",model);
+        if(networkInterface) addRowToTable("L'interface réseau a été créée",model);
 	else {addRowToTable("Echec de la création de l'interface réseau",model);return;}
 
 	//On créé l'interface disque dur
@@ -68,7 +68,7 @@ Widget::Widget(): QWidget()
 }
 
 
-//Juste une méthode statique qui écrit un évenement dans le model, et l'heure р laquelle il s'est réalisé
+//Juste une méthode statique qui écrit un évenement dans le model, et l'heure р à laquelle il s'est réalisé
 void Widget::addRowToTable(QString s,QStandardItemModel *model)
 {
 	static int r=255;

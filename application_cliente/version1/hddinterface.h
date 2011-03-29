@@ -20,18 +20,22 @@ class HddInterface: public QObject
 public:
 	//Une méthode statique pour l'allocation d'un objet hddInterface
 	static HddInterface *createHddInterface(ConfigurationData *configurationData,NetworkInterface *networkInterface,QStandardItemModel *model);
+
 	//Les fonctions qui sont appélées lors d'une modif sur un média
 	void mediaHasBeenRemoved(Media *m,Dir *parent);
 	void mediaHasBeenCreated(Media *m,Dir *parent);
 	void fileHasBeenUpdated(File *f,Dir *parent);
+
 public slots:
 	void receiveModifiedFileMessageAction(File*,QByteArray);
 	void receiveCreatedMediaMessageAction(Dir *parent,QString realName);
 	void receiveRemovedMediaMessageAction(Media*);
 	void receiveErrorMessageAction(QString s);
+
 private:
 	//Le constructeur
 	HddInterface(ConfigurationData *configurationData,NetworkInterface *networkInterface,QStandardItemModel *model);
+
 	//Les autres interfaces
 	ConfigurationData *configurationData;
 	NetworkInterface *networkInterface;

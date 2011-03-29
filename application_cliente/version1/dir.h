@@ -19,31 +19,41 @@ public:
 	//Des fonctions statiques createDir et loadDir pour allouer un objet Dir
 	static Dir *createDir(QString localPath,QString realPath);
 	static Dir *loadDir(QDomNode noeud);
+
 	//Pour récupérer la liste de ses sous médias
 	QVector<Media*> *getSubMedias();
+
 	//implémentation des fonctions virtuelles de la classe Media dont elle hérite
 	bool isDirectory();
 	bool hasBeenRemoved();
+
 	//Retourne le code xml du repertoire
 	QDomElement toXml(QDomDocument *document);
+
 	//Des fonctions pour la recherche dans l'arborescence
 	Media *findMediaByLocalPath(QString localPath);
 	Media *findMediaByRealPath(QString realPath);
 	Dir *findMediaParentByLocalPath(QString localPath);
 	Dir *findMediaParentByRealPath(QString realPath);
+
 	//Accesseur pour son listener(objet qu'il averti en cas de modifications)
 	void setSignalListener(HddInterface *hddInterface);
 	//Destructeur
 	virtual ~Dir();
-private slots:
+
+private slots:       
 	void directoryChangedAction(QString);
+
 private:
 	//Constructeur
 	Dir(QString localPath,QString realPath);
+
 	//La liste de ses sous médias
 	QVector<Media*> *subMedias;
+
 	//Le watcher pour détecter les modifs
 	QFileSystemWatcher *watcher;
+
 	//Le listener pour récuperer les évenements de modifications
 	HddInterface *hddInterface;
 };

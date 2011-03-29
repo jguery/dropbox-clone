@@ -24,8 +24,10 @@ public slots:
 
 private:
 	ClientManager(QVector<ClientManager*> *clients,QStandardItemModel *model);
-	//Le socket communiquant avec le client
+
+        //La socket communiquant avec le client
 	Socket *socket;
+
 	//La liste des autres clients
 	QVector<ClientManager*> *clients;
 	QStandardItemModel *model;

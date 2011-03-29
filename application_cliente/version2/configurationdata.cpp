@@ -334,30 +334,43 @@ ConfigurationData *ConfigurationData::createConfigurationData(ConfigurationNetwo
 ConfigurationData *ConfigurationData::loadConfigurationData(QString savePath)
 {
 	QFile file(savePath);
-	if(!file.open(QIODevice::ReadOnly)) return NULL;
+        if(!file.open(QIODevice::ReadOnly))     //On tente d'ouvrir le fichier de config
+            return NULL;
+
 	QDomDocument document;
-	if(!document.setContent(&file))
+        if(!document.setContent(&file))         //On charge son contenu dans un objet QDomDocument
 	{
 		file.close();
 		return NULL;
 	}
+
+        //On charge la liste des élèments fils du document
 	QDomNodeList noeuds=document.documentElement().childNodes();
-	ConfigurationNetwork *configurationNetwork=NULL;
-	ConfigurationIdentification *configurationIdentification=NULL;
-	ConfigurationFile *configurationFile=NULL;
+
+        ConfigurationNetwork *configurationNetwork                  = NULL;
+        ConfigurationIdentification *configurationIdentification    = NULL;
+        ConfigurationFile *configurationFile                        = NULL;
+
+        //On parcours tous ces élèment
 	for(int i=0;i<noeuds.count();i++)
 	{
 		QDomNode n=noeuds.at(i);
 		QDomElement element=n.toElement();
 		if(element.isNull()) continue;
-		if(element.tagName()=="ConfigurationNetwork")
+
+                if(element.tagName()=="ConfigurationNetwork")   //On charge la conf réseau
 			configurationNetwork=ConfigurationNetwork::loadConfigurationNetwork(n);
-		else if(element.tagName()=="ConfigurationIdentification")
+
+                else if(element.tagName()=="ConfigurationIdentification")   //On charge la conf d'identification
 			configurationIdentification=ConfigurationIdentification::loadConfigurationIdentification(n);
-		else if(element.tagName()=="ConfigurationFile")
+
+                else if(element.tagName()=="ConfigurationFile")     //On charge la conf de l'arborescence des fichiers synchronisés
 			configurationFile=ConfigurationFile::loadConfigurationFile(n);
 	}
+
 	file.close();
+
+        //Vérifie qu'aucune des confs chargées n'est dans un sal état
 	if(configurationNetwork==NULL || configurationIdentification==NULL || configurationFile==NULL)
 	{
 		delete configurationFile;
@@ -365,13 +378,16 @@ ConfigurationData *ConfigurationData::loadConfigurationData(QString savePath)
 		delete configurationIdentification;
 		return NULL;
 	}
-	ConfigurationData *configuration=new ConfigurationData(configurationNetwork,configurationIdentification,configurationFile,savePath);
+        ConfigurationData *configuration=new ConfigurationData(configurationNetwork,
+                              configurationIdentification,configurationFile,savePath);
 	return configuration;
 }
 
 
 //Le constructeur
-ConfigurationData::ConfigurationData(ConfigurationNetwork *configurationNetwork,ConfigurationIdentification *configurationIdentification,ConfigurationFile *configurationFile,QString savePath)
+ConfigurationData::ConfigurationData(ConfigurationNetwork *configurationNetwork,
+                                     ConfigurationIdentification *configurationIdentification,
+                                     ConfigurationFile *configurationFile,QString savePath)
 {
 	this->configurationNetwork=configurationNetwork;
 	this->configurationIdentification=configurationIdentification;
@@ -413,6 +429,7 @@ ConfigurationFile *ConfigurationData::getConfigurationFile()
 }
 
 //Accesseurs et mutateurs
+//Chemin absolu où sera enregistrée la config xml
 void ConfigurationData::setSavePath(QString savePath)
 {
 	this->savePath=savePath;
@@ -423,28 +440,41 @@ QString ConfigurationData::getSavePath()
 	return savePath;
 }
 
-//Pour enregistrer la configuration
+//Pour enregistrer la configuration dans un fichier xml
 bool ConfigurationData::save(QString savePath)
 {
-	if(savePath=="")
+        //En appelant cette fonction, il y a possibilité de choisir un chemin
+        //différent de celui de this-savePath.
+        if(savePath=="")
 	{
 		savePath=this->savePath;
 		if(savePath=="") return false;
 	}
 	else this->savePath=savePath;
+
+        //Crée le document xml et tous ses élèments
 	QDomDocument document;
 	QDomElement element=document.createElement("ConfigurationData");
+
+                //Ajoute à l'élèment ConfDate, les sous élèments confNetwork, confFile, et confIdent.
 		QDomElement network=configurationNetwork->toXml(&document);
 		element.appendChild(network);
 		QDomElement identification=configurationIdentification->toXml(&document);
 		element.appendChild(identification);
 		QDomElement files=configurationFile->toXml(&document);
 		element.appendChild(files);
+
 	document.appendChild(element);
+
 	QFile file(savePath);
-	if(!file.open(QIODevice::WriteOnly)) return false;
+        if(!file.open(QIODevice::WriteOnly))
+            return false;
+
+        //On écrit ce doc xml dans un nouveau fichier (écrasé s'il existe déjà)
 	file.write(document.toByteArray());
+
 	file.close();
+
 	return true;
 }
 

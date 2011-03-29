@@ -24,7 +24,7 @@ QByteArray *File::hashFile(QString path)
 
 
 //Permet de charger le fichier depuis un noeud xml. Attention il faut que la signature du fichier qui se trouve dans le xml
-//soit égale à sa signature actuelle. Autrement il faut que le fichier n'est pas été modifié à l'insu du programme
+//soit égale à sa signature actuelle. Autrement il faut que le fichier n'ait pas été modifié à l'insu du programme
 File *File::loadFile(QDomNode noeud)
 {
 	if(noeud.toElement().tagName()!="file") return NULL;

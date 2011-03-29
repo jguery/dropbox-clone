@@ -25,10 +25,12 @@ protected:
 public:
 	// la méthode virtuelle isDirectory pour savoir si c'est un repertoire ou un simple fichier
 	virtual bool isDirectory()=0;
+
 	// d'autres méthodes virtuelles qui seront utiles pour plus tard.
 	virtual QDomElement toXml(QDomDocument *document)=0;
 	virtual Media *findMediaByLocalPath(QString localPath)=0;
 	virtual Media *findMediaByRealPath(QString realPath)=0;
+
 	//les accesseurs pour que les attributs soient visibles depuis l'extérieur
 	QString getLocalPath();
 	QString getRealPath();

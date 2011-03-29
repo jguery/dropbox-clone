@@ -3,6 +3,7 @@
 
 //Pour créer un repertoire à partir de son localPath et de son realPath
 //Dans ce cas, le repertoire doit être vide.
+//Le répertoire existe déjà en réalité, cette fonction
 Dir *Dir::createDir(QString localPath,QString realPath)
 {
 	if(localPath.isEmpty() || realPath.isEmpty()) return NULL;
@@ -20,14 +21,19 @@ Dir *Dir::createDir(QString localPath,QString realPath)
 Dir *Dir::loadDir(QDomNode noeud)
 {
 	if(noeud.toElement().tagName()!="dir") return NULL;
+
 	QString localPath=noeud.toElement().attribute("localPath","");
 	QString realPath=noeud.toElement().attribute("realPath","");
+
 	if(localPath.isEmpty() || realPath.isEmpty()) return NULL;
+
 	if(localPath.endsWith("/")) localPath=localPath.left(localPath.length()-1);
 	if(realPath.endsWith("/")) realPath=realPath.left(realPath.length()-1);
+
 	QDir localDir(localPath);
 	if(!localDir.exists()) return NULL;
 	Dir *dir=new Dir(localPath,realPath);
+
 	QDomNodeList list=noeud.childNodes();
 	QList<QString> contenu1;
 	for(unsigned int i=0;i<list.length();i++)
@@ -75,7 +81,8 @@ bool Dir::isDirectory()
 }
 
 
-//Le constructeur fait les initialisations, puis alloue le watcher, et connecte son signal directoryChanged
+//Le constructeur fait les initialisations, puis alloue le watcher,
+//et connecte son signal directoryChanged
 Dir::Dir(QString localPath,QString realPath): Media(localPath,realPath)
 {
 	this->subMedias=new QVector<Media*>();

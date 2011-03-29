@@ -10,7 +10,7 @@ Socket::Socket() : QSslSocket()
 	QObject::connect(this, SIGNAL(readyRead()), this, SLOT(inputStream()));
 
         //Malheureusement pour le moment, tout marche grâce à cette ligne...
-        connect(this,SIGNAL(sslErrors(QList<QSslError>)),this,SLOT(ignoreSslErrors()));
+        //connect(this,SIGNAL(sslErrors(QList<QSslError>)),this,SLOT(ignoreSslErrors()));
 }
 
 

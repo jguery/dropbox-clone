@@ -19,6 +19,7 @@ HddInterface::HddInterface(ConfigurationData *configurationData, NetworkInterfac
 	this->model=model;
 	this->configurationData=configurationData;
 	this->configurationData->getConfigurationFile()->setSignalListener(this);
+
 	QObject::connect(networkInterface,SIGNAL(receiveCreatedMediaMessage(Dir*,QString)),this,SLOT(receiveCreatedMediaMessageAction(Dir*,QString)));
 	QObject::connect(networkInterface,SIGNAL(receiveModifiedFileMessage(File*,QByteArray)),this,SLOT(receiveModifiedFileMessageAction(File*,QByteArray)));
 	QObject::connect(networkInterface,SIGNAL(receiveRemovedMediaMessage(Media*)),this,SLOT(receiveRemovedMediaMessageAction(Media*)));
