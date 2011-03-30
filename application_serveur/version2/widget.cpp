@@ -5,7 +5,7 @@
 Widget::Widget(): QWidget()
 {
 	//On initialise la fenetre et ses composants
-	this->setWindowTitle("Client");
+	this->setWindowTitle("Serveur");
 	setMinimumSize(640,480);
 	QTableView *tableView=new QTableView();
 	tableView->setEditTriggers(QAbstractItemView::NoEditTriggers);

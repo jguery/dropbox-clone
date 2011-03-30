@@ -6,7 +6,7 @@
 Widget::Widget(): QWidget()
 {
 	//On initialise la fenetre
-	this->setWindowTitle("Client B");
+	this->setWindowTitle("Client A");
 	setMinimumSize(640,480);
 
 	//On crèe une table view non éditable
@@ -44,16 +44,16 @@ Widget::Widget(): QWidget()
 
 	//On créé la configuration de fichier
 	QList<Dir*> *depots=new QList<Dir*>();
-	//Dir *d1=Dir::createDir("/home/hky/test/A","/sd/1");depots->append(d1);
-	//if(!d1){addRowToTable("Echec de la création du repertoire 1",model);return;}
-	Dir *d2=Dir::createDir("/home/hky/test/B","/sd/1");depots->append(d2);
-	if(!d2){addRowToTable("Echec de la création du repertoire 2",model);return;}
+	Dir *d1=Dir::createDir("/home/hky/test/A","/sd/1");depots->append(d1);
+	if(!d1){addRowToTable("Echec de la création du repertoire 1",model);return;}
+	//Dir *d2=Dir::createDir("/home/hky/test/B","/sd/1");depots->append(d2);
+	//if(!d2){addRowToTable("Echec de la création du repertoire 2",model);return;}
 	ConfigurationFile *configurationFile=ConfigurationFile::createConfigurationFile(depots);
 	if(configurationFile) addRowToTable("Les configurations des repertoires surveillés ont été créés",model);
 	else {addRowToTable("Echec de la création des configurations de repertoires surveillés",model);return;}
 
 	//On créé la configuration totale
-	this->configurationData=ConfigurationData::createConfigurationData(configurationNetwork,configurationIdentification,configurationFile,"/home/hky/test/config2.xml");
+	this->configurationData=ConfigurationData::createConfigurationData(configurationNetwork,configurationIdentification,configurationFile,"/home/hky/test/config1.xml");
 
 	//On créé l'interface réseau
 	this->networkInterface=NetworkInterface::createNetworkInterface(configurationData);

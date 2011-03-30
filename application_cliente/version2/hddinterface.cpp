@@ -60,7 +60,6 @@ void HddInterface::mediaHasBeenCreated(Media *m)
 		d->setSignalListener(this);
 	}
 	Widget::addRowToTable("Le media "+m->getLocalPath()+" a été créé",model);
-	delete m;
 
         //Sauve la nouvelle config des fichiers synchronisés
         configurationData->save();
@@ -113,7 +112,7 @@ void HddInterface::fileHasBeenUpdated(File *f)
 //on a recu la modif d'un fichier
 void HddInterface::receiveModifiedFileMessageAction(File *f,QByteArray content)
 {
-        //On récupère le dossier parent du fichier updated
+	  //On récupère le dossier parent du fichier updated
         Dir *dir=configurationData->getConfigurationFile()->findMediaParentByLocalPath(f->getLocalPath());
         if(!dir)
             return;
