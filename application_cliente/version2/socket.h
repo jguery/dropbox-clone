@@ -18,8 +18,10 @@ class Socket : public QTcpSocket
 public:
 	//Constructeur et fonctions de connexion, déconnexions
 	Socket();
+
 	bool connectToServer(QString address,int port);
 	bool disconnectFromServer();
+
 	//Pour envoyer un message
 	bool sendMessage(QByteArray *message);
 
@@ -28,9 +30,11 @@ signals:
 	void receiveMessage(QByteArray *message);
 
 private slots:
+	//Slot privé qui sera appelé à chaque fois que des petits paquets sont recus
 	void inputStream();
 
 private:
+	//attribut privé pour stocker la taille du message qui est entrain d'etre recu par paquet
 	quint64 blockSize;
 };
 

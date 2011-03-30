@@ -18,13 +18,20 @@ class Widget : public QWidget
 public:
 	//Constructeur
 	Widget();
+
 	//Une méthode statique pour écrire dans la qtableview
 	static void addRowToTable(QString sentence,QStandardItemModel *model);
+
 private:
-	//Les interfaces et configurations
+	//la configuration
 	ConfigurationData *configurationData;
+
+	//L'interface réseau
 	NetworkInterface *networkInterface;
+
+	//L'interface Hdd
 	HddInterface *hddInterface;
+
 	//Le modèle de la qtableview
 	QStandardItemModel *model;
 };

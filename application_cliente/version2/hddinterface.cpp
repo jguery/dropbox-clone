@@ -5,6 +5,7 @@
 //Pour allouer un objet de type hddInterface
 HddInterface *HddInterface::createHddInterface(ConfigurationData *configurationData, NetworkInterface *networkInterface,QStandardItemModel *model)
 {
+	//On vérifie qu'aucun des paramètres n'est NULL
         if(configurationData==NULL)
             return NULL;
 
@@ -14,6 +15,7 @@ HddInterface *HddInterface::createHddInterface(ConfigurationData *configurationD
         if(model==NULL)
             return NULL;
 
+	  //On crèe et on retourne l'objet
 	return new HddInterface(configurationData,networkInterface,model);
 }
 
@@ -23,12 +25,13 @@ HddInterface::HddInterface(ConfigurationData *configurationData,
                            NetworkInterface *networkInterface,
                            QStandardItemModel *model) : QObject()
 {
+	//On fait les initialisations
 	this->networkInterface=networkInterface;
-	this->model=model;
 	this->configurationData=configurationData;
+	this->model=model;
 
+	//On demande aux repertoires de nous prevenir lorsqu'ils détectent une modif
 	this->configurationData->getConfigurationFile()->setSignalListener(this);
-
 
         //Connecte les signaux de réceptions de messages de l'interface réseau à des slots de cette classe
         //Le traitement des messages est donc fait ICI
@@ -43,18 +46,21 @@ HddInterface::HddInterface(ConfigurationData *configurationData,
 //Principalement appelée par Dir::directoryChangedAction (car le watcher est installé dans la classe Dir)
 void HddInterface::mediaHasBeenCreated(Media *m)
 {
+	//On récupère le realPath de l'objet
 	QString realPath=m->getRealPath();
 	if(m->isDirectory()) realPath=realPath+"/";
 
         //On prévient l'interface réseau, en passant le path dans le svn
 	networkInterface->sendMediaCreated(realPath);
 
+	//Si c'est un repertoire, on annule son signalListener
 	if(m->isDirectory())
 	{
 		Dir *d=(Dir*)m;
 		d->setSignalListener(this);
 	}
 	Widget::addRowToTable("Le media "+m->getLocalPath()+" a été créé",model);
+	delete m;
 
         //Sauve la nouvelle config des fichiers synchronisés
         configurationData->save();
@@ -65,10 +71,11 @@ void HddInterface::mediaHasBeenCreated(Media *m)
 //Même shéma que la méthode du dessus
 void HddInterface::mediaHasBeenRemoved(Media *m)
 {
+	//On récupère le realPath et on prévient le networkInterface
 	QString realPath=m->getRealPath();
-
 	networkInterface->sendMediaRemoved(realPath);
 
+	//Si c'est un repertoire on annule son signalListener
 	if(m->isDirectory())
 	{
 		Dir *d=(Dir*)m;
@@ -77,6 +84,7 @@ void HddInterface::mediaHasBeenRemoved(Media *m)
 	Widget::addRowToTable("Le media "+m->getLocalPath()+" a été supprimé",model);
 	delete m;
 
+	//Sauve la nouvelle config des fichiers synchronisés
 	configurationData->save();
 }
 
@@ -117,7 +125,10 @@ void HddInterface::receiveModifiedFileMessageAction(File *f,QByteArray content)
         //Écrit le nouveau fichier
 	QFile file(f->getLocalPath());
         if(!file.open(QIODevice::WriteOnly))
+	{
+		  dir->setSignalListener(this);
             return;
+	}
 	file.write(content);
 	file.close();
         f->updateContent();     //Met à jour la signature du fichier
@@ -248,7 +259,7 @@ void HddInterface::receiveRemovedMediaMessageAction(Media *m)
 
 
 
-
+//Un message inconnu a été recu, on l'affiche (pour le débogage)
 void HddInterface::receiveErrorMessageAction(QString s)
 {
 	QMessageBox::information(NULL,"",s);

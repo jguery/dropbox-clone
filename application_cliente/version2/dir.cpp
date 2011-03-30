@@ -1,38 +1,55 @@
 #include "dir.h"
 #include "hddinterface.h"
 
+
+
 //Pour créer un repertoire à partir de son localPath et de son realPath
 //Dans ce cas, le repertoire doit être vide.
 Dir *Dir::createDir(QString localPath,QString realPath)
 {
+	//Les paramètres localPath et realPath ne doivent pas être vides
 	if(localPath.isEmpty() || realPath.isEmpty()) return NULL;
+
+	//Par convention les noms de repertoire ne doivent pas se terminer pas "/"
 	if(localPath.endsWith("/")) localPath=localPath.left(localPath.length()-1);
 	if(realPath.endsWith("/")) realPath=realPath.left(realPath.length()-1);
+
+	//On vérifie si le repertoire existe sur le disque
 	QDir localDir(localPath);
 	if(!localDir.exists()) return NULL;
+
+	//On vérifie qu'il ne contient aucun fichier
 	if(localDir.entryList(QDir::AllEntries | QDir::NoDotAndDotDot).length()!=0) return NULL;
+
+	//On fait alors l'allocation d'un objet Dir
 	return new Dir(localPath,realPath);
 }
 
 
+
+
 //Permet de charger le repertoire à partir d'un noeud xml.
 //A noter qu'il faut que le contenu du repertoire tel qu'il est décrit dans le noeud corresponde
-//exactement au contenu réel du repertoire sur le disuqee. C'est à dire qu'il n'y ai eu aucune modif
+//exactement au contenu réel du repertoire sur le disque. C'est à dire qu'il n'y ai eu aucune modif
 //quand l'application n'était pas en marche
 Dir *Dir::loadDir(QDomNode noeud)
 {
+
+	//On vérifie que le nom du noeud xml est bien "dir"
         if(noeud.toElement().tagName()!="dir")
             return NULL;
 
+	  //On récupère le localPath et realPath du noeud xml et on vérifie qu'ils ne sont pas vides
 	QString localPath=noeud.toElement().attribute("localPath","");
 	QString realPath=noeud.toElement().attribute("realPath","");
         if(localPath.isEmpty() || realPath.isEmpty())
             return NULL;
 
+	  //S'ils se terminent pas "/" on normalise en enlevant le slash (simple convention)
 	if(localPath.endsWith("/")) localPath=localPath.left(localPath.length()-1);
 	if(realPath.endsWith("/")) realPath=realPath.left(realPath.length()-1);
 
-        //Vérifie que le répertoire existe effectivement en réalité
+	  //On vérifie que le répertoire existe effectivement en réalité sur le dique
 	QDir localDir(localPath);
         if(!localDir.exists())
             return NULL;
@@ -41,18 +58,21 @@ Dir *Dir::loadDir(QDomNode noeud)
         //tous les sous répertoires de ce répertoire, sotckés dans "subMedias"
 	Dir *dir=new Dir(localPath,realPath);
 
-        //Parcours tous les sous élément de notre dépot
-        QDomNodeList list=noeud.childNodes();
+	//On récupère les fils du noeud qui sont en fait les sous médias du "dir"
+	QDomNodeList list=noeud.childNodes();
         QList<QString> contenu1;
-        for(unsigned int i=0;i<list.length();i++)
+
+	  //On parcours tous les sous médias de notre repertoire
+	  for(unsigned int i=0;i<list.length();i++)
 	{
                 QDomNode n=list.at(i); QDomElement e=n.toElement();
-                if(e.tagName()=="dir")          //Le sous-élément est un répertoire
+		    if(e.tagName()=="dir")          //Le sous-médias est un répertoire
 		{
-			Dir *d=Dir::loadDir(n);
+			Dir *d=Dir::loadDir(n);  //On le charge
 			if(d==NULL)
 			{
 				delete dir;
+				//S'il n'est pas valide on retourne NULL
 				return NULL;
 			}
                         //On ajoute ce répertoire à la liste des subMedias de notre répertoire
@@ -60,10 +80,11 @@ Dir *Dir::loadDir(QDomNode noeud)
 		}
                 else if(e.tagName()=="file")    //Le sous-élément est un fichier
 		{
-			File *f=File::loadFile(n);
+			File *f=File::loadFile(n); //On le charge
 			if(f==NULL)
 			{
 				delete dir;
+				//S'il n'est pas valide on retourne NULL
 				return NULL;
 			}
                         //On ajoute ce fichier à la liste des subMedias de notre répertoire
@@ -74,20 +95,27 @@ Dir *Dir::loadDir(QDomNode noeud)
 	}
 
         //On charge dans la liste contenu2 tous les médias contenus dans localDir
-        //On vérifie que les médias qu'on a chargé (et donc présents dans le xml de config)
-        //sont bien présents dans la réalité
+	  //On vérifie qu'il n'y as pas d'autres médias présents sur le disque et qui n'ont pas été
+	  //chargés dans contenu1. Autrement on vérifie qu'il n'y a pas eu de modif en l'absence du logiciel
+	  //Pour l'instant, si c'est le cas, on retourne un erreur
 	QList<QString> contenu2=localDir.entryList(QDir::AllEntries | QDir::NoDotAndDotDot);
-        QList<QString>::iterator i;
+	QList<QString>::iterator i;
+
+	//On parcours les médias présents sur le disque
         for(i=contenu2.begin(); i!=contenu2.end(); i++)
 	{
+		  //On teste s'ils n'existaient pas dans le xml
                 if(!contenu1.contains(localPath+"/"+*i))
 		{
 			delete dir;
+			//On retourne NULL
 			return NULL;
 		}
 	}
+	  //Tout est bon, on retourne le dir
 	return dir;
 }
+
 
 
 //Oui, c'est bien un repertoire
@@ -97,12 +125,16 @@ bool Dir::isDirectory()
 }
 
 
+
 //Le constructeur fait les initialisations, puis alloue le watcher, et connecte son signal directoryChanged
 Dir::Dir(QString localPath,QString realPath): Media(localPath,realPath)
 {
 	this->subMedias=new QVector<Media*>();
 	watcher=new QFileSystemWatcher();
-	watcher->addPath(localPath);
+
+	watcher->addPath(localPath);  //Le watcher ne surveille que ce repertoire
+
+	//On connecte son signal au slot
 	QObject::connect(watcher,SIGNAL(directoryChanged(QString)),this,SLOT(directoryChangedAction(QString)));
 	this->hddInterface=NULL;
 }
@@ -120,13 +152,14 @@ void Dir::directoryChangedAction(QString path)
 		{
                         File *f=(File*)m;   //On le stocke dans un objet File
 
-                        //Le fichier a été supprimé
+				//Si le fichier a été supprimé
                         if(f->hasBeenRemoved() && hddInterface!=NULL)
 			{
                                 //On l'enlève de la liste des subMedias et on prévient
                                 //le module d'interface DD (qui assurera la comm sur le réseau)
                                 subMedias->remove(i);
 				hddInterface->mediaHasBeenRemoved(f);
+				//On décrémente i pour assurer le bon parcours de la boucle après une suppression d'un élément.(correction d'un bug)
 				i=i-1;
 				continue;
 			}
@@ -147,6 +180,7 @@ void Dir::directoryChangedAction(QString path)
 			{
                                 subMedias->remove(i);   //On le vire des subMedias
                                 hddInterface->mediaHasBeenRemoved(d);   //On prévient l'interace DD
+				//On décrémente i pour assurer le bon parcours de la boucle après une suppression d'un élément.(correction d'un bug)
 				i=i-1;
 				continue;
 			}
@@ -211,35 +245,47 @@ QVector<Media*> *Dir::getSubMedias()
 //Retourne le code xml du repertoire et de ses sous medias
 QDomElement Dir::toXml(QDomDocument *document)
 {
+	//On crèe le noeud xml avec le nom "dir"
 	QDomElement element=document->createElement("dir");
 
+	//On écrit ses attributs localPath et realPath
 	element.setAttribute("localPath",localPath);
 	element.setAttribute("realPath",realPath);
 
+	//On parcours ses sous médias pour les ajouter commes des noeuds fils du noeud actuel
 	for(int i=0;i<subMedias->size();i++)
 	{
 		QDomElement e=subMedias->at(i)->toXml(document);
 		element.appendChild(e);
 	}
 
+	//On retourne le noeud
 	return element;
 }
+
+
 
 
 //Recherche à quel média correspond ce localPath
 //Fonction récursive qui agit sur tous les submedias
 Media *Dir::findMediaByLocalPath(QString localPath)
 {
+	//On normalise le localPath
 	if(localPath.endsWith("/")) localPath=localPath.left(localPath.length()-1);
-        if(this->localPath==localPath)
+
+	//On teste si le localPath est égal au localPath de l'objet
+	  if(this->localPath==localPath)
             return this;
 
+	  //Sinon on recherche dans tous les sous médias
 	for(int i=0;i<subMedias->size();i++)
 	{
 		Media *find=subMedias->at(i)->findMediaByLocalPath(localPath);
                 if(find!=NULL)
                     return find;
 	}
+
+	//On a rien trouvé dans la recherche, on retourne NULL
 	return NULL;
 }
 
@@ -248,16 +294,22 @@ Media *Dir::findMediaByLocalPath(QString localPath)
 //Fonction récursive qui agit sur tous les submedias
 Media *Dir::findMediaByRealPath(QString realPath)
 {
+	//On normalise le realPath
 	if(realPath.endsWith("/")) realPath=realPath.left(realPath.length()-1);
+
+	//On teste si le realPath est égal au realPath de l'objet
         if(this->realPath==realPath)
             return this;
 
+	  //Sinon on recherche dans tous les sous médias
 	for(int i=0;i<subMedias->size();i++)
 	{
 		Media *find=subMedias->at(i)->findMediaByRealPath(realPath);
                 if(find!=NULL)
                     return find;
 	}
+
+	//On a rien trouvé dans la recherche, on retourne NULL
 	return NULL;
 }
 
@@ -266,40 +318,59 @@ Media *Dir::findMediaByRealPath(QString realPath)
 Dir *Dir::findMediaParentByLocalPath(QString localPath)
 {
 	if(localPath.endsWith("/")) localPath=localPath.left(localPath.length()-1);
+
+	//On teste si le localPath est égal au localPath des sous médias de l'objet
+	//Si c'est le cas on retourne this
 	for(int i=0;i<subMedias->size();i++)
 	{
                 if(subMedias->at(i)->getLocalPath()==localPath)
                     return this;
 	}
 
+	//Sinon le fait la recherche dans ses sous médias
 	for(int i=0;i<subMedias->size();i++)
 	{
-                if(!subMedias->at(i)->isDirectory()) continue;
-		Dir *find=((Dir*)subMedias->at(i))->findMediaParentByLocalPath(localPath);
+		    if(!subMedias->at(i)->isDirectory()) continue; //On ne fait la recherche que pour les sous repertoires
+
+		    //On apelle la fonction récursivement
+		    Dir *find=((Dir*)subMedias->at(i))->findMediaParentByLocalPath(localPath);
                 if(find!=NULL)
                     return find;
 	}
+
+	//On a rien trouvé dans la recherche, on retourne NULL
 	return NULL;
 }
+
+
+
 
 
 //Recherche quel est le repertoire parent du média auquel correspond ce realPath
 Dir *Dir::findMediaParentByRealPath(QString realPath)
 {
 	if(realPath.endsWith("/")) realPath=realPath.left(realPath.length()-1);
+
+	//On teste si le realPath est égal au realPath des sous médias de l'objet
+	//Si c'est le cas on retourne this
 	for(int i=0;i<subMedias->size();i++)
 	{
                 if(subMedias->at(i)->getRealPath()==realPath)
                     return this;
 	}
 
+	//Sinon on fait la recherche dans ses sous médias
 	for(int i=0;i<subMedias->size();i++)
 	{
-		if(!subMedias->at(i)->isDirectory()) continue;
+		if(!subMedias->at(i)->isDirectory()) continue; //On ne fait la recherche que pour les sous repertoires
+
+		//On apelle la fonction récursivement
 		Dir *find=((Dir*)subMedias->at(i))->findMediaParentByRealPath(realPath);
                 if(find!=NULL)
                     return find;
 	}
+
+	//On a rien trouvé dans la recherche, on retourne NULL
 	return NULL;
 }
 
@@ -319,15 +390,20 @@ void Dir::setSignalListener(HddInterface *hddInterface)
 }
 
 
+
 //Le destructeur qui détruit tout ce qu'il trouve sur son passage :P
 Dir::~Dir()
 {
+	//On delete tous les sous médias, et on vide la liste des sous médias
 	while(!subMedias->isEmpty())
 	{
 		delete subMedias->at(0);
 		subMedias->remove(0);
 	}
+	//On delete la liste des sous médias
 	delete subMedias;
+
+	//On delete le watcher
 	delete watcher;
 }
 

@@ -5,7 +5,8 @@
 
 class HddInterface;
 
-/*Cette classe représente un repertoire sur le disque dur.
+/*
+  Cette classe représente un repertoire sur le disque dur.
   Elle hérite de la classe Media. Un Dir possède une liste de Media qui
   peuvent être eux aussi des Dir ou des File.
 */
@@ -43,6 +44,7 @@ public:
 	virtual ~Dir();
 
 private slots:
+	//Le slot qui sera appelé lorsque le repertoire a subit un changement
 	void directoryChangedAction(QString);
 
 private:

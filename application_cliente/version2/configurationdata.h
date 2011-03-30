@@ -1,3 +1,16 @@
+/*
+
+ Ce fichier contient les déclarations de trois classes:
+ ConfigurationNetwork : Pour la gestion du réseau
+ ConfigurationIdentification : Pour la configuration de l'identification
+ ConfigurationFile: Pour la configuration des fichiers et repertoires synchronisés
+ ConfigurationData: Pour regrouper toutes les configurations
+
+*/
+
+
+
+
 
 #ifndef CONFIGURATIONNETWORK_H
 #define CONFIGURATIONNETWORK_H
@@ -25,7 +38,10 @@ public:
 	QDomElement toXml(QDomDocument *document);
 
 private:
+	//le constructeur
 	ConfigurationNetwork(QString address,int port);
+
+	// attribusts: adresse et port du serveur
 	QString address;
 	int port;
 };
@@ -71,7 +87,10 @@ public:
 	QDomElement toXml(QDomDocument *document);
 
 private:
+	//le constructeur
 	ConfigurationIdentification(QString pseudo,QString password);
+
+	//attributs: pseudo et mot de passe d'identification
 	QString pseudo;
 	QString password;
 };
@@ -120,6 +139,7 @@ public:
 	~ConfigurationFile();
 
 private:
+	//le constructeur
 	ConfigurationFile(QList<Dir*> *depots);
 
 	//La liste des dépots à surveiller
@@ -151,26 +171,27 @@ private:
 class ConfigurationData
 {
 public:
+	//Des fonctions statiques pour créer l'objet
 	static ConfigurationData *createConfigurationData(ConfigurationNetwork *configurationNetwork,ConfigurationIdentification *configurationIdentification,ConfigurationFile *configurationFile,QString savePath="");
 	static ConfigurationData *loadConfigurationData(QString savePath);
 
-	//Les accesseurs et mutateurs
+	//Les accesseurs et mutateurs de configurationNetwork
 	ConfigurationNetwork *getConfigurationNetwork();
 	void setConfigurationNetwork(ConfigurationNetwork *configurationNetwork);
 
-	//Les accesseurs et mutateurs
+	//Les accesseurs et mutateurs de configurationIdentification
 	ConfigurationIdentification *getConfigurationIdentification();
 	void setConfigurationIdentification(ConfigurationIdentification *configurationIdentification);
 
-	//Les accesseurs et mutateurs
+	//Les accesseurs et mutateurs de configurationFile
 	ConfigurationFile *getConfigurationFile();
 	void setConfigurationFile(ConfigurationFile *configurationFile);
 
-	//Les accesseurs et mutateurs
+	//Les accesseurs et mutateurs de savePath
 	QString getSavePath();
 	void setSavePath(QString savePath);
 
-	//Enregistre la config
+	//Enregistre au format xml la configuration
 	bool save(QString savePath="");
 
 	//Destructeur

@@ -14,8 +14,10 @@ class Messages
 public:
 	//Requete pour avertir de la modification du contenu d'un fichier
 	static QByteArray *createFileContentMessage(QString realPath, QByteArray content);
+
 	//Avertir de la création d'un nouveau média
 	static QByteArray *createMediaCreatedMessage(QString realPath);
+
 	//Avertir de la suppression d'un média
 	static QByteArray *createMediaRemovedMessage(QString realPath);
 

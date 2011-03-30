@@ -43,14 +43,18 @@ signals:
 	void receiveAnnulationMessage();
 
 private slots:
+	//Slots pour recevoir les évènement de la socket
 	void stateChangedAction(QAbstractSocket::SocketState);
 	void receiveMessageAction(QByteArray *message);
 
 private:
+	//Le constructeur
 	NetworkInterface(ConfigurationData *configurationData);
 
 	//La socket qui servira à se connecter au serveur
 	Socket *socket;
+
+	//La configuration totale
 	ConfigurationData *configurationData;
 };
 

@@ -1,31 +1,53 @@
 #include "configurationdata.h"
 
 
-//Fonction statique pour créer une config initiale
+/*
+
+ Ce fichier contient les implémentations de trois classes:
+ ConfigurationNetwork : Pour la gestion du réseau
+ ConfigurationIdentification : Pour la configuration de l'identification
+ ConfigurationFile: Pour la configuration des fichiers et repertoires synchronisés
+ ConfigurationData: Pour regrouper toutes les configurations
+
+*/
+
+
+
+//Fonction statique pour créer une configuration network initiale
 ConfigurationNetwork *ConfigurationNetwork::createConfigurationNetwork(QString address, int port)
 {
+	//On vérifie la validité de l'adresse et du port demandés
         if(address.isEmpty() || port<0 || port>=65536)
             return NULL;
+
+	//On crèe l'objet et on le renvoi
 	ConfigurationNetwork *configurationNetwork=new ConfigurationNetwork(address,port);
 	return configurationNetwork;
 }
+
+
 
 //Permet de charger l'objet à partir d'un noeud xml
 ConfigurationNetwork *ConfigurationNetwork::loadConfigurationNetwork(QDomNode noeud)
 {
 	QDomElement element=noeud.toElement();
+
+	//On vérifie que le nom du noeud est bien ConfigurationNetwork
         if(element.tagName()!="ConfigurationNetwork")
             return NULL;
 
+	  //On récupère l'adresse et le port et on vérifie qu'ils ne sont pas vides
 	QString address=element.attribute("address","");
 	QString port=element.attribute("port","");
         if(address.isEmpty() || port.isEmpty())
             return NULL;
 
+	  //On convertit le port en format int
 	bool ok=false;int p=port.toInt(&ok);
         if(!ok)
             return NULL;
 
+	  //On crèe l'objet et on le retourne
         ConfigurationNetwork *configurationNetwork =
                 ConfigurationNetwork::createConfigurationNetwork(address,p);
 	return configurationNetwork;
@@ -40,7 +62,7 @@ ConfigurationNetwork::ConfigurationNetwork(QString address, int port)
 }
 
 
-//Les accesseurs et mutateurs
+//Les accesseurs et mutateurs de l'attribut address
 
 QString ConfigurationNetwork::getAddress()
 {
@@ -52,7 +74,7 @@ void ConfigurationNetwork::setAddress(QString address)
 	this->address=address;
 }
 
-//les accesseurs et mutateurs
+//les accesseurs et mutateurs de l'attribut port
 
 int ConfigurationNetwork::getPort()
 {
@@ -64,10 +86,14 @@ void ConfigurationNetwork::setPort(int port)
 	this->port=port;
 }
 
+
 //Retourne le code xml correspondant à l'objet
 QDomElement ConfigurationNetwork::toXml(QDomDocument *document)
 {
+	//On crèe le noeud xml avec le nom ConfigurationNetwork
 	QDomElement element=document->createElement("ConfigurationNetwork");
+
+	//On écrit ses attributs
 	element.setAttribute("address",address);
 	element.setAttribute("port",QString::number(port));
 
@@ -85,30 +111,39 @@ QDomElement ConfigurationNetwork::toXml(QDomDocument *document)
 //Pour créer une configuration d'identification initiale
 ConfigurationIdentification *ConfigurationIdentification::createConfigurationIdentification(QString pseudo, QString password)
 {
+	//On vérifie que le pseudo et password ne sont pas vides
         if(pseudo.isEmpty() || password.isEmpty())
             return NULL;
 
+	  //On crèe l'objet et on le renvoi
 	ConfigurationIdentification *configurationIdentification=new ConfigurationIdentification(pseudo,password);
 	return configurationIdentification;
 }
+
 
 
 //Pour charger l'objet à partir d'un noeud xml
 ConfigurationIdentification *ConfigurationIdentification::loadConfigurationIdentification(QDomNode noeud)
 {
 	QDomElement element=noeud.toElement();
+
+	//On vérifie que le nom du noeud xml est bien ConfigurationIdentification
         if(element.tagName()!="ConfigurationIdentification")
             return NULL;
 
+	  //On récupère les pseudo et password du noeud et on vérifie qu'ils ne soient pas vides.
 	QString pseudo=element.attribute("pseudo","");
 	QString password=element.attribute("password","");
         if(pseudo.isEmpty() || password.isEmpty())
             return NULL;
 
+	  //On crèe l'objet et on le retourne
         ConfigurationIdentification *configurationIdentification=
                 ConfigurationIdentification::createConfigurationIdentification(pseudo,password);
 	return configurationIdentification;
 }
+
+
 
 //Le constructeur
 ConfigurationIdentification::ConfigurationIdentification(QString pseudo,QString password)
@@ -117,7 +152,7 @@ ConfigurationIdentification::ConfigurationIdentification(QString pseudo,QString 
 	this->password=password;
 }
 
-//Les accesseurs et mutateurs
+//Les accesseurs et mutateurs de l'attribut pseudo
 
 QString ConfigurationIdentification::getPseudo()
 {
@@ -129,7 +164,7 @@ void ConfigurationIdentification::setPseudo(QString pseudo)
 	this->pseudo=pseudo;
 }
 
-//les accesseurs et mutateurs
+//les accesseurs et mutateurs de l'attribut password
 
 QString ConfigurationIdentification::getPassword()
 {
@@ -141,13 +176,16 @@ void ConfigurationIdentification::setPassword(QString password)
 	this->password=password;
 }
 
+
 //Retourne le code xml correspondant à la configuration
 QDomElement ConfigurationIdentification::toXml(QDomDocument *document)
 {
+	//On crèe le noeud xml avec le nom ConfigurationIdentification
 	QDomElement element=document->createElement("ConfigurationIdentification");
+
+	//On écrit ses attributs pseudo et password et on le renvoi
 	element.setAttribute("pseudo",pseudo);
 	element.setAttribute("password",password);
-
 	return element;
 }
 
@@ -160,14 +198,14 @@ QDomElement ConfigurationIdentification::toXml(QDomDocument *document)
 
 
 
-//Une fonction statique pour créer une configuration initiale
+//Une fonction statique pour créer une configuration de dépots initiale
 ConfigurationFile *ConfigurationFile::createConfigurationFile(QList<Dir*> *depots)
 {
-        if(depots==NULL)
-            return NULL;
-        if(depots->length()==0)
-            return NULL;
+	//La liste de dépots passée ne doit être ni NULLe, ni vide
+	  if(depots==NULL)        return NULL;
+	  if(depots->length()==0)      return NULL;
 
+	  //On crèe la configuration et on la retourne
 	ConfigurationFile *config=new ConfigurationFile(depots);
 	return config;
 }
@@ -178,7 +216,10 @@ ConfigurationFile *ConfigurationFile::createConfigurationFile(QList<Dir*> *depot
 //préalablement enregistrée dans un config.xml, grâce à ConfigurationData::save
 ConfigurationFile *ConfigurationFile::loadConfigurationFile(QDomNode noeud)
 {
+	//On alloue la liste des dépots dans laquelle seront chargées les dépots lues
 	QList<Dir*> *depots=new QList<Dir*>();
+
+	//On vérifie que le nom du noeud est bien ConfigurationData
 	QDomElement element=noeud.toElement();
         if(element.tagName()!="ConfigurationFile")
             return NULL;
@@ -189,14 +230,21 @@ ConfigurationFile *ConfigurationFile::loadConfigurationFile(QDomNode noeud)
 	for(unsigned int i=0;i<list.length();i++)
 	{
 		QDomNode n=list.at(i);
+
+		//On charge le noeud avec la méthode statique loadDir
 		Dir *d=Dir::loadDir(n);
                 if(d==NULL)
                     return NULL;
+
+		 //On l'ajoute à la liste de dépots
 		depots->append(d);
 	}
+
+	//On crèe l'objet et on le retourne
 	ConfigurationFile *config=new ConfigurationFile(depots);
 	return config;
 }
+
 
 
 //Constructeur
@@ -206,15 +254,22 @@ ConfigurationFile::ConfigurationFile(QList<Dir*> *depots)
 }
 
 
+
 //Retourne le code xml de la configuration
 QDomElement ConfigurationFile::toXml(QDomDocument *document)
 {
+	//On crèe le noeud xml avec le nom ConfigurationFile
 	QDomElement element=document->createElement("ConfigurationFile");
+
+	//On parcours les dépots de la configuration
 	for(int i=0;i<depots->size();i++)
 	{
+		//On récupére leurs noeuds xml et on les ajoute au noeud principal
 		QDomElement e=depots->at(i)->toXml(document);
 		element.appendChild(e);
 	}
+
+	//On retourne le noeud
 	return element;
 }
 
@@ -223,8 +278,11 @@ QDomElement ConfigurationFile::toXml(QDomDocument *document)
 Media *ConfigurationFile::findMediaByLocalPath(QString localPath)
 {
         QList<Dir*>::iterator i;
-        for(i=depots->begin(); i!=depots->end(); i++)
+
+	//On parcours la liste des dépots
+	  for(i=depots->begin(); i!=depots->end(); i++)
 	{
+		  //On recherche le localPath dans l'arborescence de ce dépot
                 Media *find=(*i)->findMediaByLocalPath(localPath);
                 if(find!=NULL)
                     return find;
@@ -236,8 +294,11 @@ Media *ConfigurationFile::findMediaByLocalPath(QString localPath)
 Media *ConfigurationFile::findMediaByRealPath(QString realPath)
 {
         QList<Dir*>::iterator i;
+
+	  //On parcours la liste des dépots
         for(i=depots->begin(); i!=depots->end(); i++)
 	{
+		  //On recherche le realPath dans l'arborescence de ce dépot
                 Media *find=(*i)->findMediaByRealPath(realPath);
                 if(find!=NULL)
                     return find;
@@ -251,8 +312,11 @@ Dir *ConfigurationFile::findMediaParentByLocalPath(QString localPath)
 {
 
         QList<Dir*>::iterator i;
+
+	  //On parcours la liste des dépots
         for(i=depots->begin(); i!=depots->end(); i++)
 	{
+		  //On recherche le parent du localPath dans l'arborescence de ce dépot
                 Dir *find=(*i)->findMediaParentByLocalPath(localPath);
 		if(find!=NULL) return find;
 	}
@@ -264,8 +328,11 @@ Dir *ConfigurationFile::findMediaParentByLocalPath(QString localPath)
 Dir *ConfigurationFile::findMediaParentByRealPath(QString realPath)
 {
         QList<Dir*>::iterator i;
+
+	  //On parcours la liste des dépots
         for(i=depots->begin(); i!=depots->end(); i++)
 	{
+		  //On recherche le parent du realPath dans l'arborescence de ce dépot
                 Dir *find=(*i)->findMediaParentByRealPath(realPath);
 		if(find!=NULL) return find;
 	}
@@ -273,10 +340,13 @@ Dir *ConfigurationFile::findMediaParentByRealPath(QString realPath)
 }
 
 
+
 //Permet de fixer l'objet à prevenir en cas de modif
 void ConfigurationFile::setSignalListener(HddInterface *hddInterface)
 {
         QList<Dir*>::iterator i;
+
+	  //On parcours tous les dépots et on appelle récursivement la fonction setSignalListener
         for(i=depots->begin(); i!=depots->end(); i++)
 	{
                 (*i)->setSignalListener(hddInterface);
@@ -286,12 +356,16 @@ void ConfigurationFile::setSignalListener(HddInterface *hddInterface)
 //Destructeur
 ConfigurationFile::~ConfigurationFile()
 {
-        QList<Dir*>::iterator i;
-        for(i=depots->begin(); i!=depots->end(); i++)
+     //On parcours la liste des dépots et on des supprime
+	for(int i=0; i<depots->length(); i++)
 	{
-                delete *i;
+		delete depots->at(i);
 	}
+
+	//On vide la liste des dépots
 	depots->clear();
+
+	//On la supprime
 	delete depots;
 }
 
@@ -317,12 +391,15 @@ ConfigurationData *ConfigurationData::createConfigurationData(ConfigurationNetwo
                          ConfigurationIdentification *configurationIdentification,
                          ConfigurationFile *configurationFile,QString savePath)
 {
-        if(configurationNetwork==NULL)
+	//On vérifie qu'aucun des attributs n'est NULL
+	if(configurationNetwork==NULL)
             return NULL;
         if(configurationIdentification==NULL)
             return NULL;
         if(configurationFile==NULL)
             return NULL;
+
+	  //On crèe l'objet et on le retourne
         ConfigurationData *config=new ConfigurationData(configurationNetwork,
                         configurationIdentification,configurationFile,savePath);
 
@@ -347,6 +424,7 @@ ConfigurationData *ConfigurationData::loadConfigurationData(QString savePath)
         //On charge la liste des élèments fils du document
 	QDomNodeList noeuds=document.documentElement().childNodes();
 
+	//On initialise toutes les configuration à NULL
         ConfigurationNetwork *configurationNetwork                  = NULL;
         ConfigurationIdentification *configurationIdentification    = NULL;
         ConfigurationFile *configurationFile                        = NULL;
@@ -370,7 +448,7 @@ ConfigurationData *ConfigurationData::loadConfigurationData(QString savePath)
 
 	file.close();
 
-        //Vérifie qu'aucune des confs chargées n'est dans un sal état
+	  //Vérifie qu'aucune des confs chargées n'est dans un sale état
 	if(configurationNetwork==NULL || configurationIdentification==NULL || configurationFile==NULL)
 	{
 		delete configurationFile;
@@ -378,10 +456,14 @@ ConfigurationData *ConfigurationData::loadConfigurationData(QString savePath)
 		delete configurationIdentification;
 		return NULL;
 	}
+
+	//On cree l'objet et on le retourne
         ConfigurationData *configuration=new ConfigurationData(configurationNetwork,
                               configurationIdentification,configurationFile,savePath);
 	return configuration;
 }
+
+
 
 
 //Le constructeur
@@ -389,13 +471,15 @@ ConfigurationData::ConfigurationData(ConfigurationNetwork *configurationNetwork,
                                      ConfigurationIdentification *configurationIdentification,
                                      ConfigurationFile *configurationFile,QString savePath)
 {
+	//On ne fait qu'initialiser
 	this->configurationNetwork=configurationNetwork;
 	this->configurationIdentification=configurationIdentification;
 	this->configurationFile=configurationFile;
 	this->savePath=savePath;
 }
 
-// Accesseurs et mutateurs
+
+// Accesseurs et mutateurs de ConfigurationNetwork
 void ConfigurationData::setConfigurationNetwork(ConfigurationNetwork *configurationNetwork)
 {
 	this->configurationNetwork=configurationNetwork;
@@ -406,7 +490,8 @@ ConfigurationNetwork *ConfigurationData::getConfigurationNetwork()
 	return configurationNetwork;
 }
 
-// Accesseurs et mutateurs
+
+// Accesseurs et mutateurs de ConfigurationIdentification
 void ConfigurationData::setConfigurationIdentification(ConfigurationIdentification *configurationIdentification)
 {
 	this->configurationIdentification=configurationIdentification;
@@ -417,7 +502,8 @@ ConfigurationIdentification *ConfigurationData::getConfigurationIdentification()
 	return configurationIdentification;
 }
 
-// Accesseurs et mutateurs
+
+// Accesseurs et mutateurs de ConfigurationFile
 void ConfigurationData::setConfigurationFile(ConfigurationFile *configurationFile)
 {
 	this->configurationFile=configurationFile;
@@ -428,8 +514,8 @@ ConfigurationFile *ConfigurationData::getConfigurationFile()
 	return configurationFile;
 }
 
-//Accesseurs et mutateurs
-//Chemin absolu où sera enregistrée la config xml
+
+//Accesseurs et mutateurs du savePath (Chemin absolu où sera enregistrée la config xml)
 void ConfigurationData::setSavePath(QString savePath)
 {
 	this->savePath=savePath;
@@ -456,7 +542,7 @@ bool ConfigurationData::save(QString savePath)
 	QDomDocument document;
 	QDomElement element=document.createElement("ConfigurationData");
 
-                //Ajoute à l'élèment ConfDate, les sous élèments confNetwork, confFile, et confIdent.
+		    //Ajoute à l'élèment ConfData, les sous élèments confNetwork, confFile, et confIdent.
 		QDomElement network=configurationNetwork->toXml(&document);
 		element.appendChild(network);
 		QDomElement identification=configurationIdentification->toXml(&document);
@@ -482,6 +568,7 @@ bool ConfigurationData::save(QString savePath)
 //Destructeur
 ConfigurationData::~ConfigurationData()
 {
+	//on détruit toutes les autres configurations
 	delete configurationNetwork;
 	delete configurationIdentification;
 	delete configurationFile;

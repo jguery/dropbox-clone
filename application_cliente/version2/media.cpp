@@ -8,7 +8,7 @@ Media::Media(QString localPath,QString realPath)
 	this->realPath=realPath;
 }
 
-//les accesseurs d'accès et de modifications
+//les accesseurs d'accès et de modifications au localPath
 
 QString Media::getLocalPath()
 {
@@ -20,7 +20,7 @@ void Media::setLocalPath(QString localPath)
 	this->localPath=localPath;
 }
 
-//les accesseurs d'accès et de modifications
+//les accesseurs d'accès et de modifications au realPath
 
 QString Media::getRealPath()
 {

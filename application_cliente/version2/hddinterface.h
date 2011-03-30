@@ -9,9 +9,7 @@
 /*
  Cette classe représente l'interaction avec le disque dur.
  Elle est avertie à chaque fois qu'un média est créé, modifié ou supprimé.
- Elle est encore en cours de tests et de modifications
 */
-
 
 class HddInterface: public QObject
 {
@@ -27,6 +25,7 @@ public:
 	void fileHasBeenUpdated(File *f);
 
 public slots:
+	//Les slots appelés lorsqu'on recoit un message du serveur
 	void receiveModifiedFileMessageAction(File*,QByteArray);
 	void receiveCreatedMediaMessageAction(Dir *parent,QString realName);
 	void receiveRemovedMediaMessageAction(Media*);
@@ -39,6 +38,8 @@ private:
 	//Les autres interfaces
 	ConfigurationData *configurationData;
 	NetworkInterface *networkInterface;
+
+	//Juste pour l'affichage
 	QStandardItemModel *model;
 };
 
