@@ -3,10 +3,12 @@
 
 #include <QtNetwork>
 
+
 /*
  Cette classe héritant de QSslSocket implémente une socket sécurisée
- capable de recevoir des messages xml complets du client, et de lui en envoyer.
+ capable de recevoir des messages xml complets, et d'en envoyer
 */
+
 
 class Socket : public QSslSocket
 {
@@ -15,9 +17,10 @@ class Socket : public QSslSocket
 public:
 	//Constructeur et fonctions de connexion, déconnexions
 	Socket();
-	//Pour renseigner le descripteur du client
-	bool setDescriptor(int socketDescriptor);
-	bool disconnectClient();
+
+	bool connectToServer(QString address,int port);
+	bool disconnectFromServer();
+
 	//Pour envoyer un message
 	bool sendMessage(QByteArray *message);
 
@@ -26,9 +29,14 @@ signals:
 	void receiveMessage(QByteArray *message);
 
 private slots:
+	//Slot privé qui sera appelé à chaque fois que des petits paquets sont recus
 	void inputStream();
 
 private:
+	//Pour initialiser la communication ssl
+	bool initialiseSSL();
+
+	//attribut privé pour stocker la taille du message qui est entrain d'etre recu par paquet
 	quint64 blockSize;
 };
 
