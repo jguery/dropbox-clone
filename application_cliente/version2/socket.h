@@ -5,13 +5,12 @@
 
 
 /*
- Cette classe héritant de QtcpSocket implémente une socket
+ Cette classe héritant de QSslSocket implémente une socket sécurisée
  capable de recevoir des messages xml complets, et d'en envoyer
- Elle ne gère pas le ssl pour l'instant
 */
 
 
-class Socket : public QTcpSocket
+class Socket : public QSslSocket
 {
 	Q_OBJECT
 
@@ -34,6 +33,9 @@ private slots:
 	void inputStream();
 
 private:
+	//Pour initialiser la communication ssl
+	bool initialiseSSL();
+
 	//attribut privé pour stocker la taille du message qui est entrain d'etre recu par paquet
 	quint64 blockSize;
 };

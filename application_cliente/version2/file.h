@@ -2,9 +2,11 @@
 #define FILE_H
 
 #include "media.h"
+#include <QtCore/QFile>
 
 
-/* Cette classe représente un fichier physique.
+/*
+   Cette classe représente un fichier physique.
    Elle hérite de la classe Media
    On peut créer un fichier ou le charger à partir d'un noeud xml
    Un fichier possède une signature (pour détecter si il y a eu modification)

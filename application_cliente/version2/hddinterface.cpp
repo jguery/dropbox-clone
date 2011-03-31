@@ -193,24 +193,6 @@ void HddInterface::receiveCreatedMediaMessageAction(Dir *parent,QString realName
 }
 
 
-//On supprime un répertoire non vide
-void rmNonEmptyDir( QString name )
-{
-    QDir dir( name );
-
-    //Supprime tous les fichier contenus dans le dossier name
-    QFileInfoList fileList = dir.entryInfoList( QDir::Files | QDir::Hidden );
-    foreach(QFileInfo file, fileList) dir.remove( file.absoluteFilePath());
-
-    //Supprime tous les dossiers contenus dans le dossier name
-    QFileInfoList dirList = dir.entryInfoList( QDir::AllDirs | QDir::Hidden | QDir::NoDotAndDotDot );
-    foreach(QFileInfo dir, dirList) rmNonEmptyDir(dir.absoluteFilePath());
-
-    //On supprime enfin le dossier name
-    dir.rmdir(dir.absolutePath());
-}
-
-
 
 void HddInterface::receiveRemovedMediaMessageAction(Media *m)
 {
@@ -237,7 +219,7 @@ void HddInterface::receiveRemovedMediaMessageAction(Media *m)
 	{
 		Dir *d=(Dir*)m;
 		d->setSignalListener(NULL);
-		rmNonEmptyDir(d->getLocalPath());
+		Dir::removeNonEmptyDirectory(d->getLocalPath());
 		Widget::addRowToTable("Message du serveur: le repertoire "+d->getLocalPath()+" a été supprimé",model);
 		delete d;
 	}

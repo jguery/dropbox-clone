@@ -83,11 +83,8 @@ void NetworkInterface::receiveMessageAction(QByteArray *message)
 	else if(arg->value("action")=="CREATED")
 	{
 
-		QString realPath2=realPath;
-		if(realPath2.endsWith("/")) realPath2=realPath2.left(realPath2.length()-1);
-
 		//On récupère le média parent
-		Media *parentMedia=configurationData->getConfigurationFile()->findMediaByRealPath(realPath2.left(realPath2.lastIndexOf("/")));
+		Media *parentMedia=configurationData->getConfigurationFile()->findMediaByRealPath(Media::extractParentPath(realPath));
 
 		//On vérifie que le parent n'est pas NULL et que c'est bien un repertoire
 		if(parentMedia==NULL){emit receiveErrorMessage("7");return;}
@@ -97,8 +94,7 @@ void NetworkInterface::receiveMessageAction(QByteArray *message)
 		Dir *parent=(Dir*)parentMedia;
 
 		//On récupère le nom du média créé. NB: Si c'est un repertoire on fait terminé le nom par "/"
-		QString realName=realPath2.right(realPath2.length()-realPath2.lastIndexOf("/")-1);
-		if(realPath.endsWith("/")) realName=realName+"/";
+		QString realName=Media::extractName(realPath);
 
 		//On émet le signal de création du média
 		emit receiveCreatedMediaMessage(parent,realName);

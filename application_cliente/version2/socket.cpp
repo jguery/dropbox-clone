@@ -1,8 +1,14 @@
 #include "socket.h"
 
 
+#define CACERTIFICATES_FILE "../ssl/ca.pem"
+#define LOCALCERTIFICATE_FILE "../ssl/client-crt.pem"
+#define PRIVATEKEY_FILE "../ssl/client-key.pem"
+
+
+
 //Le constructeur
-Socket::Socket() : QTcpSocket()
+Socket::Socket() : QSslSocket()
 {
 	blockSize=0;
 
@@ -11,14 +17,49 @@ Socket::Socket() : QTcpSocket()
 }
 
 
+
+
 //Pour se connecter au serveur
 bool Socket::connectToServer(QString address,int port)
 {
 	//On vérifie qu'on est pas déjà connecté
 	if(this->state()==ConnectedState) return true;
 
-	//On se connecte avec l'adresse et le port passés en paramètre
-	connectToHost(address,port);
+	//On récupère la clé privée du client
+	QFile file(PRIVATEKEY_FILE);
+	if(!file.open(QIODevice::ReadOnly))
+	{
+		qDebug("La clé privée du client est introuvable.");
+		return false;
+	}
+
+	QSslKey key(&file, QSsl::Rsa, QSsl::Pem, QSsl::PrivateKey, "dropbox");
+	if (key.isNull())
+	{
+		qDebug("La clé privée du client est nulle");
+		return false;
+	}
+	file.close();
+	setPrivateKey(key);
+
+	//on charge le certificat du client
+	setLocalCertificate( LOCALCERTIFICATE_FILE );
+
+	//on charge le certificat de notre ca
+	if(!addCaCertificates(CACERTIFICATES_FILE))
+	{
+		qDebug("Impossible de charger le certificat du CA.");
+		return false;
+	}
+
+	//on supprime la vérification du serveur
+	setPeerVerifyMode(QSslSocket::VerifyNone);
+
+	//on ignore les erreurs car on a un certificat auto signé
+	ignoreSslErrors();
+
+	//on se connecte au serveur
+	connectToHostEncrypted(address, port);
 
 	//On attends au plus 3secondes pour que la connexion s'établisse
 	bool result = waitForConnected(3000);
@@ -26,6 +67,8 @@ bool Socket::connectToServer(QString address,int port)
 	//On retourne le résultat true/false
 	return result;
 }
+
+
 
 
 //Se déconnecter du serveur

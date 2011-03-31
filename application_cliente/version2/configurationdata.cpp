@@ -311,13 +311,13 @@ Media *ConfigurationFile::findMediaByRealPath(QString realPath)
 Dir *ConfigurationFile::findMediaParentByLocalPath(QString localPath)
 {
 
-        QList<Dir*>::iterator i;
+	  QList<Dir*>::iterator i;
 
 	  //On parcours la liste des dépots
-        for(i=depots->begin(); i!=depots->end(); i++)
+	  for(i=depots->begin(); i!=depots->end(); i++)
 	{
 		  //On recherche le parent du localPath dans l'arborescence de ce dépot
-                Dir *find=(*i)->findMediaParentByLocalPath(localPath);
+		    Dir *find=(*i)->findMediaParentByLocalPath(localPath);
 		if(find!=NULL) return find;
 	}
 	return NULL;
@@ -327,13 +327,13 @@ Dir *ConfigurationFile::findMediaParentByLocalPath(QString localPath)
 //Recherche quel est le repertoire du média qui a ce realPath
 Dir *ConfigurationFile::findMediaParentByRealPath(QString realPath)
 {
-        QList<Dir*>::iterator i;
+	  QList<Dir*>::iterator i;
 
 	  //On parcours la liste des dépots
-        for(i=depots->begin(); i!=depots->end(); i++)
+	  for(i=depots->begin(); i!=depots->end(); i++)
 	{
 		  //On recherche le parent du realPath dans l'arborescence de ce dépot
-                Dir *find=(*i)->findMediaParentByRealPath(realPath);
+		    Dir *find=(*i)->findMediaParentByRealPath(realPath);
 		if(find!=NULL) return find;
 	}
 	return NULL;

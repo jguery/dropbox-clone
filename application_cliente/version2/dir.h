@@ -2,6 +2,9 @@
 #define DIR_H
 
 #include "file.h"
+#include <QtCore/QFileSystemWatcher>
+#include <QtCore/QDir>
+
 
 class HddInterface;
 
@@ -39,6 +42,9 @@ public:
 
 	//Accesseur pour son listener(objet qu'il averti en cas de modifications)
 	void setSignalListener(HddInterface *hddInterface);
+
+	//Une methode statique qui sert à supprimer un repertoire non vide
+	static void removeNonEmptyDirectory(QString path);
 
 	//Destructeur
 	virtual ~Dir();

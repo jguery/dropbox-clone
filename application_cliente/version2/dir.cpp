@@ -290,6 +290,8 @@ Media *Dir::findMediaByLocalPath(QString localPath)
 }
 
 
+
+
 //Recherche à quel média correspond ce realPath
 //Fonction récursive qui agit sur tous les submedias
 Media *Dir::findMediaByRealPath(QString realPath)
@@ -323,8 +325,8 @@ Dir *Dir::findMediaParentByLocalPath(QString localPath)
 	//Si c'est le cas on retourne this
 	for(int i=0;i<subMedias->size();i++)
 	{
-                if(subMedias->at(i)->getLocalPath()==localPath)
-                    return this;
+		    if(subMedias->at(i)->getLocalPath()==localPath)
+			  return this;
 	}
 
 	//Sinon le fait la recherche dans ses sous médias
@@ -334,8 +336,8 @@ Dir *Dir::findMediaParentByLocalPath(QString localPath)
 
 		    //On apelle la fonction récursivement
 		    Dir *find=((Dir*)subMedias->at(i))->findMediaParentByLocalPath(localPath);
-                if(find!=NULL)
-                    return find;
+		    if(find!=NULL)
+			  return find;
 	}
 
 	//On a rien trouvé dans la recherche, on retourne NULL
@@ -355,8 +357,8 @@ Dir *Dir::findMediaParentByRealPath(QString realPath)
 	//Si c'est le cas on retourne this
 	for(int i=0;i<subMedias->size();i++)
 	{
-                if(subMedias->at(i)->getRealPath()==realPath)
-                    return this;
+		    if(subMedias->at(i)->getRealPath()==realPath)
+			  return this;
 	}
 
 	//Sinon on fait la recherche dans ses sous médias
@@ -366,8 +368,8 @@ Dir *Dir::findMediaParentByRealPath(QString realPath)
 
 		//On apelle la fonction récursivement
 		Dir *find=((Dir*)subMedias->at(i))->findMediaParentByRealPath(realPath);
-                if(find!=NULL)
-                    return find;
+		    if(find!=NULL)
+			  return find;
 	}
 
 	//On a rien trouvé dans la recherche, on retourne NULL
@@ -388,6 +390,26 @@ void Dir::setSignalListener(HddInterface *hddInterface)
 		d->setSignalListener(hddInterface);
 	}
 }
+
+
+
+//Une méthode statique qui supprime un répertoire non vide
+void Dir::removeNonEmptyDirectory(QString path)
+{
+    QDir dir(path);
+
+    //Supprime tous les fichier contenus dans le dossier path
+    QFileInfoList fileList = dir.entryInfoList( QDir::Files | QDir::Hidden );
+    foreach(QFileInfo file, fileList) dir.remove( file.absoluteFilePath());
+
+    //Supprime tous les dossiers contenus dans le dossier path
+    QFileInfoList dirList = dir.entryInfoList( QDir::AllDirs | QDir::Hidden | QDir::NoDotAndDotDot );
+    foreach(QFileInfo dir, dirList) Dir::removeNonEmptyDirectory(dir.absoluteFilePath());
+
+    //On supprime enfin le dossier name
+    dir.rmdir(dir.absolutePath());
+}
+
 
 
 

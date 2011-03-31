@@ -1,15 +1,14 @@
-#ifndef SOCKet_H
-#define SOCKet_H
+#ifndef SOCKET_H
+#define SOCKET_H
 
 #include <QtNetwork>
 
 /*
- Cette classe héritant de QtcpSocket implémente une socket
+ Cette classe héritant de QSslSocket implémente une socket sécurisée
  capable de recevoir des messages xml complets du client, et de lui en envoyer.
- Elle ne gère pas le ssl pour l'instant
 */
 
-class Socket : public QTcpSocket
+class Socket : public QSslSocket
 {
 	Q_OBJECT
 
@@ -33,4 +32,4 @@ private:
 	quint64 blockSize;
 };
 
-#endif // SOCKet_H
+#endif // SOCKET_H

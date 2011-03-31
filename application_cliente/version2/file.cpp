@@ -1,5 +1,7 @@
 #include "file.h"
 
+
+
 //Permet de créer un objet fichier en passant son localPath et son realPath
 //Le fichier doit exister sur le disque dur
 //On crée enfaite une synchronisation, pas un vrai fichier
@@ -16,6 +18,8 @@ File *File::createFile(QString localPath,QString realPath)
 	//On peut créer le fichier
 	return new File(localPath,realPath,hash);
 }
+
+
 
 //Fonction statique permetant de hasher un fichier pour récupérer sa signature.
 //Ici on peut implémenter l'algorithme de hash (md5 ou ...)
