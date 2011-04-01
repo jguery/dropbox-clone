@@ -66,7 +66,12 @@ ConfigurationNetwork::ConfigurationNetwork(QString address, int port)
 
 QString ConfigurationNetwork::getAddress()
 {
-	return address;
+        return address;
+}
+
+QString ConfigurationNetwork::getFullAddress()
+{
+    return address+":"+QString::number(port);
 }
 
 void ConfigurationNetwork::setAddress(QString address)

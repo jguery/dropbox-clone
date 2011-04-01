@@ -30,6 +30,7 @@ public:
 
 	//Des accesseurs et mutateurs
 	QString getAddress();
+        QString getFullAddress();    //IP + port
 	int getPort();
 	void setAddress(QString address);
 	void setPort(int port);

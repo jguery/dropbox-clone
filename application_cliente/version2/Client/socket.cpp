@@ -14,6 +14,9 @@ Socket::Socket() : QSslSocket()
 
 	//On connecte le signal de paquets arrivés au slot inputStream
 	QObject::connect(this, SIGNAL(readyRead()), this, SLOT(inputStream()));
+
+        //Toujours cette malheureuse ligne...
+        QObject::connect(this,SIGNAL(sslErrors(QList<QSslError>)),this,SLOT(ignoreSslErrors()));
 }
 
 
@@ -23,17 +26,18 @@ Socket::Socket() : QSslSocket()
 bool Socket::connectToServer(QString address,int port)
 {
 	//On vérifie qu'on est pas déjà connecté
-	if(this->state()==ConnectedState) return true;
+        if(this->state()==ConnectedState)
+            return true;
 
 	//On récupère la clé privée du client
-	QFile file(PRIVATEKEY_FILE);
+        QFile file(PRIVATEKEY_FILE);
 	if(!file.open(QIODevice::ReadOnly))
 	{
 		qDebug("La clé privée du client est introuvable.");
 		return false;
 	}
 
-	QSslKey key(&file, QSsl::Rsa, QSsl::Pem, QSsl::PrivateKey, "dropbox");
+        QSslKey key(&file, QSsl::Rsa, QSsl::Pem, QSsl::PrivateKey, "pass");
 	if (key.isNull())
 	{
 		qDebug("La clé privée du client est nulle");
@@ -50,13 +54,10 @@ bool Socket::connectToServer(QString address,int port)
 	{
 		qDebug("Impossible de charger le certificat du CA.");
 		return false;
-	}
+        }
 
-	//on supprime la vérification du serveur
-	setPeerVerifyMode(QSslSocket::VerifyNone);
-
-	//on ignore les erreurs car on a un certificat auto signé
-	ignoreSslErrors();
+        //on supprime la vérification du serveur
+        //setPeerVerifyMode(QSslSocket::VerifyNone);
 
 	//on se connecte au serveur
 	connectToHostEncrypted(address, port);
@@ -75,7 +76,8 @@ bool Socket::connectToServer(QString address,int port)
 bool Socket::disconnectFromServer()
 {
 	//On vérifie qu'on est pas déjà déconnecté
-	if(this->state()!=ConnectedState) return true;
+        if(this->state()!=ConnectedState)
+            return true;
 
 	//On se déconnecte. Maximum 3secondes pour la déconnexion
 	disconnectFromHost();

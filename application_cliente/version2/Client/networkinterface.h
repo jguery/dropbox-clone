@@ -1,6 +1,7 @@
 #ifndef NETWORKINTERFACE_H
 #define NETWORKINTERFACE_H
 
+#include <QStandardItemModel>
 #include "configurationdata.h"
 #include "socket.h"
 #include "messages.h"
@@ -16,7 +17,7 @@ class NetworkInterface: public QObject
 
 public:
 	//Une méthode statique pour créer l'objet
-	static NetworkInterface *createNetworkInterface(ConfigurationData *configurationData);
+        static NetworkInterface *createNetworkInterface(ConfigurationData *configurationData, QStandardItemModel *model);
 
 	//Les fonction de connexion et déconnexion
 	bool connect();
@@ -46,16 +47,21 @@ private slots:
 	//Slots pour recevoir les évènement de la socket
 	void stateChangedAction(QAbstractSocket::SocketState);
 	void receiveMessageAction(QByteArray *message);
+        void connexionEncrypted();
+        void erreursSsl(const QList<QSslError>&);
 
 private:
 	//Le constructeur
-	NetworkInterface(ConfigurationData *configurationData);
+        NetworkInterface(ConfigurationData *configurationData, QStandardItemModel *model);
 
 	//La socket qui servira à se connecter au serveur
 	Socket *socket;
 
 	//La configuration totale
 	ConfigurationData *configurationData;
+
+        //Juste pour l'affichage
+        QStandardItemModel *model;
 };
 
 

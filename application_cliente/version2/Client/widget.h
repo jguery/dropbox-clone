@@ -11,6 +11,10 @@
  Elle permet de voir tous les évenements par l'intermediaire d'une qtableview
 */
 
+#define MSG_HDD QColor::fromRgb(0,255,155)
+#define MSG_NETWORK QColor::fromRgb(255,0,0)
+#define MSG_INIT QColor::fromRgb(0,255,255)
+
 class Widget : public QWidget
 {
 	Q_OBJECT
@@ -20,7 +24,7 @@ public:
 	Widget();
 
 	//Une méthode statique pour écrire dans la qtableview
-	static void addRowToTable(QString sentence,QStandardItemModel *model);
+        static void addRowToTable(QString sentence,QStandardItemModel *model, QColor color=MSG_NETWORK);
 
 private:
 	//la configuration

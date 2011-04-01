@@ -59,7 +59,7 @@ void HddInterface::mediaHasBeenCreated(Media *m)
 		Dir *d=(Dir*)m;
 		d->setSignalListener(this);
 	}
-	Widget::addRowToTable("Le media "+m->getLocalPath()+" a été créé",model);
+        Widget::addRowToTable("Le media "+m->getLocalPath()+" a été créé",model,MSG_HDD);
 
         //Sauve la nouvelle config des fichiers synchronisés
         configurationData->save();
@@ -80,7 +80,7 @@ void HddInterface::mediaHasBeenRemoved(Media *m)
 		Dir *d=(Dir*)m;
 		d->setSignalListener(NULL);
 	}
-	Widget::addRowToTable("Le media "+m->getLocalPath()+" a été supprimé",model);
+        Widget::addRowToTable("Le media "+m->getLocalPath()+" a été supprimé",model,MSG_HDD);
 	delete m;
 
 	//Sauve la nouvelle config des fichiers synchronisés
@@ -101,7 +101,7 @@ void HddInterface::fileHasBeenUpdated(File *f)
 
 	file.close();
 
-	Widget::addRowToTable("Le fichier "+f->getLocalPath()+" a été modifié",model);
+        Widget::addRowToTable("Le fichier "+f->getLocalPath()+" a été modifié",model,MSG_HDD);
 
 	configurationData->save();
 }
@@ -135,7 +135,7 @@ void HddInterface::receiveModifiedFileMessageAction(File *f,QByteArray content)
         //Remet le dossier sur écoute
 	dir->setSignalListener(this);
 
-	Widget::addRowToTable("Message du serveur: le fichier "+f->getLocalPath()+" a été modifié",model);
+        Widget::addRowToTable("Message du serveur: le fichier "+f->getLocalPath()+" a été modifié",model,MSG_HDD);
 
         //Sauve toute la config
         configurationData->save();
@@ -164,7 +164,7 @@ void HddInterface::receiveCreatedMediaMessageAction(Dir *parent,QString realName
                 //Met le dossier créé sur écoute
 		d->setSignalListener(this);
 
-		Widget::addRowToTable("Message du serveur: le repertoire "+d->getLocalPath()+" a été créé",model);
+                Widget::addRowToTable("Message du serveur: le repertoire "+d->getLocalPath()+" a été créé",model,MSG_HDD);
 	}
 
         else                        //Le media créé est un fichier, il est vide (un autre message sera envoyé quand il sera plein)
@@ -183,7 +183,7 @@ void HddInterface::receiveCreatedMediaMessageAction(Dir *parent,QString realName
                     return;
 		parent->getSubMedias()->append(f);
 
-		Widget::addRowToTable("Message du serveur: le fichier "+f->getLocalPath()+" a été créé",model);
+                Widget::addRowToTable("Message du serveur: le fichier "+f->getLocalPath()+" a été créé",model,MSG_HDD);
 	}
 
         //On remet le dossier parent sur écoute
@@ -220,14 +220,14 @@ void HddInterface::receiveRemovedMediaMessageAction(Media *m)
 		Dir *d=(Dir*)m;
 		d->setSignalListener(NULL);
 		Dir::removeNonEmptyDirectory(d->getLocalPath());
-		Widget::addRowToTable("Message du serveur: le repertoire "+d->getLocalPath()+" a été supprimé",model);
+                Widget::addRowToTable("Message du serveur: le repertoire "+d->getLocalPath()+" a été supprimé",model,MSG_HDD);
 		delete d;
 	}
         else                    //On supprime un fichier
 	{
 		File *f=(File*)m;
 		QFile::remove(f->getLocalPath());
-		Widget::addRowToTable("Message du serveur: le fichier "+f->getLocalPath()+" a été supprimé",model);
+                Widget::addRowToTable("Message du serveur: le fichier "+f->getLocalPath()+" a été supprimé",model,MSG_HDD);
 		delete f;
 	}
 

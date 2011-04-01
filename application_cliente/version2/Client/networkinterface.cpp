@@ -1,32 +1,40 @@
 #include "networkinterface.h"
-
+#include "widget.h"
 
 
 //La méthode statique d'allocation
-NetworkInterface *NetworkInterface::createNetworkInterface(ConfigurationData *configurationData)
+NetworkInterface *NetworkInterface::createNetworkInterface(ConfigurationData *configurationData, QStandardItemModel *model)
 {
 	//On teste la validité de la configuration
-	if(configurationData==NULL) return NULL;
+        if(configurationData==NULL)
+            return NULL;
+
+        if(model==NULL)
+            return NULL;
 
 	//On retourne l'objet créé
-	return new NetworkInterface(configurationData);
+        return new NetworkInterface(configurationData,model);
 }
 
 
 //Le constructeur
-NetworkInterface::NetworkInterface(ConfigurationData *configurationData): QObject()
+NetworkInterface::NetworkInterface(ConfigurationData *configurationData, QStandardItemModel *model): QObject()
 {
 	//On crèe la socket
 	socket=new Socket();
 
 	//On établit les connexion des évenement de socket à la classe.
 	QObject::connect(socket,SIGNAL(stateChanged(QAbstractSocket::SocketState)),this,SLOT(stateChangedAction(QAbstractSocket::SocketState)));
-	QObject::connect(socket,SIGNAL(connected()),this,SIGNAL(connectedToServer()));
+        QObject::connect(socket,SIGNAL(encrypted()),this,SLOT(connexionEncrypted()));
+        QObject::connect(socket,SIGNAL(connected()),this,SIGNAL(connectedToServer()));
+        QObject::connect(socket,SIGNAL(sslErrors(QList<QSslError>)),this,SLOT(erreursSsl(QList<QSslError>)));
 	QObject::connect(socket,SIGNAL(disconnected()),this,SIGNAL(disconnectedFromServer()));
 	QObject::connect(socket,SIGNAL(receiveMessage(QByteArray*)),this,SLOT(receiveMessageAction(QByteArray*)));
 
 	//On initialise la socket
 	this->configurationData=configurationData;
+
+        this->model = model;
 }
 
 
@@ -43,6 +51,23 @@ bool NetworkInterface::disconnect()
 {
 	//C'est le socket qui s'en charge
 	return socket->disconnectFromServer();
+}
+
+
+//Recu quand la connexion a été correctement cryptée
+void NetworkInterface::connexionEncrypted()
+{
+    Widget::addRowToTable("Connexion avec le serveur correctement établie et cryptée",model,MSG_NETWORK);
+}
+
+
+//Erreurs SSL recues pendant la phase de handshake
+void NetworkInterface::erreursSsl(const QList<QSslError> &errors)
+{
+    foreach(const QSslError &error, errors)
+    {
+        Widget::addRowToTable("Erreur SSL ignorée: "+ error.errorString(), model,MSG_NETWORK);
+    }
 }
 
 
@@ -207,12 +232,14 @@ void NetworkInterface::stateChangedAction(QAbstractSocket::SocketState state)
 	//Le nouvel état est dans state.
 	//Selon sa valeur, on rédige une description à renvoyer
 	QString description;
-	if(state==QAbstractSocket::UnconnectedState) description="L'application est en mode déconnecté du serveur";
-	else if(state==QAbstractSocket::HostLookupState) description="L'application recherche le serveur à l'adresse: "+configurationData->getConfigurationNetwork()->getAddress();
+        if(state==QAbstractSocket::UnconnectedState) description="L'application déconnectée du serveur";
+        else if(state==QAbstractSocket::HostLookupState) description="L'application recherche le serveur à l'adresse: "+configurationData->getConfigurationNetwork()->getFullAddress();
 	else if(state==QAbstractSocket::ConnectingState) description="L'application tente de se connecter au serveur";
-	else if(state==QAbstractSocket::ConnectedState) description="L'application est en mode connecté au serveur";
-	else if(state==QAbstractSocket::ClosingState) description="L'application est en cours de fermeture de la connexion";
+        else if(state==QAbstractSocket::ConnectedState) description="L'application est connectée au serveur en mode non crypté";
+        else if(state==QAbstractSocket::ClosingState) description="L'application coupe sa connexion au serveur";
 	else description="La connexion réseau est à un état inconnu";
+
+        Widget::addRowToTable("socket::stateChanged: "+description,model,MSG_NETWORK);
 
 	//On émet un signal contenant l'état et sa description
 	emit connexionStateChanged(state,description);
