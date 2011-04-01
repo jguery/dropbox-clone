@@ -1,8 +1,8 @@
 #ifndef WIDGET_H
 #define WIDGET_H
 
-#include "server.h"
 #include <QtGui>
+#include "server.h"
 
 /*
  Cette classe implémente une fenetre de test pour le serveur.

@@ -1,8 +1,8 @@
 #ifndef CLIENTMANAGER_H
 #define CLIENTMANAGER_H
 
+#include <QStandardItemModel>
 #include "socket.h"
-#include <QtGui>
 
 
 /*
@@ -22,10 +22,20 @@ public slots:
 	//Le slot levé lorsqu'un message est recu
 	void receiveMessageAction(QByteArray *message);
 
+        //Lorsqu'un client est déconnecté
+        void clientDisconnected();
+
+        //On recoit des erreurs lors de la connexion SSL
+        void erreursSsl(const QList<QSslError>&);
+
+        void connexionEncrypted();
+
 private:
 	ClientManager(QVector<ClientManager*> *clients,QStandardItemModel *model);
-	//Le socket communiquant avec le client
+
+        //La socket communiquant avec le client
 	Socket *socket;
+
 	//La liste des autres clients
 	QVector<ClientManager*> *clients;
 	QStandardItemModel *model;

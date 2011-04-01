@@ -33,7 +33,7 @@ bool Socket::setDescriptor(int socketDescriptor)
 		return false;
 	}
 
-	QSslKey key(&file, QSsl::Rsa, QSsl::Pem, QSsl::PrivateKey, "dropbox");
+        QSslKey key(&file, QSsl::Rsa, QSsl::Pem, QSsl::PrivateKey, "pass");
 	if (key.isNull())
 	{
 		qDebug("La clé privée du serveur est nulle");
@@ -52,11 +52,12 @@ bool Socket::setDescriptor(int socketDescriptor)
 		return false;
 	}
 
-	//on supprime la vérification du serveur
-	setPeerVerifyMode(QSslSocket::VerifyNone);
+        //on supprime la vérification des certificats des clients
+        //seuls ces derniers vérifient les clés et certificat du serveur
+        setPeerVerifyMode(QSslSocket::VerifyNone);
 
 	//on ignore les erreurs car on a un certificat auto signé
-	ignoreSslErrors();
+        ignoreSslErrors();
 
 	//on se connecte au serveur
 	startServerEncryption();

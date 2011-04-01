@@ -1,7 +1,9 @@
 #ifndef SOCKET_H
 #define SOCKET_H
 
-#include <QtNetwork>
+#include <QSslSocket>
+#include <QSslKey>
+#include <QFile>
 
 /*
  Cette classe héritant de QSslSocket implémente une socket sécurisée
@@ -15,9 +17,12 @@ class Socket : public QSslSocket
 public:
 	//Constructeur et fonctions de connexion, déconnexions
 	Socket();
+
 	//Pour renseigner le descripteur du client
 	bool setDescriptor(int socketDescriptor);
+
 	bool disconnectClient();
+
 	//Pour envoyer un message
 	bool sendMessage(QByteArray *message);
 
