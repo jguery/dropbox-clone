@@ -21,7 +21,7 @@ class Dir: public Media
 
 public:
 	//Des fonctions statiques createDir et loadDir pour allouer un objet Dir
-	static Dir *createDir(QString localPath,QString realPath);
+	static Dir *createDir(QString localPath,QString realPath,int revision,bool readOnly);
 	static Dir *loadDir(QDomNode noeud);
 
 	//Pour récupérer la liste de ses sous médias
@@ -46,16 +46,19 @@ public:
 	//Une methode statique qui sert à supprimer un repertoire non vide
 	static void removeNonEmptyDirectory(QString path);
 
+	//Une méthode pour chercher les modifications dans l'arborescence
+	bool searchChanges(bool recursif=false);
+
 	//Destructeur
 	virtual ~Dir();
 
 private slots:
 	//Le slot qui sera appelé lorsque le repertoire a subit un changement
-	void directoryChangedAction(QString);
+	void directoryChangedAction();
 
 private:
 	//Constructeur
-	Dir(QString localPath,QString realPath);
+	Dir(QString localPath,QString realPath,int revision,bool readOnly);
 
 	//La liste de ses sous médias
 	QVector<Media*> *subMedias;

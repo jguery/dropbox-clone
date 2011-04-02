@@ -130,7 +130,7 @@ void HddInterface::receiveModifiedFileMessageAction(File *f,QByteArray content)
 	}
 	file.write(content);
 	file.close();
-        f->updateContent();     //Met à jour la signature du fichier
+	  f->updateHash();     //Met à jour la signature du fichier
 
         //Remet le dossier sur écoute
 	dir->setSignalListener(this);
@@ -156,7 +156,7 @@ void HddInterface::receiveCreatedMediaMessageAction(Dir *parent,QString realName
                     return;
 
                 //Crée le répertoire dans l'arborescence de synchronisation du client
-		Dir *d=Dir::createDir(parent->getLocalPath()+"/"+realName,parent->getRealPath()+"/"+realName);
+		Dir *d=Dir::createDir(parent->getLocalPath()+"/"+realName,parent->getRealPath()+"/"+realName,0,false);
                 if(!d)
                     return ;
 		parent->getSubMedias()->append(d);
@@ -178,7 +178,7 @@ void HddInterface::receiveCreatedMediaMessageAction(Dir *parent,QString realName
 		file.close();
 
                 //Crée le fichier à l'arbo de synchronisation
-		File *f=File::createFile(parent->getLocalPath()+"/"+realName,parent->getRealPath()+"/"+realName);
+		File *f=File::createFile(parent->getLocalPath()+"/"+realName,parent->getRealPath()+"/"+realName,0,false);
                 if(!f)
                     return;
 		parent->getSubMedias()->append(f);

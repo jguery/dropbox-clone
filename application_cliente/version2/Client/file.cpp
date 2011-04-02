@@ -5,19 +5,75 @@
 //Permet de créer un objet fichier en passant son localPath et son realPath
 //Le fichier doit exister sur le disque dur
 //On crée enfaite une synchronisation, pas un vrai fichier
-File *File::createFile(QString localPath,QString realPath)
+File *File::createFile(QString localPath,QString realPath,int revision,bool readOnly)
 {
-        if(localPath.isEmpty() || realPath.isEmpty())
-            return NULL;
+	if(localPath.isEmpty() || realPath.isEmpty())
+		return NULL;
 
-        //Récupère la signature (le hash) du fichier
-	QByteArray *hash=File::hashFile(localPath);
-	  if(hash==NULL) //Si la signature n'est pas valide on ne crèe pas le fichier
-            return NULL;
+	//On vérifie que le fichier existe
+	QFile f(localPath);
+	if(!f.exists()) return NULL;
+
+	//On considère que le contenu est vide
+	QByteArray *hash=File::hashFile();
 
 	//On peut créer le fichier
-	return new File(localPath,realPath,hash);
+	return new File(localPath,realPath,hash,revision,readOnly);
 }
+
+
+
+
+
+
+
+//Permet de charger le fichier depuis un noeud xml.
+File *File::loadFile(QDomNode noeud)
+{
+	//On vérifie que le nom du noeud xml est bien "file"
+	if(noeud.toElement().tagName()!="file")
+		return NULL;
+
+	//On récupère les attributs localPath et realPath du noeud xml.
+	QString localPath=noeud.toElement().attribute("localPath","");
+	QString realPath=noeud.toElement().attribute("realPath","");
+
+	if(localPath.isEmpty() || realPath.isEmpty())
+		return NULL;
+
+	//On récupère les attributs révision et readOnly du noeud xml.
+	QString revisionString=noeud.toElement().attribute("revision","");
+	QString readOnlyString=noeud.toElement().attribute("readOnly","");
+
+	//On convertit ces attributs en int et bool
+	int revision;bool readOnly;bool ok;
+	revision=revisionString.toInt(&ok); if(!ok) revision=0;
+	readOnly=readOnlyString=="true"?true:false;
+
+	QByteArray *hash;
+	//Récupère le hash du fichier, contenu dans le xml
+	//C'est le premier et le seul fils du noeud représentant le fichier
+
+	if(noeud.childNodes().length()==0) //Le hash est vide ( = "" )
+	{
+		hash=new QByteArray();
+	}
+	else if(!noeud.firstChild().isText())   //Si ce fils n'est pas du texte...
+	{
+		delete hash;
+		return NULL;    //On annule tout
+	}
+	else    //Récupère le texte contenu dans le fils, c'est le hash
+	{
+		hash=new QByteArray(noeud.firstChild().toText().data().toAscii());
+	}
+
+	 //On peut maintenant créer l'objet
+	return new File(localPath,realPath,hash,revision,readOnly);
+}
+
+
+
 
 
 
@@ -26,10 +82,15 @@ File *File::createFile(QString localPath,QString realPath)
 //Pour l'instant on retourne seulement le contenu du fichier comme hash, mais c'est bien sur à changer.
 QByteArray *File::hashFile(QString path)
 {
+	//Si le chemin, est vide, on renvoi le hash d'une chaine vide
+	if(path=="") return new QByteArray();
+
+	//Sinon on ouvre le fichier en lecture
 	QFile f(path);
 	  if(!f.open(QIODevice::ReadOnly)) //Si l'ouverture échoue, on renvoie une signature NULL (non valide)
-            return NULL;
+		return NULL;
 
+	  //Et on renvoi le hash de son contenu
 	QByteArray *hash=new QByteArray(f.readAll());
 	f.close();
 
@@ -37,53 +98,10 @@ QByteArray *File::hashFile(QString path)
 }
 
 
-//Permet de charger le fichier depuis un noeud xml. Attention il faut que la signature du fichier qui se trouve dans le xml
-//soit égale à sa signature actuelle. Autrement il faut que le fichier n'ait pas été modifié à l'insu du programme
-File *File::loadFile(QDomNode noeud)
-{
-	//On vérifie que le nom du noeud xml est bien "file"
-        if(noeud.toElement().tagName()!="file")
-            return NULL;
 
-	  //On récupère les attributs localPath et realPath du noeud xml.
-	QString localPath=noeud.toElement().attribute("localPath","");
-	QString realPath=noeud.toElement().attribute("realPath","");
-        if(localPath.isEmpty() || realPath.isEmpty())
-            return NULL;
 
-        //Récupère le hash du fichier (sa valeur actuelle)
-	QByteArray *hash=hashFile(localPath);
-        if(hash==NULL)
-            return NULL;
 
-	QByteArray *h;
-        //Récupère le hash du fichier, contenu dans le xml
-        //C'est le premier et le seul fils du noeud représentant le fichier
-        if(noeud.childNodes().length()==0) //Le hash est vide ( = "" )
-	{
-		h=new QByteArray();
-	}
-        else if(!noeud.firstChild().isText())   //Si ce fils n'est pas du texte...
-	{
-                delete h;  delete hash;
-                return NULL;    //On annule tout
-	}
-        else    //Récupère le texte contenu dans le fils, c'est le hash
-	{
-		h=new QByteArray(noeud.firstChild().toText().data().toAscii());
-	}
 
-        //Vérifie que le hash actuel et celui contenu dans le xml sont égaux
-	if((*hash)!=(*h))
-	{
-		delete hash;delete h;
-		return NULL;
-	}
-	delete h;
-
-        //C'est bien égal, on crée l'objet
-	return new File(localPath,realPath,hash);
-}
 
 
 //Détecte si oui ou non le fichier a été supprimé
@@ -93,6 +111,15 @@ bool File::hasBeenRemoved()
 	if(!file.exists()) return true; //S'il n'existe pas, c'est qu'il a été supprimé
 	return false;
 }
+
+
+
+
+
+
+
+
+
 
 //Détecte si oui ou non le fichier a été modifié
 //Pour cela, on compare les signatures actuelle et dans le xml
@@ -108,6 +135,10 @@ bool File::hasBeenUpdated()
 	return false;
 }
 
+
+
+
+
 //Retourne false car ce n'est pas un repertoire ;)
 bool File::isDirectory()
 {
@@ -115,11 +146,18 @@ bool File::isDirectory()
 }
 
 
+
+
+
 //Constructeur qui ne fait qu'initialiser
-File::File(QString localPath,QString realPath,QByteArray *hash): Media(localPath,realPath)
+File::File(QString localPath,QString realPath,QByteArray *hash,int revision,bool readOnly): Media(localPath,realPath,revision,readOnly)
 {
 	this->hash=hash;
 }
+
+
+
+
 
 
 //Retourne le code xml correspondant au fichier pour sauvegarde ultérieure.
@@ -132,12 +170,22 @@ QDomElement File::toXml(QDomDocument *document)
 	element.setAttribute("localPath",localPath);
 	element.setAttribute("realPath",realPath);
 
+	//On écrit ses attributs revision et readOnly
+	element.setAttribute("revision",QString::number(revision));
+	element.setAttribute("readOnly",readOnly?"true":"false");
+
 	//On ajoute sa signature dans le noeud xml
 	element.appendChild(document->createTextNode(QString(*hash)));
 
 	//On retourne le noeud xml
 	return element;
 }
+
+
+
+
+
+
 
 
 //Retourne this si le chemin localPath passé correspond au localPath du fichier
@@ -151,6 +199,12 @@ Media *File::findMediaByLocalPath(QString localPath)
 }
 
 
+
+
+
+
+
+
 //Retourne this si le chemin realPath passé correspond au realPath du fichier
 //Sinon retourne NULL
 Media *File::findMediaByRealPath(QString realPath)
@@ -161,8 +215,14 @@ Media *File::findMediaByRealPath(QString realPath)
 }
 
 
+
+
+
+
+
+
 //Met à jour le hash du fichier
-void File::updateContent()
+void File::updateHash()
 {
 	//On supprime l'ancien hash
 	delete this->hash;
@@ -170,6 +230,10 @@ void File::updateContent()
 	//On récalcule le nouveau hash
 	this->hash=hashFile(localPath);
 }
+
+
+
+
 
 
 //Le destructeur

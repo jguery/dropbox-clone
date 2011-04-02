@@ -26,7 +26,7 @@ class Media: public QObject
 	Q_OBJECT
 // le constructeur et les attributs sont protected pour être accéssible depuis les classes filles
 protected:
-	Media(QString localPath,QString realPath,int revision=0,bool readOnly=false);
+	Media(QString localPath,QString realPath,int revision,bool readOnly);
 
 	//Les attributs
 	QString localPath;
@@ -58,7 +58,7 @@ public:
 	void setRealPath(QString realPath);
 	void setRevision(int revision);
 	void incRevision();
-	virtual void setReadOnly(bool readOnly);
+	void setReadOnly(bool readOnly);
 
 	//Quelques méthodes statiques pour la gestion des fichiers et repertoires en général
 	static QString extractParentPath(QString path);

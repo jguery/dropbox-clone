@@ -44,9 +44,9 @@ Widget::Widget(): QWidget()
 
 	//On créé la configuration de fichier
 	QList<Dir*> *depots=new QList<Dir*>();
-        Dir *d1=Dir::createDir("/home/julien/test/A","/sd/1");depots->append(d1);
-        if(!d1){addRowToTable("Echec de la création du repertoire 1",model,MSG_INIT);return;}
-        //Dir *d2=Dir::createDir("/home/julien/test/B","/sd/1");depots->append(d2);
+	  Dir *d1=Dir::createDir("/home/julien/test/A","/sd/1",0,false);depots->append(d1);
+	  if(!d1){addRowToTable("Echec de la création du repertoire 1",model,MSG_INIT);return;}
+	  //Dir *d2=Dir::createDir("/home/julien/test/B","/sd/1",0,false);depots->append(d2);
         //if(!d2){addRowToTable("Echec de la création du repertoire 2",model,MSG_INIT);return;}
 	ConfigurationFile *configurationFile=ConfigurationFile::createConfigurationFile(depots);
         if(configurationFile) addRowToTable("Les configurations des repertoires surveillés ont été créés",model,MSG_INIT);
