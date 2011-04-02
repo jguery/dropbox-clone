@@ -53,12 +53,6 @@ void HddInterface::mediaHasBeenCreated(Media *m)
         //On prévient l'interface réseau, en passant le path dans le svn
 	networkInterface->sendMediaCreated(realPath);
 
-	//Si c'est un repertoire, on annule son signalListener
-	if(m->isDirectory())
-	{
-		Dir *d=(Dir*)m;
-		d->setSignalListener(this);
-	}
         Widget::addRowToTable("Le media "+m->getLocalPath()+" a été créé",model,MSG_HDD);
 
         //Sauve la nouvelle config des fichiers synchronisés

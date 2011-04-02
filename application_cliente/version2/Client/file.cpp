@@ -78,23 +78,30 @@ File *File::loadFile(QDomNode noeud)
 
 
 //Fonction statique permetant de hasher un fichier pour récupérer sa signature.
-//Ici on peut implémenter l'algorithme de hash (md5 ou ...)
-//Pour l'instant on retourne seulement le contenu du fichier comme hash, mais c'est bien sur à changer.
+//Ici on implemente l'algorithme de hash md5
 QByteArray *File::hashFile(QString path)
 {
+	QByteArray content;
 	//Si le chemin, est vide, on renvoi le hash d'une chaine vide
-	if(path=="") return new QByteArray();
+	if(path=="")
+	{
+		content="";
+	}
+	else
+	{
+		//Sinon on ouvre le fichier en lecture
+		QFile f(path);
+		if(!f.open(QIODevice::ReadOnly)) //Si l'ouverture échoue, on renvoie une signature NULL (non valide)
+			return NULL;
+		content=f.readAll(); //On récupère le contenu du fichier
+		f.close();
+	}
 
-	//Sinon on ouvre le fichier en lecture
-	QFile f(path);
-	  if(!f.open(QIODevice::ReadOnly)) //Si l'ouverture échoue, on renvoie une signature NULL (non valide)
-		return NULL;
+	//On déclare le hasher en MD5 (autres alternatives MD4 ou SHA2
+	QCryptographicHash hasher(QCryptographicHash::Md5);
+	hasher.addData(content);  //On met les données à hasher
 
-	  //Et on renvoi le hash de son contenu
-	QByteArray *hash=new QByteArray(f.readAll());
-	f.close();
-
-	return hash;
+	return new QByteArray(hasher.result().toBase64()); //On hash, on met le hash en base64 et on retourne le resultat
 }
 
 

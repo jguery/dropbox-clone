@@ -129,7 +129,9 @@ Dir::Dir(QString localPath,QString realPath,int revision,bool readOnly): Media(l
 	this->subMedias=new QVector<Media*>();
 	watcher=new QFileSystemWatcher();
 
-	watcher->addPath(localPath);  //Le watcher ne surveille que ce repertoire
+	QDir dir(localPath);
+	if(dir.exists())
+		watcher->addPath(localPath);  //Le watcher ne surveille que ce repertoire
 
 	//On connecte son signal au slot
 	QObject::connect(watcher,SIGNAL(directoryChanged(QString)),this,SLOT(directoryChangedAction()));
@@ -143,11 +145,10 @@ Dir::Dir(QString localPath,QString realPath,int revision,bool readOnly): Media(l
 
 
 //Cherche les éventuels modifications qu'il y a eu dans le repertoire
-//Si recursif est true, elle appele la méthode à ses sous médias
-bool Dir::searchChanges(bool recursif)
+void Dir::directoryChangedAction()
 {
 	//Si l'objet à prévenir en cas de modif n'existe pas, ne pas continuer.
-	if(hddInterface==NULL) return false;
+	if(hddInterface==NULL) return ;
 
 	bool isChanged=false; //contiendra true lorsqu'on aura détecter un changement
 
@@ -177,8 +178,6 @@ bool Dir::searchChanges(bool recursif)
 				if(!f->isReadOnly() && !this->isReadOnly())
 					hddInterface->mediaHasBeenRemoved(f);
 
-				delete f; //le fichier est détruit
-
 				isChanged=true; //On a détecter un changement
 
 				continue; //Prochain fichier
@@ -187,6 +186,8 @@ bool Dir::searchChanges(bool recursif)
 			//Le fichier a été modifié
 			else if(f->hasBeenUpdated())
 			{
+				f->updateHash(); //Met à jour son hash
+
 				//Si le fichier n'est pas en lecture seule, et que hddInterface n'est pas NULL,
 				//alors on le previent
 				if(!f->isReadOnly())
@@ -194,8 +195,6 @@ bool Dir::searchChanges(bool recursif)
 					hddInterface->fileHasBeenUpdated(f); //Prévient l'interface DD
 					f->incRevision(); //On passe à la prochaine révision
 				}
-
-				f->updateHash(); //Met à jour son hash
 
 				isChanged=true; //On a détecter un changement
 			}
@@ -219,18 +218,9 @@ bool Dir::searchChanges(bool recursif)
 				if(!this->isReadOnly() && !d->isReadOnly())
 					hddInterface->mediaHasBeenRemoved(d);   //On prévient l'interace DD
 
-				delete d; //le repertoire est détruit
-
 				isChanged=true; //On a détecter un changement
 
 				continue; //Prochain fichier
-			}
-
-			//Si on doit faire un parcours récursif, on le fait :)
-			if(recursif)
-			{
-				bool r=d->searchChanges(true);
-				if(r) isChanged=true;
 			}
 		}
 		//Si on a pas fait de remove, ajoute le chemin du media à une liste
@@ -283,22 +273,7 @@ bool Dir::searchChanges(bool recursif)
 	}
 
 	//Si on a détecté un changement, on reprend le parcours
-	if(isChanged) searchChanges();
-	return isChanged;
-}
-
-
-
-
-
-
-
-
-
-//Ce slot est appellé à chaque fois qu'une modification est détectée dans le repertoire
-void Dir::directoryChangedAction()
-{
-	searchChanges(false);
+	if(isChanged) directoryChangedAction();
 }
 
 
@@ -504,7 +479,7 @@ Dir *Dir::findMediaParentByRealPath(QString realPath)
 void Dir::setSignalListener(HddInterface *hddInterface)
 {
 	this->hddInterface=hddInterface;
-	searchChanges();
+	directoryChangedAction();
 
         //Change tous les signalListener de tous les répertoires contenus dans subMedias
 	for(int i=0;i<subMedias->size();i++)

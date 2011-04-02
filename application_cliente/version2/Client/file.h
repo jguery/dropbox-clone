@@ -3,7 +3,7 @@
 
 #include "media.h"
 #include <QtCore/QFile>
-
+#include <QtCore/QCryptographicHash>
 
 /*
    Cette classe représente un fichier physique.

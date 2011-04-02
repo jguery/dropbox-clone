@@ -46,9 +46,6 @@ public:
 	//Une methode statique qui sert à supprimer un repertoire non vide
 	static void removeNonEmptyDirectory(QString path);
 
-	//Une méthode pour chercher les modifications dans l'arborescence
-	bool searchChanges(bool recursif=false);
-
 	//Destructeur
 	virtual ~Dir();
 

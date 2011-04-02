@@ -20,8 +20,11 @@ class Widget : public QWidget
 	Q_OBJECT
 
 public:
-	//Constructeur
-	Widget();
+	//Constructeur à 3 paramètres : le localPath et le realPath du dépot sur lequel on veut travailler
+	Widget(QString localPath, QString realPath, QString configSavePath);
+
+	//Constructeur à 1 paramètre: le fichier de config du programme
+	Widget(QString configPath);
 
 	//Une méthode statique pour écrire dans la qtableview
         static void addRowToTable(QString sentence,QStandardItemModel *model, QColor color=MSG_NETWORK);
