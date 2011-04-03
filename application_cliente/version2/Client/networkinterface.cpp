@@ -6,14 +6,14 @@
 NetworkInterface *NetworkInterface::createNetworkInterface(ConfigurationData *configurationData, QStandardItemModel *model)
 {
 	//On teste la validité de la configuration
-        if(configurationData==NULL)
-            return NULL;
+	if(configurationData==NULL)
+		return NULL;
 
-        if(model==NULL)
-            return NULL;
+	if(model==NULL)
+		return NULL;
 
 	//On retourne l'objet créé
-        return new NetworkInterface(configurationData,model);
+	return new NetworkInterface(configurationData,model);
 }
 
 
@@ -25,16 +25,16 @@ NetworkInterface::NetworkInterface(ConfigurationData *configurationData, QStanda
 
 	//On établit les connexion des évenement de socket à la classe.
 	QObject::connect(socket,SIGNAL(stateChanged(QAbstractSocket::SocketState)),this,SLOT(stateChangedAction(QAbstractSocket::SocketState)));
-        QObject::connect(socket,SIGNAL(encrypted()),this,SLOT(connexionEncrypted()));
-        QObject::connect(socket,SIGNAL(connected()),this,SIGNAL(connectedToServer()));
-        QObject::connect(socket,SIGNAL(sslErrors(QList<QSslError>)),this,SLOT(erreursSsl(QList<QSslError>)));
+	QObject::connect(socket,SIGNAL(encrypted()),this,SLOT(connexionEncrypted()));
+	QObject::connect(socket,SIGNAL(connected()),this,SIGNAL(connectedToServer()));
+	QObject::connect(socket,SIGNAL(sslErrors(QList<QSslError>)),this,SLOT(erreursSsl(QList<QSslError>)));
 	QObject::connect(socket,SIGNAL(disconnected()),this,SIGNAL(disconnectedFromServer()));
 	QObject::connect(socket,SIGNAL(receiveMessage(QByteArray*)),this,SLOT(receiveMessageAction(QByteArray*)));
 
 	//On initialise la socket
 	this->configurationData=configurationData;
 
-        this->model = model;
+	this->model = model;
 }
 
 
@@ -57,17 +57,17 @@ bool NetworkInterface::disconnect()
 //Recu quand la connexion a été correctement cryptée
 void NetworkInterface::connexionEncrypted()
 {
-    Widget::addRowToTable("Connexion avec le serveur correctement établie et cryptée",model,MSG_NETWORK);
+	Widget::addRowToTable("Connexion avec le serveur correctement établie et cryptée",model,MSG_NETWORK);
 }
 
 
 //Erreurs SSL recues pendant la phase de handshake
 void NetworkInterface::erreursSsl(const QList<QSslError> &errors)
 {
-    foreach(const QSslError &error, errors)
-    {
-        Widget::addRowToTable("Erreur SSL ignorée: "+ error.errorString(), model,MSG_NETWORK);
-    }
+	foreach(const QSslError &error, errors)
+	{
+		Widget::addRowToTable("Erreur SSL ignorée: "+ error.errorString(), model,MSG_NETWORK);
+	}
 }
 
 
@@ -201,12 +201,13 @@ bool NetworkInterface::sendFileModified(QString realPath,QByteArray content)
 bool NetworkInterface::sendMediaCreated(QString realPath)
 {
 	//On vérifie que la socket est connectée
-        if(!socket->isWritable())
-            return false;
-        if(realPath.isEmpty())
-            return false;
+	if(!socket->isWritable())
+		return false;
 
-	  //On rédige le message et on l'envoi
+	if(realPath.isEmpty())
+		return false;
+
+	//On rédige le message et on l'envoi
 	QByteArray *message=Messages::createMediaCreatedMessage(realPath);
 	return socket->sendMessage(message);
 }

@@ -1,7 +1,9 @@
 #include "media.h"
 
-//le constructeur pour initialiser les attributs
 
+
+
+//le constructeur pour initialiser les attributs
 Media::Media(QString localPath,QString realPath,int revision,bool readOnly)
 {
 	this->localPath=localPath;
@@ -60,6 +62,11 @@ void Media::incRevision()
 	this->revision++;
 }
 
+void Media::decRevision()
+{
+	this->revision--;
+}
+
 
 
 
@@ -89,8 +96,6 @@ QString Media::extractParentPath(QString path)
 	if(path.endsWith("/")) parentPath=parentPath+"/";
 	return parentPath;
 }
-
-
 
 
 

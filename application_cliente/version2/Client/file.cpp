@@ -2,6 +2,7 @@
 
 
 
+
 //Permet de créer un objet fichier en passant son localPath et son realPath
 //Le fichier doit exister sur le disque dur
 //On crée enfaite une synchronisation, pas un vrai fichier
@@ -50,18 +51,12 @@ File *File::loadFile(QDomNode noeud)
 	revision=revisionString.toInt(&ok); if(!ok) revision=0;
 	readOnly=readOnlyString=="true"?true:false;
 
-	QByteArray *hash;
 	//Récupère le hash du fichier, contenu dans le xml
 	//C'est le premier et le seul fils du noeud représentant le fichier
-
+	QByteArray *hash;
 	if(noeud.childNodes().length()==0) //Le hash est vide ( = "" )
 	{
 		hash=new QByteArray();
-	}
-	else if(!noeud.firstChild().isText())   //Si ce fils n'est pas du texte...
-	{
-		delete hash;
-		return NULL;    //On annule tout
 	}
 	else    //Récupère le texte contenu dans le fils, c'est le hash
 	{
@@ -97,8 +92,8 @@ QByteArray *File::hashFile(QString path)
 		f.close();
 	}
 
-	//On déclare le hasher en MD5 (autres alternatives MD4 ou SHA2
-	QCryptographicHash hasher(QCryptographicHash::Md5);
+	//On déclare le hasher en MD5 (autres alternatives MD4 ou SHA1
+	QCryptographicHash hasher(QCryptographicHash::Sha1);
 	hasher.addData(content);  //On met les données à hasher
 
 	return new QByteArray(hasher.result().toBase64()); //On hash, on met le hash en base64 et on retourne le resultat
@@ -123,11 +118,6 @@ bool File::hasBeenRemoved()
 
 
 
-
-
-
-
-
 //Détecte si oui ou non le fichier a été modifié
 //Pour cela, on compare les signatures actuelle et dans le xml
 bool File::hasBeenUpdated()
@@ -141,7 +131,6 @@ bool File::hasBeenUpdated()
 	delete h;
 	return false;
 }
-
 
 
 
@@ -193,8 +182,6 @@ QDomElement File::toXml(QDomDocument *document)
 
 
 
-
-
 //Retourne this si le chemin localPath passé correspond au localPath du fichier
 //Sinon retourne NULL
 Media *File::findMediaByLocalPath(QString localPath)
@@ -209,9 +196,6 @@ Media *File::findMediaByLocalPath(QString localPath)
 
 
 
-
-
-
 //Retourne this si le chemin realPath passé correspond au realPath du fichier
 //Sinon retourne NULL
 Media *File::findMediaByRealPath(QString realPath)
@@ -220,9 +204,6 @@ Media *File::findMediaByRealPath(QString realPath)
             return this;
 	return NULL;
 }
-
-
-
 
 
 

@@ -70,9 +70,7 @@ Widget::Widget(QString localPath, QString realPath, QString configSavePath): QWi
 	this->hddInterface=HddInterface::createHddInterface(configurationData,networkInterface,model);
 	if(hddInterface) addRowToTable("L'interface disque a été crée",model,MSG_INIT);
 	else {addRowToTable("Echec de la création de l'interface disque",model,MSG_INIT);return;}
-
 }
-
 
 
 //Le constructeur à 1 paramètre

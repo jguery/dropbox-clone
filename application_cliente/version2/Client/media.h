@@ -58,6 +58,7 @@ public:
 	void setRealPath(QString realPath);
 	void setRevision(int revision);
 	void incRevision();
+	void decRevision();
 	void setReadOnly(bool readOnly);
 
 	//Quelques méthodes statiques pour la gestion des fichiers et repertoires en général
