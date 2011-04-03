@@ -55,6 +55,8 @@ void ClientManager::clientDisconnected()
 {
     QSslSocket *client = qobject_cast<QSslSocket*>(sender());
     Widget::addRowToTable("Le client "+ client->peerAddress().toString()+" s'est déconnecté.",model,false);
+
+    emit clientManagerStop(this);
 }
 
 void ClientManager::erreursSsl(const QList<QSslError> &errors)

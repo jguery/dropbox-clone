@@ -2,7 +2,7 @@
 
 
 //Le constructeur
-Server::Server(QStandardItemModel *model): QTcpServer()
+Server::Server(QStandardItemModel *model) : QTcpServer()
 {
 	this->model=model;
 	clients=new QVector<ClientManager*>();
@@ -47,5 +47,19 @@ void Server::incomingConnection(int socketDescriptor)
 	ClientManager *cm=ClientManager::createClientManager(socketDescriptor,clients,model);
 	if(cm==NULL) return;
 	clients->append(cm);
+	QObject::connect(cm,SIGNAL(clientManagerStop(ClientManager*)),this,SLOT(disconnectClient(ClientManager*)));
 }
 
+
+//Lorsqu'un client se déconnecte, appelé pour l'enlever du QVector
+void Server::disconnectClient(ClientManager *cl)
+{
+	if(cl==NULL)
+		return;
+
+	int index = clients->indexOf(cl);
+	if(index==-1)
+		return;
+
+	else clients->remove(index);
+}

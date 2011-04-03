@@ -10,7 +10,7 @@
  Il est chargé de communiquer avec le client.
 */
 
-class ClientManager: private QObject
+class ClientManager: public QObject
 {
 	Q_OBJECT
 
@@ -18,9 +18,13 @@ public:
 	//Une méthode statique pour allocation
 	static ClientManager *createClientManager(int clientSocket,QVector<ClientManager*> *clients,QStandardItemModel *model);
 
+signals:
+	//Emis pour dire qu'un client est parti, et donc qu'on arrete le client manager
+	void clientManagerStop(ClientManager*);
+
 public slots:
-	//Le slot levé lorsqu'un message est recu
-	void receiveMessageAction(QByteArray *message);
+	 //Le slot levé lorsqu'un message est recu
+	 void receiveMessageAction(QByteArray *message);
 
         //Lorsqu'un client est déconnecté
         void clientDisconnected();
@@ -33,7 +37,7 @@ public slots:
 private:
 	ClientManager(QVector<ClientManager*> *clients,QStandardItemModel *model);
 
-        //La socket communiquant avec le client
+	//La socket communiquant avec le client
 	Socket *socket;
 
 	//La liste des autres clients

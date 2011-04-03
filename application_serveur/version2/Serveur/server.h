@@ -12,6 +12,8 @@
 class Server: public QTcpServer
 {
 
+Q_OBJECT
+
 public:
 	//Le constructeur
 	Server(QStandardItemModel *model);
@@ -24,6 +26,9 @@ public:
 
 	//Lorsqu'un client se connecte
 	void incomingConnection(int socketDescriptor);
+
+public slots:
+	void disconnectClient(ClientManager*);	//Lorsqu'un client se déconnecte, appelé pour l'enlever du QVector
 
 private:
 	//La liste des clients
