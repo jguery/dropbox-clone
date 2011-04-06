@@ -32,8 +32,6 @@ Dir *Dir::createDir(QString localPath,QString realPath,Dir *parent,State state,i
 
 
 
-
-
 //Permet de charger le repertoire à partir d'un noeud xml.
 //A noter qu'il faut que le contenu du repertoire tel qu'il est décrit dans le noeud corresponde
 //exactement au contenu réel du repertoire sur le disque. C'est à dire qu'il n'y ai eu aucune modif
@@ -123,9 +121,6 @@ bool Dir::isDirectory()
 
 
 
-
-#include<iostream>
-
 //Le constructeur fait les initialisations, puis alloue le watcher, et connecte son signal directoryChanged
 Dir::Dir(QString localPath,QString realPath,Dir *parent,State state,int revision,bool readOnly): Media(localPath,realPath,parent,state,revision,readOnly)
 {
@@ -142,8 +137,6 @@ Dir::Dir(QString localPath,QString realPath,Dir *parent,State state,int revision
 
 	this->listen=false;
 }
-
-
 
 
 
@@ -174,9 +167,8 @@ void Dir::directoryChangedAction()
 				//Il est à l'état de suppression
 				f->setState(MediaIsRemoving);
 
-				//Si le repertoire n'est pas en lecture seule,
-				//Et que le fichier n'est pas en lecture seule,
-				//alors on prévient le module d'interface DD (qui assurera la comm sur le réseau)
+				//Si le repertoire n'est pas en lecture seule, Et que le fichier n'est pas en lecture seule,
+				//alors on prévient le parent du repertoire
 				if(!f->isReadOnly() && !this->isReadOnly())
 					emit detectChangement(f);
 
@@ -193,7 +185,7 @@ void Dir::directoryChangedAction()
 				//Il est à l'état de modification
 				f->setState(MediaIsUpdating);
 
-				//Si le fichier n'est pas en lecture seule, alors on le previent
+				//Si le fichier n'est pas en lecture seule, alors on previent le parent
 				if(!f->isReadOnly())
 					emit detectChangement(f);
 
@@ -212,11 +204,10 @@ void Dir::directoryChangedAction()
 				d->setState(MediaIsRemoving);
 				d->setListenning(false);
 
-				//Si le parent n'est pas en lecture seule,
-				//Et que le repertoire n'est pas en lecture seule,
-				//alors on prévient le module d'interface DD (qui assurera la comm sur le réseau)
+				//Si le parent n'est pas en lecture seule, Et que le repertoire n'est pas en lecture seule,
+				//alors on prévient le parent
 				if(!this->isReadOnly() && !d->isReadOnly())
-					emit detectChangement(d);   //On prévient l'interace DD
+					emit detectChangement(d);   //signal pour prévenir le parent
 
 				isChanged=true; //On a détecter un changement
 
@@ -255,15 +246,15 @@ void Dir::directoryChangedAction()
 			//on ajoute le media à la liste des subMedias
 			subMedias->append(m);
 
-			//On informe l'interface DD
+			//On informe le parent
 			if(!this->isReadOnly())
 				emit detectChangement(m);
 
-			//On charge son contenu
+			//On le met à l'écoute
 			if(m->isDirectory())
 			{
 				Dir *d=(Dir*)m;
-				d->setListenning(true);
+				d->setListenning(listen);
 			}
 
 			isChanged=true; //On a détecter un changement
@@ -275,9 +266,6 @@ void Dir::directoryChangedAction()
 	//Si on a détecté un changement, on reprend le parcours
 	if(isChanged) directoryChangedAction();
 }
-
-
-
 
 
 
@@ -296,14 +284,64 @@ bool Dir::hasBeenRemoved()
 
 
 
-
-//Retourne la liste des sous médias du repertoire
-QVector<Media*> *Dir::getSubMedias()
+//Récupérer le nombre de sous médias
+int Dir::numberSubMedia()
 {
-	return subMedias;
+	return subMedias->size();
 }
 
 
+
+//Récupérer un sous média à l'indice i
+Media *Dir::getSubMedia(int i)
+{
+	if(i<0 || i>=subMedias->size()) return NULL;
+	return subMedias->at(i);
+}
+
+
+
+
+
+//Ajouter un sous fichier
+File *Dir::addSubFile(QString localPath,QString realPath,State state,int revision,bool readOnly)
+{
+	File *f;
+	f=File::createFile(localPath,realPath,this,state,revision,readOnly);
+	if(f==NULL) return NULL;
+	subMedias->append(f);
+	return f;
+}
+
+
+
+//Ajouter un sous repertoire
+Dir *Dir::addSubDir(QString localPath,QString realPath,State state,int revision,bool readOnly)
+{
+	Dir *d;
+	d=Dir::createDir(localPath,realPath,this,state,revision,readOnly);
+	if(d==NULL) return NULL;
+	subMedias->append(d);
+	d->setListenning(listen);
+	return m;
+}
+
+
+
+
+//Supprimer un sous média
+void Dir::delSubMedia(Media *m)
+{
+	if(m==NULL) return;
+	int i=subMedias->indexOf(m);
+	if(i<0) return;
+	if(m->isDirectory())
+	{
+		Dir *d=(Dir*)m;
+		d->setListenning(false);
+	}
+	subMedias->remove(i);
+}
 
 
 

@@ -97,7 +97,7 @@ int HddInterface::detectRemovedMedia(Media *m)
 	QString realPath=m->getRealPath();
 	int errorType=networkInterface->sendMediaRemoved(realPath);
 
-	if(errorType==0) m->getParent()->removeSubMedia(m);
+	if(errorType==0) m->getParent()->delSubMedia(m);
 	else ; /////////////////////erreur
 
 	Widget::addRowToTable("Le media "+m->getLocalPath()+" a été supprimé",model,MSG_HDD);

@@ -23,8 +23,12 @@ public:
 	static Dir *createDir(QString localPath,QString realPath,Dir *parent,State state,int revision,bool readOnly);
 	static Dir *loadDir(QDomNode noeud,Dir *parent);
 
-	//Pour récupérer la liste de ses sous médias
-	QVector<Media*> *getSubMedias();
+	//Pour gérer la liste de ses sous médias
+	int numberSubMedia();
+	Media *getSubMedia(int i);
+	File *addSubFile(QString localPath,QString realPath,State state,int revision,bool readOnly);
+	Dir *addSubDir(QString localPath,QString realPath,State state,int revision,bool readOnly);
+	void delSubMedia(Media *m);
 
 	//implémentation des fonctions virtuelles de la classe Media dont elle hérite
 	bool isDirectory();
