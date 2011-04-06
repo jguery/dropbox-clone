@@ -17,17 +17,18 @@ class NetworkInterface: public QObject
 
 public:
 	//Une méthode statique pour créer l'objet
-        static NetworkInterface *createNetworkInterface(ConfigurationData *configurationData, QStandardItemModel *model);
+	static NetworkInterface *createNetworkInterface(ConfigurationData *configurationData, QStandardItemModel *model);
 
 	//Les fonction de connexion et déconnexion
 	bool connect();
 	bool disconnect();
 
 	//Envoi de messages de divers types
-	bool sendIdentification();
+	bool sendMediaCreated(QString realPath,bool isDirectory);
 	bool sendFileModified(QString realPath,QByteArray content);
-	bool sendMediaCreated(QString realPath);
 	bool sendMediaRemoved(QString realPath);
+
+	bool sendIdentification();
 
 signals:
 	//Signaux pour connaitre l'état de la connexion
@@ -47,8 +48,8 @@ private slots:
 	//Slots pour recevoir les évènement de la socket
 	void stateChangedAction(QAbstractSocket::SocketState);
 	void receiveMessageAction(QByteArray *message);
-        void connexionEncrypted();
-        void erreursSsl(const QList<QSslError>&);
+	void connexionEncrypted();
+	void erreursSsl(const QList<QSslError>&);
 
 private:
 	//Le constructeur

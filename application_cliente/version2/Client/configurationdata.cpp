@@ -17,8 +17,8 @@
 ConfigurationNetwork *ConfigurationNetwork::createConfigurationNetwork(QString address, int port)
 {
 	//On vérifie la validité de l'adresse et du port demandés
-        if(address.isEmpty() || port<0 || port>=65536)
-            return NULL;
+	if(address.isEmpty() || port<0 || port>=65536)
+		return NULL;
 
 	//On crèe l'objet et on le renvoi
 	ConfigurationNetwork *configurationNetwork=new ConfigurationNetwork(address,port);
@@ -33,23 +33,23 @@ ConfigurationNetwork *ConfigurationNetwork::loadConfigurationNetwork(QDomNode no
 	QDomElement element=noeud.toElement();
 
 	//On vérifie que le nom du noeud est bien ConfigurationNetwork
-        if(element.tagName()!="ConfigurationNetwork")
-            return NULL;
+	if(element.tagName()!="ConfigurationNetwork")
+		return NULL;
 
-	  //On récupère l'adresse et le port et on vérifie qu'ils ne sont pas vides
+	//On récupère l'adresse et le port et on vérifie qu'ils ne sont pas vides
 	QString address=element.attribute("address","");
 	QString port=element.attribute("port","");
-        if(address.isEmpty() || port.isEmpty())
-            return NULL;
+	if(address.isEmpty() || port.isEmpty())
+		return NULL;
 
-	  //On convertit le port en format int
+	//On convertit le port en format int
 	bool ok=false;int p=port.toInt(&ok);
-        if(!ok)
-            return NULL;
+	if(!ok)
+		return NULL;
 
-	  //On crèe l'objet et on le retourne
-        ConfigurationNetwork *configurationNetwork =
-                ConfigurationNetwork::createConfigurationNetwork(address,p);
+	//On crèe l'objet et on le retourne
+	ConfigurationNetwork *configurationNetwork =
+				ConfigurationNetwork::createConfigurationNetwork(address,p);
 	return configurationNetwork;
 }
 
@@ -66,12 +66,12 @@ ConfigurationNetwork::ConfigurationNetwork(QString address, int port)
 
 QString ConfigurationNetwork::getAddress()
 {
-        return address;
+	return address;
 }
 
 QString ConfigurationNetwork::getFullAddress()
 {
-    return address+":"+QString::number(port);
+	return address+":"+QString::number(port);
 }
 
 void ConfigurationNetwork::setAddress(QString address)
@@ -117,10 +117,10 @@ QDomElement ConfigurationNetwork::toXml(QDomDocument *document)
 ConfigurationIdentification *ConfigurationIdentification::createConfigurationIdentification(QString pseudo, QString password)
 {
 	//On vérifie que le pseudo et password ne sont pas vides
-        if(pseudo.isEmpty() || password.isEmpty())
-            return NULL;
+	if(pseudo.isEmpty() || password.isEmpty())
+		return NULL;
 
-	  //On crèe l'objet et on le renvoi
+	//On crèe l'objet et on le renvoi
 	ConfigurationIdentification *configurationIdentification=new ConfigurationIdentification(pseudo,password);
 	return configurationIdentification;
 }
@@ -133,18 +133,18 @@ ConfigurationIdentification *ConfigurationIdentification::loadConfigurationIdent
 	QDomElement element=noeud.toElement();
 
 	//On vérifie que le nom du noeud xml est bien ConfigurationIdentification
-        if(element.tagName()!="ConfigurationIdentification")
-            return NULL;
+	if(element.tagName()!="ConfigurationIdentification")
+		return NULL;
 
-	  //On récupère les pseudo et password du noeud et on vérifie qu'ils ne soient pas vides.
+	//On récupère les pseudo et password du noeud et on vérifie qu'ils ne soient pas vides.
 	QString pseudo=element.attribute("pseudo","");
 	QString password=element.attribute("password","");
-        if(pseudo.isEmpty() || password.isEmpty())
-            return NULL;
+	if(pseudo.isEmpty() || password.isEmpty())
+		return NULL;
 
-	  //On crèe l'objet et on le retourne
-        ConfigurationIdentification *configurationIdentification=
-                ConfigurationIdentification::createConfigurationIdentification(pseudo,password);
+	//On crèe l'objet et on le retourne
+	ConfigurationIdentification *configurationIdentification=
+	ConfigurationIdentification::createConfigurationIdentification(pseudo,password);
 	return configurationIdentification;
 }
 
@@ -207,13 +207,14 @@ QDomElement ConfigurationIdentification::toXml(QDomDocument *document)
 ConfigurationFile *ConfigurationFile::createConfigurationFile(QList<Dir*> *depots)
 {
 	//La liste de dépots passée ne doit être ni NULLe, ni vide
-	  if(depots==NULL)        return NULL;
-	  if(depots->length()==0)      return NULL;
+	if(depots==NULL)        return NULL;
+	if(depots->length()==0)      return NULL;
 
-	  //On crèe la configuration et on la retourne
+	//On crèe la configuration et on la retourne
 	ConfigurationFile *config=new ConfigurationFile(depots);
 	return config;
 }
+
 
 
 //Pour charger la configuration des répertoires et fichiers depuis un noeud xml
@@ -226,22 +227,22 @@ ConfigurationFile *ConfigurationFile::loadConfigurationFile(QDomNode noeud)
 
 	//On vérifie que le nom du noeud est bien ConfigurationData
 	QDomElement element=noeud.toElement();
-        if(element.tagName()!="ConfigurationFile")
-            return NULL;
+	if(element.tagName()!="ConfigurationFile")
+		return NULL;
 
-        //Parcours l'ensemble des éléments fils de l'élement "COnfigurationFile"
-        //Ce sont donc des fichiers et des dossiers (toute l'arborescence  à synchroniser enfaite)
+	//Parcours l'ensemble des éléments fils de l'élement "COnfigurationFile"
+	//Ce sont donc des fichiers et des dossiers (toute l'arborescence  à synchroniser enfaite)
 	QDomNodeList list=noeud.childNodes();
 	for(unsigned int i=0;i<list.length();i++)
 	{
 		QDomNode n=list.at(i);
 
 		//On charge le noeud avec la méthode statique loadDir
-		Dir *d=Dir::loadDir(n);
-                if(d==NULL)
-                    return NULL;
+		Dir *d=Dir::loadDir(n,NULL);
+		if(d==NULL)
+			return NULL;
 
-		 //On l'ajoute à la liste de dépots
+		//On l'ajoute à la liste de dépots
 		depots->append(d);
 	}
 
@@ -253,10 +254,18 @@ ConfigurationFile *ConfigurationFile::loadConfigurationFile(QDomNode noeud)
 
 
 //Constructeur
-ConfigurationFile::ConfigurationFile(QList<Dir*> *depots)
+ConfigurationFile::ConfigurationFile(QList<Dir*> *depots) : QObject()
 {
 	this->depots=depots;
+	this->detectMediaList=new QList<Media*>();
+	this->waitConditionDetect=NULL;
+	for(int i=0;i<depots->length();i++)
+	{
+		QObject::connect(depots->at(i),SIGNAL(detectChangement(Media*)),this,SLOT(putMediaDetection(Media*)),Qt::QueuedConnection);
+	}
 }
+
+
 
 
 
@@ -279,18 +288,20 @@ QDomElement ConfigurationFile::toXml(QDomDocument *document)
 }
 
 
+
+
 //Recherche quel média a ce localPath
 Media *ConfigurationFile::findMediaByLocalPath(QString localPath)
 {
-        QList<Dir*>::iterator i;
+	QList<Dir*>::iterator i;
 
 	//On parcours la liste des dépots
-	  for(i=depots->begin(); i!=depots->end(); i++)
+	for(i=depots->begin(); i!=depots->end(); i++)
 	{
-		  //On recherche le localPath dans l'arborescence de ce dépot
-                Media *find=(*i)->findMediaByLocalPath(localPath);
-                if(find!=NULL)
-                    return find;
+		//On recherche le localPath dans l'arborescence de ce dépot
+		Media *find=(*i)->findMediaByLocalPath(localPath);
+		if(find!=NULL)
+			return find;
 	}
 	return NULL;
 }
@@ -298,70 +309,79 @@ Media *ConfigurationFile::findMediaByLocalPath(QString localPath)
 //Recherche quel média a ce realPath
 Media *ConfigurationFile::findMediaByRealPath(QString realPath)
 {
-        QList<Dir*>::iterator i;
+	QList<Dir*>::iterator i;
 
-	  //On parcours la liste des dépots
-        for(i=depots->begin(); i!=depots->end(); i++)
+	//On parcours la liste des dépots
+	for(i=depots->begin(); i!=depots->end(); i++)
 	{
-		  //On recherche le realPath dans l'arborescence de ce dépot
-                Media *find=(*i)->findMediaByRealPath(realPath);
-                if(find!=NULL)
-                    return find;
-	}
-	return NULL;
-}
-
-
-//Recherche quel est le repertoire parent du média qui a ce localPath
-Dir *ConfigurationFile::findMediaParentByLocalPath(QString localPath)
-{
-
-	  QList<Dir*>::iterator i;
-
-	  //On parcours la liste des dépots
-	  for(i=depots->begin(); i!=depots->end(); i++)
-	{
-		  //On recherche le parent du localPath dans l'arborescence de ce dépot
-		    Dir *find=(*i)->findMediaParentByLocalPath(localPath);
-		if(find!=NULL) return find;
-	}
-	return NULL;
-}
-
-
-//Recherche quel est le repertoire du média qui a ce realPath
-Dir *ConfigurationFile::findMediaParentByRealPath(QString realPath)
-{
-	  QList<Dir*>::iterator i;
-
-	  //On parcours la liste des dépots
-	  for(i=depots->begin(); i!=depots->end(); i++)
-	{
-		  //On recherche le parent du realPath dans l'arborescence de ce dépot
-		    Dir *find=(*i)->findMediaParentByRealPath(realPath);
-		if(find!=NULL) return find;
+		//On recherche le realPath dans l'arborescence de ce dépot
+		Media *find=(*i)->findMediaByRealPath(realPath);
+		if(find!=NULL)
+			return find;
 	}
 	return NULL;
 }
 
 
 
-//Permet de fixer l'objet à prevenir en cas de modif
-void ConfigurationFile::setSignalListener(HddInterface *hddInterface)
-{
-        QList<Dir*>::iterator i;
 
-	  //On parcours tous les dépots et on appelle récursivement la fonction setSignalListener
-        for(i=depots->begin(); i!=depots->end(); i++)
+
+//Pour récupérer la prochaine détection à traiter
+Media *ConfigurationFile::getMediaDetection()
+{
+	detectMediaListMutex.lock();
+	Media *m;
+	if(detectMediaList->size()>0)
 	{
-                (*i)->setSignalListener(hddInterface);
+		m=detectMediaList->first();
+		detectMediaList->removeFirst();
+	}
+	else m=NULL;
+	detectMediaListMutex.unlock();
+	return m;
+}
+
+
+
+
+//Le slot qui répond aux détections de changements
+void ConfigurationFile::putMediaDetection(Media *m)
+{
+	detectMediaListMutex.lock();
+	detectMediaList->append(m);
+	if(waitConditionDetect!=NULL) waitConditionDetect->wakeAll();
+	detectMediaListMutex.unlock();
+}
+
+
+
+
+void ConfigurationFile::setWaitConditionDetection(QWaitCondition *waitConditionDetect)
+{
+	this->waitConditionDetect=waitConditionDetect;
+}
+
+
+
+
+//Permet de mettre les dépots à l'écoute de changements
+void ConfigurationFile::setListenning(bool listen)
+{
+	QList<Dir*>::iterator i;
+
+	//On parcours tous les dépots et on appelle récursivement la fonction setListenning
+	for(i=depots->begin(); i!=depots->end(); i++)
+	{
+		(*i)->setListenning(listen);
 	}
 }
+
+
 
 //Destructeur
 ConfigurationFile::~ConfigurationFile()
 {
-     //On parcours la liste des dépots et on des supprime
+	//On parcours la liste des dépots et on des supprime
 	for(int i=0; i<depots->length(); i++)
 	{
 		delete depots->at(i);
@@ -398,15 +418,15 @@ ConfigurationData *ConfigurationData::createConfigurationData(ConfigurationNetwo
 {
 	//On vérifie qu'aucun des attributs n'est NULL
 	if(configurationNetwork==NULL)
-            return NULL;
-        if(configurationIdentification==NULL)
-            return NULL;
-        if(configurationFile==NULL)
-            return NULL;
+		return NULL;
+	if(configurationIdentification==NULL)
+		return NULL;
+	if(configurationFile==NULL)
+		return NULL;
 
-	  //On crèe l'objet et on le retourne
-        ConfigurationData *config=new ConfigurationData(configurationNetwork,
-                        configurationIdentification,configurationFile,savePath);
+	//On crèe l'objet et on le retourne
+	ConfigurationData *config=new ConfigurationData(configurationNetwork,
+				configurationIdentification,configurationFile,savePath);
 
 	return config;
 }
@@ -416,44 +436,44 @@ ConfigurationData *ConfigurationData::createConfigurationData(ConfigurationNetwo
 ConfigurationData *ConfigurationData::loadConfigurationData(QString savePath)
 {
 	QFile file(savePath);
-        if(!file.open(QIODevice::ReadOnly))     //On tente d'ouvrir le fichier de config
-            return NULL;
+	if(!file.open(QIODevice::ReadOnly))     //On tente d'ouvrir le fichier de config
+		return NULL;
 
 	QDomDocument document;
-        if(!document.setContent(&file))         //On charge son contenu dans un objet QDomDocument
+	if(!document.setContent(&file))         //On charge son contenu dans un objet QDomDocument
 	{
 		file.close();
 		return NULL;
 	}
 
-        //On charge la liste des élèments fils du document
+	//On charge la liste des élèments fils du document
 	QDomNodeList noeuds=document.documentElement().childNodes();
 
 	//On initialise toutes les configuration à NULL
-        ConfigurationNetwork *configurationNetwork                  = NULL;
-        ConfigurationIdentification *configurationIdentification    = NULL;
-        ConfigurationFile *configurationFile                        = NULL;
+	ConfigurationNetwork *configurationNetwork                  = NULL;
+	ConfigurationIdentification *configurationIdentification    = NULL;
+	ConfigurationFile *configurationFile                        = NULL;
 
-        //On parcours tous ces élèment
+	//On parcours tous ces élèment
 	for(int i=0;i<noeuds.count();i++)
 	{
 		QDomNode n=noeuds.at(i);
 		QDomElement element=n.toElement();
 		if(element.isNull()) continue;
 
-                if(element.tagName()=="ConfigurationNetwork")   //On charge la conf réseau
-			configurationNetwork=ConfigurationNetwork::loadConfigurationNetwork(n);
+		if(element.tagName()=="ConfigurationNetwork")   //On charge la conf réseau
+		configurationNetwork=ConfigurationNetwork::loadConfigurationNetwork(n);
 
-                else if(element.tagName()=="ConfigurationIdentification")   //On charge la conf d'identification
-			configurationIdentification=ConfigurationIdentification::loadConfigurationIdentification(n);
+		else if(element.tagName()=="ConfigurationIdentification")   //On charge la conf d'identification
+		configurationIdentification=ConfigurationIdentification::loadConfigurationIdentification(n);
 
-                else if(element.tagName()=="ConfigurationFile")     //On charge la conf de l'arborescence des fichiers synchronisés
-			configurationFile=ConfigurationFile::loadConfigurationFile(n);
+		else if(element.tagName()=="ConfigurationFile")     //On charge la conf de l'arborescence des fichiers synchronisés
+		configurationFile=ConfigurationFile::loadConfigurationFile(n);
 	}
 
 	file.close();
 
-	  //Vérifie qu'aucune des confs chargées n'est dans un sale état
+	//Vérifie qu'aucune des confs chargées n'est dans un sale état
 	if(configurationNetwork==NULL || configurationIdentification==NULL || configurationFile==NULL)
 	{
 		delete configurationFile;
@@ -463,8 +483,8 @@ ConfigurationData *ConfigurationData::loadConfigurationData(QString savePath)
 	}
 
 	//On cree l'objet et on le retourne
-        ConfigurationData *configuration=new ConfigurationData(configurationNetwork,
-                              configurationIdentification,configurationFile,savePath);
+	ConfigurationData *configuration=new ConfigurationData(configurationNetwork,
+					configurationIdentification,configurationFile,savePath);
 	return configuration;
 }
 
@@ -473,8 +493,8 @@ ConfigurationData *ConfigurationData::loadConfigurationData(QString savePath)
 
 //Le constructeur
 ConfigurationData::ConfigurationData(ConfigurationNetwork *configurationNetwork,
-                                     ConfigurationIdentification *configurationIdentification,
-                                     ConfigurationFile *configurationFile,QString savePath)
+						ConfigurationIdentification *configurationIdentification,
+						ConfigurationFile *configurationFile,QString savePath)
 {
 	//On ne fait qu'initialiser
 	this->configurationNetwork=configurationNetwork;
@@ -534,20 +554,20 @@ QString ConfigurationData::getSavePath()
 //Pour enregistrer la configuration dans un fichier xml
 bool ConfigurationData::save(QString savePath)
 {
-        //En appelant cette fonction, il y a possibilité de choisir un chemin
-        //différent de celui de this-savePath.
-        if(savePath=="")
+	//En appelant cette fonction, il y a possibilité de choisir un chemin
+	//différent de celui de this-savePath.
+	if(savePath=="")
 	{
 		savePath=this->savePath;
 		if(savePath=="") return false;
 	}
 	else this->savePath=savePath;
 
-        //Crée le document xml et tous ses élèments
+	//Crée le document xml et tous ses élèments
 	QDomDocument document;
 	QDomElement element=document.createElement("ConfigurationData");
 
-		    //Ajoute à l'élèment ConfData, les sous élèments confNetwork, confFile, et confIdent.
+		//Ajoute à l'élèment ConfData, les sous élèments confNetwork, confFile, et confIdent.
 		QDomElement network=configurationNetwork->toXml(&document);
 		element.appendChild(network);
 		QDomElement identification=configurationIdentification->toXml(&document);
@@ -558,10 +578,10 @@ bool ConfigurationData::save(QString savePath)
 	document.appendChild(element);
 
 	QFile file(savePath);
-        if(!file.open(QIODevice::WriteOnly))
-            return false;
+	if(!file.open(QIODevice::WriteOnly))
+		return false;
 
-        //On écrit ce doc xml dans un nouveau fichier (écrasé s'il existe déjà)
+	//On écrit ce doc xml dans un nouveau fichier (écrasé s'il existe déjà)
 	file.write(document.toByteArray());
 
 	file.close();

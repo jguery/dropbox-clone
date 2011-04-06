@@ -6,6 +6,16 @@
 #include<QtXml/QDomDocument>
 #include<QtXml/QDomElement>
 
+class Dir;
+
+enum State
+{
+	MediaNormalState,
+	MediaIsCreating,
+	MediaIsRemoving,
+	MediaIsUpdating
+};
+
 
 
 /*
@@ -26,11 +36,16 @@ class Media: public QObject
 	Q_OBJECT
 // le constructeur et les attributs sont protected pour être accéssible depuis les classes filles
 protected:
-	Media(QString localPath,QString realPath,int revision,bool readOnly);
-
+	Media(QString localPath,QString realPath,Dir *parent,State state,int revision,bool readOnly);
 	//Les attributs
 	QString localPath;
 	QString realPath;
+
+	//Le parent du média
+	Dir *parent;
+
+	//Pour connaitre l'état du média
+	State state;
 
 	//Pour savoir si le media est en lecture seule
 	bool readOnly;
@@ -50,20 +65,26 @@ public:
 	//les accesseurs pour que les attributs soient visibles depuis l'extérieur
 	QString getLocalPath();
 	QString getRealPath();
+	Dir *getParent();
 	int getRevision();
 	bool isReadOnly();
+	State getState();
 
 	//Les mutateurs
 	void setLocalPath(QString localPath);
 	void setRealPath(QString realPath);
 	void setRevision(int revision);
+	void setParent(Dir *parent);
 	void incRevision();
 	void decRevision();
 	void setReadOnly(bool readOnly);
+	void setState(State state);
 
 	//Quelques méthodes statiques pour la gestion des fichiers et repertoires en général
 	static QString extractParentPath(QString path);
 	static QString extractName(QString path);
+	static State stateFromString(QString stateString);
+	static QString stateToString(State state);
 };
 
 #endif // MEDIA_H

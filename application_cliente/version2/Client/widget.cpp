@@ -1,6 +1,6 @@
 #include "widget.h"
 #include "hddinterface.h"
-
+#include<iostream>
 
 //Le constructeur à 3 paramètres
 //pour démarer le programme avec comme dépot le localPath et le realPath donnés
@@ -46,7 +46,7 @@ Widget::Widget(QString localPath, QString realPath, QString configSavePath): QWi
 
 	//On créé la configuration de fichier
 	QList<Dir*> *depots=new QList<Dir*>();
-	Dir *d = Dir::createDir(localPath,realPath,0,false);depots->append(d);
+	Dir *d = Dir::createDir(localPath,realPath,NULL,MediaNormalState,0,false);depots->append(d);
 	if(!d){addRowToTable("Echec de la création du repertoire 1",model,MSG_INIT);return;}
 	ConfigurationFile *configurationFile=ConfigurationFile::createConfigurationFile(depots);
 	if(configurationFile) addRowToTable("Les configurations des repertoires surveillés ont été créés",model,MSG_INIT);
@@ -54,7 +54,8 @@ Widget::Widget(QString localPath, QString realPath, QString configSavePath): QWi
 
 	//On créé la configuration totale
 	this->configurationData=ConfigurationData::createConfigurationData(configurationNetwork,configurationIdentification,configurationFile,configSavePath);
-
+	configurationFile->setListenning(true);
+	/*
 	//On créé l'interface réseau
 	this->networkInterface=NetworkInterface::createNetworkInterface(configurationData,model);
 	if(networkInterface) addRowToTable("L'interface réseau a été crée",model,MSG_INIT);
@@ -70,6 +71,7 @@ Widget::Widget(QString localPath, QString realPath, QString configSavePath): QWi
 	this->hddInterface=HddInterface::createHddInterface(configurationData,networkInterface,model);
 	if(hddInterface) addRowToTable("L'interface disque a été crée",model,MSG_INIT);
 	else {addRowToTable("Echec de la création de l'interface disque",model,MSG_INIT);return;}
+*/
 }
 
 

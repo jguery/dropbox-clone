@@ -6,7 +6,7 @@
 //Permet de créer un objet fichier en passant son localPath et son realPath
 //Le fichier doit exister sur le disque dur
 //On crée enfaite une synchronisation, pas un vrai fichier
-File *File::createFile(QString localPath,QString realPath,int revision,bool readOnly)
+File *File::createFile(QString localPath,QString realPath,Dir *parent,State state,int revision,bool readOnly)
 {
 	if(localPath.isEmpty() || realPath.isEmpty())
 		return NULL;
@@ -19,7 +19,7 @@ File *File::createFile(QString localPath,QString realPath,int revision,bool read
 	QByteArray *hash=File::hashFile();
 
 	//On peut créer le fichier
-	return new File(localPath,realPath,hash,revision,readOnly);
+	return new File(localPath,realPath,parent,hash,state,revision,readOnly);
 }
 
 
@@ -29,7 +29,7 @@ File *File::createFile(QString localPath,QString realPath,int revision,bool read
 
 
 //Permet de charger le fichier depuis un noeud xml.
-File *File::loadFile(QDomNode noeud)
+File *File::loadFile(QDomNode noeud,Dir *parent)
 {
 	//On vérifie que le nom du noeud xml est bien "file"
 	if(noeud.toElement().tagName()!="file")
@@ -42,12 +42,14 @@ File *File::loadFile(QDomNode noeud)
 	if(localPath.isEmpty() || realPath.isEmpty())
 		return NULL;
 
-	//On récupère les attributs révision et readOnly du noeud xml.
+	//On récupère les attributs state, révision et readOnly du noeud xml.
+	QString stateString=noeud.toElement().attribute("state","");
 	QString revisionString=noeud.toElement().attribute("revision","");
 	QString readOnlyString=noeud.toElement().attribute("readOnly","");
 
-	//On convertit ces attributs en int et bool
-	int revision;bool readOnly;bool ok;
+	//On convertit ces attributs en state, int et bool
+	State state;int revision;bool readOnly;bool ok;
+	state=Media::stateFromString(stateString);
 	revision=revisionString.toInt(&ok); if(!ok) revision=0;
 	readOnly=readOnlyString=="true"?true:false;
 
@@ -64,7 +66,7 @@ File *File::loadFile(QDomNode noeud)
 	}
 
 	 //On peut maintenant créer l'objet
-	return new File(localPath,realPath,hash,revision,readOnly);
+	return new File(localPath,realPath,parent,hash,state,revision,readOnly);
 }
 
 
@@ -146,7 +148,7 @@ bool File::isDirectory()
 
 
 //Constructeur qui ne fait qu'initialiser
-File::File(QString localPath,QString realPath,QByteArray *hash,int revision,bool readOnly): Media(localPath,realPath,revision,readOnly)
+File::File(QString localPath,QString realPath,Dir *parent,QByteArray *hash,State state,int revision,bool readOnly): Media(localPath,realPath,parent,state,revision,readOnly)
 {
 	this->hash=hash;
 }
@@ -166,7 +168,8 @@ QDomElement File::toXml(QDomDocument *document)
 	element.setAttribute("localPath",localPath);
 	element.setAttribute("realPath",realPath);
 
-	//On écrit ses attributs revision et readOnly
+	//On écrit ses attributs state, revision et readOnly
+	element.setAttribute("state",Media::stateToString(state));
 	element.setAttribute("revision",QString::number(revision));
 	element.setAttribute("readOnly",readOnly?"true":"false");
 

@@ -3,10 +3,9 @@
 
 #include "file.h"
 #include <QtCore/QFileSystemWatcher>
-#include <QtCore/QDir>
+#include <QtCore>
 
 
-class HddInterface;
 
 /*
   Cette classe représente un repertoire sur le disque dur.
@@ -21,8 +20,8 @@ class Dir: public Media
 
 public:
 	//Des fonctions statiques createDir et loadDir pour allouer un objet Dir
-	static Dir *createDir(QString localPath,QString realPath,int revision,bool readOnly);
-	static Dir *loadDir(QDomNode noeud);
+	static Dir *createDir(QString localPath,QString realPath,Dir *parent,State state,int revision,bool readOnly);
+	static Dir *loadDir(QDomNode noeud,Dir *parent);
 
 	//Pour récupérer la liste de ses sous médias
 	QVector<Media*> *getSubMedias();
@@ -37,11 +36,9 @@ public:
 	//Des fonctions pour la recherche dans l'arborescence
 	Media *findMediaByLocalPath(QString localPath);
 	Media *findMediaByRealPath(QString realPath);
-	Dir *findMediaParentByLocalPath(QString localPath);
-	Dir *findMediaParentByRealPath(QString realPath);
 
-	//Accesseur pour son listener(objet qu'il averti en cas de modifications)
-	void setSignalListener(HddInterface *hddInterface);
+	//Demande à l'objet d'écouter les signaux
+	void setListenning(bool listen);
 
 	//Une methode statique qui sert à supprimer un repertoire non vide
 	static void removeNonEmptyDirectory(QString path);
@@ -53,9 +50,12 @@ private slots:
 	//Le slot qui sera appelé lorsque le repertoire a subit un changement
 	void directoryChangedAction();
 
+signals:
+	void detectChangement(Media *m);
+
 private:
 	//Constructeur
-	Dir(QString localPath,QString realPath,int revision,bool readOnly);
+	Dir(QString localPath,QString realPath,Dir *parent,State state,int revision,bool readOnly);
 
 	//La liste de ses sous médias
 	QVector<Media*> *subMedias;
@@ -63,8 +63,8 @@ private:
 	//Le watcher pour détecter les modifs
 	QFileSystemWatcher *watcher;
 
-	//Le listener pour récuperer les évenements de modifications
-	HddInterface *hddInterface;
+	//Le boolean, pour indiquer si le Dir doit détecter ou non les changement
+	bool listen;
 };
 
 #endif // DIR_H

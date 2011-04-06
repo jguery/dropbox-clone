@@ -4,10 +4,12 @@
 
 
 //le constructeur pour initialiser les attributs
-Media::Media(QString localPath,QString realPath,int revision,bool readOnly)
+Media::Media(QString localPath,QString realPath,Dir *parent,State state,int revision,bool readOnly): QObject((QObject*)parent)
 {
 	this->localPath=localPath;
 	this->realPath=realPath;
+	this->parent=parent;
+	this->state=state;
 	this->revision=revision;
 	this->readOnly=readOnly;
 }
@@ -39,6 +41,35 @@ QString Media::getRealPath()
 void Media::setRealPath(QString realPath)
 {
 	this->realPath=realPath;
+}
+
+
+
+
+//les accesseurs d'accès et de modifications au parent
+
+Dir *Media::getParent()
+{
+	return parent;
+}
+
+void Media::setParent(Dir *parent)
+{
+	this->parent=parent;
+}
+
+
+
+//les accesseurs d'accès et de modifications à l'attribut state
+
+State Media::getState()
+{
+	return state;
+}
+
+void Media::setState(State state)
+{
+	this->state=state;
 }
 
 
@@ -109,3 +140,26 @@ QString Media::extractName(QString path)
 	return name;
 }
 
+
+//Méthode qui convertit une QString en une vrai state
+State Media::stateFromString(QString stateString)
+{
+	State state;
+	if(stateString=="MediaIsCreating") state=MediaIsCreating;
+	else if(stateString=="MediaIsUpdating") state=MediaIsUpdating;
+	else if(stateString=="MediaIsRemoving") state=MediaIsRemoving;
+	else state=MediaNormalState;
+	return state;
+}
+
+
+//Méthode qui convertit une state en une QString
+QString Media::stateToString(State state)
+{
+	QString stateString;
+	if(state==MediaIsCreating) stateString="MediaIsCreating";
+	else if(state==MediaIsUpdating) stateString="MediaIsUpdating";
+	else if(state==MediaIsRemoving) stateString="MediaIsRemoving";
+	else stateString="MediaNormalState";
+	return stateString;
+}

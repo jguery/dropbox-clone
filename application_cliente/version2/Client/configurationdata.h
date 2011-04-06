@@ -119,8 +119,11 @@ private:
  Cette classe gère la configuration des fichiers et repertoires synchronisés
 */
 
-class ConfigurationFile
+class ConfigurationFile: public QObject
 {
+	Q_OBJECT
+
+
 public:
 	//Des fonctions statiques pour créer l'objet
 	static ConfigurationFile *createConfigurationFile(QList<Dir*> *depots);
@@ -132,16 +135,30 @@ public:
 	//Des fonctions pour rechercher dans l'arborescence des fichiers
 	Media *findMediaByLocalPath(QString localPath);
 	Media *findMediaByRealPath(QString realPath);
-	Dir *findMediaParentByLocalPath(QString localPath);
-	Dir *findMediaParentByRealPath(QString realPath);
-	void setSignalListener(HddInterface *hddInterface);
+	void setListenning(bool listen);
 
 	//Destructeur
 	~ConfigurationFile();
 
+	//Pour récupérer la détection à traiter
+	Media *getMediaDetection();
+
+	void setWaitConditionDetection(QWaitCondition *waitConditionDetect);
+
+
+private slots:
+	//Un slot pour stocker tous les changements détectés dans une liste
+	void putMediaDetection(Media *m);
+
 private:
 	//le constructeur
 	ConfigurationFile(QList<Dir*> *depots);
+
+	//La liste des changements détectés en cours de communication au serveur
+	QList<Media*> *detectMediaList;
+	QMutex detectMediaListMutex;
+
+	QWaitCondition *waitConditionDetect;
 
 	//La liste des dépots à surveiller
 	QList<Dir*> *depots;
