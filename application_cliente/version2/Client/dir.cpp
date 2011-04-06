@@ -86,7 +86,7 @@ Dir *Dir::loadDir(QDomNode noeud,Dir *parent)
 				return NULL;
 			}
 			//On ajoute ce répertoire à la liste des subMedias de notre répertoire
-			dir->getSubMedias()->append(d);
+			dir->subMedias->append(d);
 		}
 
 		else if(e.tagName()=="file")    //Le sous-élément est un fichier
@@ -99,7 +99,7 @@ Dir *Dir::loadDir(QDomNode noeud,Dir *parent)
 				return NULL;
 			}
 			//On ajoute ce fichier à la liste des subMedias de notre répertoire
-			dir->getSubMedias()->append(f);
+			dir->subMedias->append(f);
 		}
 	}
 
@@ -323,7 +323,7 @@ Dir *Dir::addSubDir(QString localPath,QString realPath,State state,int revision,
 	if(d==NULL) return NULL;
 	subMedias->append(d);
 	d->setListenning(listen);
-	return m;
+	return d;
 }
 
 

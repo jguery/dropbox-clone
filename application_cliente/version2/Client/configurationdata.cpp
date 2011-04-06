@@ -261,6 +261,9 @@ ConfigurationFile::ConfigurationFile(QList<Dir*> *depots) : QObject()
 	this->waitConditionDetect=NULL;
 	for(int i=0;i<depots->length();i++)
 	{
+		//cette ligne est à décommenter si on définit le ConfigurationFile comme thread.
+		//A discuter avec Julien
+		//depots->at(i)->moveToThread(this);
 		QObject::connect(depots->at(i),SIGNAL(detectChangement(Media*)),this,SLOT(putMediaDetection(Media*)),Qt::QueuedConnection);
 	}
 }
@@ -306,6 +309,8 @@ Media *ConfigurationFile::findMediaByLocalPath(QString localPath)
 	return NULL;
 }
 
+
+
 //Recherche quel média a ce realPath
 Media *ConfigurationFile::findMediaByRealPath(QString realPath)
 {
@@ -321,8 +326,6 @@ Media *ConfigurationFile::findMediaByRealPath(QString realPath)
 	}
 	return NULL;
 }
-
-
 
 
 
@@ -393,15 +396,6 @@ ConfigurationFile::~ConfigurationFile()
 	//On la supprime
 	delete depots;
 }
-
-
-
-
-
-
-
-
-
 
 
 

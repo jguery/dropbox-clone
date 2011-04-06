@@ -143,19 +143,19 @@ void HddInterface::receiveUpdatedMedia(QString realPath, QByteArray content)
 	File *f=(File*)m;
 
 	//On récupère le dossier parent du fichier updated
-	Dir *dir=f->getParent();
-	if(!dir)
+	Dir *parent=f->getParent();
+	if(!parent)
 		return;
 
 	//Met l'écoute de ce dossier à NULL, pour qu'aucun signal de modification
 	//de dossier ne soit envoyé alors que nous contrôlons cette modification
-	dir->setListenning(false);
+	parent->setListenning(false);
 
 	//Écrit le nouveau fichier
 	QFile file(f->getLocalPath());
 	if(!file.open(QIODevice::WriteOnly))
 	{
-		dir->setListenning(true);
+		parent->setListenning(true);
 		return;
 	}
 	file.write(content);
@@ -163,13 +163,15 @@ void HddInterface::receiveUpdatedMedia(QString realPath, QByteArray content)
 	f->updateHash();     //Met à jour la signature du fichier
 
 	//Remet le dossier sur écoute
-	dir->setListenning(true);
+	parent->setListenning(true);
 
 	Widget::addRowToTable("Message du serveur: le fichier "+f->getLocalPath()+" a été modifié",model,MSG_HDD);
 
 	//Sauve toute la config
 	configurationData->save();
 }
+
+
 
 
 //on a recu la création d'un media
@@ -192,10 +194,9 @@ void HddInterface::receiveCreatedMedia(QString realPath, bool isDirectory)
 			return;
 
 		//Crée le répertoire dans l'arborescence de synchronisation du client
-		Dir *d=Dir::createDir(parent->getLocalPath()+"/"+realName,parent->getRealPath()+"/"+realName,parent,MediaNormalState,0,false);
+		Dir *d=parent->addSubDir(parent->getLocalPath()+"/"+realName,parent->getRealPath()+"/"+realName,MediaNormalState,0,false);
 		if(!d)
-			return ;
-		parent->getSubMedias()->append(d);
+			return;
 
 		//Met le dossier créé sur écoute
 		d->setListenning(true);
@@ -203,7 +204,7 @@ void HddInterface::receiveCreatedMedia(QString realPath, bool isDirectory)
 		Widget::addRowToTable("Message du serveur: le repertoire "+d->getLocalPath()+" a été créé",model,MSG_HDD);
 	}
 
-	else                        //Le media créé est un fichier, il est vide (un autre message sera envoyé quand il sera plein)
+	else                //Le media créé est un fichier, il est vide (un autre message sera envoyé quand il sera plein)
 	{
 		QFile file(parent->getLocalPath()+"/"+realName);
 
@@ -215,10 +216,9 @@ void HddInterface::receiveCreatedMedia(QString realPath, bool isDirectory)
 		file.close();
 
 		//Crée le fichier à l'arbo de synchronisation
-		File *f=File::createFile(parent->getLocalPath()+"/"+realName,parent->getRealPath()+"/"+realName,parent,MediaNormalState,0,false);
+		File *f=parent->addSubFile(parent->getLocalPath()+"/"+realName,parent->getRealPath()+"/"+realName,MediaNormalState,0,false);
 		if(!f)
 			return;
-		parent->getSubMedias()->append(f);
 
 		Widget::addRowToTable("Message du serveur: le fichier "+f->getLocalPath()+" a été créé",model,MSG_HDD);
 	}
@@ -244,16 +244,7 @@ void HddInterface::receiveRemovedMedia(QString realPath)
 	//Met à off l'écoute de parent
 	parent->setListenning(false);
 
-	//Enlève le media de la liste des subMedias de parent
-	for(int i=0;i<parent->getSubMedias()->size();i++)
-	{
-		if(m==parent->getSubMedias()->at(i))
-		{
-			parent->getSubMedias()->remove(i);
-			break;
-		}
-	}
-
+	parent->delSubMedia(m);
 
 	if(m->isDirectory())    //On supprime un répertoire
 	{
