@@ -60,8 +60,7 @@ void Media::setParent(Dir *parent)
 
 
 
-//les accesseurs d'accès à l'attribut state
-
+//l'accesseur d'accès à la liste des détections en cours de traitement
 QList<State> *Media::getDetectionState()
 {
 	return detectionState;
@@ -99,7 +98,6 @@ void Media::decRevision()
 
 
 //les accesseurs d'accès et de modifications au readOnly
-
 bool Media::isReadOnly()
 {
 	return readOnly;
@@ -112,13 +110,32 @@ void Media::setReadOnly(bool readOnly)
 
 
 
+
+//Pour réserver l'objet
+void Media::lock()
+{
+    this->mutex.lock();
+}
+
+
+//Pour le libérer
+void Media::unlock()
+{
+    this->mutex.unlock();
+}
+
+
+
+
 //méthode statique qui extrait d'un chemin, son repertoire parent.
+//le resultat est renvoyé sans le "/"
 QString Media::extractParentPath(QString path)
 {
 	QString path2=path;
 	if(path2.endsWith("/")) path2=path2.left(path2.length()-1);
-	QString parentPath=path2.left(path2.lastIndexOf("/"));
-	if(path.endsWith("/")) parentPath=parentPath+"/";
+	QString parentPath;
+	if(path2.lastIndexOf("/")>=0)
+		parentPath=path2.left(path2.lastIndexOf("/"));
 	return parentPath;
 }
 
@@ -126,11 +143,14 @@ QString Media::extractParentPath(QString path)
 
 
 //méthode statique qui extrait d'un chemin, son nom
+//si c'est un repertoire, le nom retourné contient bien un "/" final
 QString Media::extractName(QString path)
 {
 	QString path2=path;
 	if(path2.endsWith("/")) path2=path2.left(path2.length()-1);
-	QString name=path2.right(path2.length()-path2.lastIndexOf("/")-1);
+	QString name=path2;
+	if(path2.lastIndexOf("/")>=0)
+		name=path2.right(path2.length()-path2.lastIndexOf("/")-1);
 	if(path.endsWith("/")) name=name+"/";
 	return name;
 }
@@ -144,9 +164,10 @@ State Media::stateFromString(QString stateString)
 	if(stateString=="MediaIsCreating") state=MediaIsCreating;
 	else if(stateString=="MediaIsUpdating") state=MediaIsUpdating;
 	else if(stateString=="MediaIsRemoving") state=MediaIsRemoving;
-	else state=MediaNormalState;
+	else state=MediaDefaultState;
 	return state;
 }
+
 
 
 
@@ -157,7 +178,7 @@ QString Media::stateToString(State state)
 	if(state==MediaIsCreating) stateString="MediaIsCreating";
 	else if(state==MediaIsUpdating) stateString="MediaIsUpdating";
 	else if(state==MediaIsRemoving) stateString="MediaIsRemoving";
-	else stateString="MediaNormalState";
+	else stateString="MediaDefaultState";
 	return stateString;
 }
 

@@ -10,8 +10,8 @@ int main(int argc, char *argv[])
 	QApplication a(argc, argv);
 
 	//On crèe juste la 1ere fenetre et on l'affiche
-	Widget w1 ("/home/hky/test","/h/d","/home/hky/test/config1.xml");
-	w1.show();
+	Widget w1 ("/home/hky/test/A","/h/d","/home/hky/test/config1.xml");
+	//w1.show();
 /*
 	//On crèe juste la 1ere fenetre et on l'affiche
 	Widget w2 ("/home/hky/test/config2.xml");

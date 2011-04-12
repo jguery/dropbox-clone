@@ -5,12 +5,14 @@
 #include <QtCore/QFile>
 #include <QtCore/QCryptographicHash>
 
+
 /*
    Cette classe représente un fichier physique.
    Elle hérite de la classe Media
    On peut créer un fichier ou le charger à partir d'un noeud xml
    Un fichier possède une signature (pour détecter si il y a eu modification)
 */
+
 
 class File : public Media
 {

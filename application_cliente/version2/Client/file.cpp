@@ -38,7 +38,6 @@ File *File::loadFile(QDomNode noeud,Dir *parent)
 	//On récupère les attributs localPath et realPath du noeud xml.
 	QString localPath=noeud.toElement().attribute("localPath","");
 	QString realPath=noeud.toElement().attribute("realPath","");
-
 	if(localPath.isEmpty() || realPath.isEmpty())
 		return NULL;
 
@@ -77,7 +76,7 @@ File *File::loadFile(QDomNode noeud,Dir *parent)
 QByteArray *File::hashFile(QString path)
 {
 	QByteArray content;
-	//Si le chemin, est vide, on renvoi le hash d'une chaine vide
+        //Si le chemin, est vide, on renvoi le hash d'une chaine vide (convention)
 	if(path=="")
 	{
 		content="";

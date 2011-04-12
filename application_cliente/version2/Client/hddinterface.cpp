@@ -54,18 +54,32 @@ void HddInterface::run()
 		mutexWaitCondition.lock();
 		waitCondition.wait(&mutexWaitCondition,5000);
 		mutexWaitCondition.unlock();
+
+		//On vérifie qu'on est toujours bien connecté
+		networkInterface->blockWhileDisconnected();
+
+		bool detect;
 		//y a t-il des medias détecté?
-		Media *m=configurationData->getConfigurationFile()->getMediaDetection();
-		if(m!=NULL)
+		do
 		{
-			this->detectedMedia(m);
+			detect=false;
+			Media *m=configurationData->getConfigurationFile()->getMediaDetection();
+			if(m!=NULL)
+			{
+				this->detectedMedia(m);
+				detect=true;
+				continue;
+			}
+			//y a t-il des requetes recues?
+			Request *r=networkInterface->getReceiveRequestList();
+			if(r!=NULL)
+			{
+				this->receivedRequest(r);
+				detect=true;
+				continue;
+			}
 		}
-		//y a t-il des requetes recues?
-		Request *r=networkInterface->getReceiveRequestList();
-		if(r!=NULL)
-		{
-			this->receivedRequest(r);
-		}
+		while(detect);
 	}
 }
 
@@ -74,9 +88,11 @@ void HddInterface::run()
 void HddInterface::detectedMedia(Media *m)
 {
 	State state=m->getDetectionState()->first();
+	qDebug("%s : %s",m->getLocalPath().toStdString().c_str(),Media::stateToString(state).toStdString().c_str());
 	if(state==MediaIsCreating) detectedCreatedMedia(m);
 	else if(state==MediaIsUpdating) detectedUpdatedMedia(m);
 	else if(state==MediaIsRemoving) detectedRemovedMedia(m);
+	this->sleep(3);
 }
 
 
@@ -114,11 +130,54 @@ int HddInterface::detectedCreatedMedia(Media *m)
 	QString realPath=m->getRealPath();
 
 	//On prévient l'interface réseau, en passant le realPath
-	networkInterface->sendMediaCreated(realPath,m->isDirectory());
+	ResponseEnum response=networkInterface->sendMediaCreated(realPath,m->isDirectory());
 
-	m->getDetectionState()->removeFirst();
-
-	Widget::addRowToTable("Le media "+m->getLocalPath()+" a été créé",model,MSG_HDD);
+	if(response==ACCEPT_FILE_INFO)
+	{
+		configurationData->getConfigurationFile()->removeMediaDetection();
+		m->getDetectionState()->removeFirst();
+		Widget::addRowToTable("Réponse: Le serveur a accepté la modif",model,MSG_HDD);
+	}
+	else if(response==REJECT_FILE_INFO_FOR_IDENTIFICATION)
+	{
+		Widget::addRowToTable("Réponse: Le serveur requiert une identification",model,MSG_HDD);
+	}
+	else if(response==REJECT_FILE_INFO_FOR_PARAMETERS)
+	{
+		Widget::addRowToTable("Réponse: Le serveur a détecté des parametres erronés dans le message",model,MSG_HDD);
+	}
+	else if(response==REJECT_FILE_INFO_FOR_RIGHT)
+	{
+		configurationData->getConfigurationFile()->removeMediaDetection();
+		m->getDetectionState()->removeFirst();
+		Widget::addRowToTable("Réponse: Vos droits sont insuffisants",model,MSG_HDD);
+	}
+	else if(response==REJECT_FILE_INFO_FOR_CONFLICT)
+	{
+		configurationData->getConfigurationFile()->removeMediaDetection();
+		m->getDetectionState()->removeFirst();
+		Widget::addRowToTable("Réponse: Un conflit a été détecté",model,MSG_HDD);
+	}
+	else if(response==NOT_CONNECT)
+	{
+		Widget::addRowToTable("Vous n'etes pas connecté au serveur",model,MSG_HDD);
+	}
+	else if(response==NOT_IDENTIFICATE)
+	{
+		Widget::addRowToTable("Vous n'etes pas identifié sur serveur",model,MSG_HDD);
+	}
+	else if(response==NOT_SEND)
+	{
+		Widget::addRowToTable("Le message n'a pas été envoyé",model,MSG_HDD);
+	}
+	else if(response==NOT_TIMEOUT)
+	{
+		Widget::addRowToTable("Le serveur tarde trop à répondre",model,MSG_HDD);
+	}
+	else if(response==NOT_PARAMETERS)
+	{
+		Widget::addRowToTable("Le message à envoyer contient des parametres érronnés",model,MSG_HDD);
+	}
 
 	//Sauve la nouvelle config des fichiers synchronisés
 	configurationData->save();
@@ -134,11 +193,58 @@ int HddInterface::detectedRemovedMedia(Media *m)
 {
 	//On récupère le realPath et on prévient le networkInterface
 	QString realPath=m->getRealPath();
-	networkInterface->sendMediaRemoved(realPath);
 
-	m->getParent()->delSubMedia(m);
+	ResponseEnum response=networkInterface->sendMediaRemoved(realPath);
 
-	Widget::addRowToTable("Le media "+m->getLocalPath()+" a été supprimé",model,MSG_HDD);
+	if(response==ACCEPT_FILE_INFO)
+	{
+		m->getParent()->delSubMedia(m);
+		configurationData->getConfigurationFile()->removeMediaDetection();
+		m->getDetectionState()->removeFirst();
+		Widget::addRowToTable("Réponse: Le serveur a accepté la modif",model,MSG_HDD);
+	}
+	else if(response==REJECT_FILE_INFO_FOR_IDENTIFICATION)
+	{
+		Widget::addRowToTable("Réponse: Le serveur requiert une identification",model,MSG_HDD);
+	}
+	else if(response==REJECT_FILE_INFO_FOR_PARAMETERS)
+	{
+		Widget::addRowToTable("Réponse: Le serveur a détecté des parametres erronés dans le message",model,MSG_HDD);
+	}
+	else if(response==REJECT_FILE_INFO_FOR_RIGHT)
+	{
+		m->getParent()->delSubMedia(m);
+		configurationData->getConfigurationFile()->removeMediaDetection();
+		m->getDetectionState()->removeFirst();
+		Widget::addRowToTable("Réponse: Vos droits sont insuffisants",model,MSG_HDD);
+	}
+	else if(response==REJECT_FILE_INFO_FOR_CONFLICT)
+	{
+		m->getParent()->delSubMedia(m);
+		configurationData->getConfigurationFile()->removeMediaDetection();
+		m->getDetectionState()->removeFirst();
+		Widget::addRowToTable("Réponse: Un conflit a été détecté",model,MSG_HDD);
+	}
+	else if(response==NOT_CONNECT)
+	{
+		Widget::addRowToTable("Vous n'etes pas connecté au serveur",model,MSG_HDD);
+	}
+	else if(response==NOT_IDENTIFICATE)
+	{
+		Widget::addRowToTable("Vous n'etes pas identifié sur serveur",model,MSG_HDD);
+	}
+	else if(response==NOT_SEND)
+	{
+		Widget::addRowToTable("Le message n'a pas été envoyé",model,MSG_HDD);
+	}
+	else if(response==NOT_TIMEOUT)
+	{
+		Widget::addRowToTable("Le serveur tarde trop à répondre",model,MSG_HDD);
+	}
+	else if(response==NOT_PARAMETERS)
+	{
+		Widget::addRowToTable("Le message à envoyer contient des parametres érronnés",model,MSG_HDD);
+	}
 
 	//Sauve la nouvelle config des fichiers synchronisés
 	configurationData->save();
@@ -155,15 +261,58 @@ int HddInterface::detectedUpdatedMedia(Media *m)
 
 	QFile file(f->getLocalPath());      
 	file.open(QIODevice::ReadOnly);
-
-	//Envoie le contenu de tout le fichier à l'interface réseau
-	networkInterface->sendMediaUpdated(realPath,file.readAll());
-
-	f->getDetectionState()->removeFirst();
-
+	QByteArray content=file.readAll();
 	file.close();
 
-	Widget::addRowToTable("Le fichier "+f->getLocalPath()+" a été modifié",model,MSG_HDD);
+	//Envoie le contenu de tout le fichier à l'interface réseau
+	ResponseEnum response=networkInterface->sendMediaUpdated(realPath,content);
+
+	if(response==ACCEPT_FILE_INFO)
+	{
+		configurationData->getConfigurationFile()->removeMediaDetection();
+		m->getDetectionState()->removeFirst();
+		Widget::addRowToTable("Réponse: Le serveur a accepté la modif",model,MSG_HDD);
+	}
+	else if(response==REJECT_FILE_INFO_FOR_IDENTIFICATION)
+	{
+		Widget::addRowToTable("Réponse: Le serveur requiert une identification",model,MSG_HDD);
+	}
+	else if(response==REJECT_FILE_INFO_FOR_PARAMETERS)
+	{
+		Widget::addRowToTable("Réponse: Le serveur a détecté des parametres erronés dans le message",model,MSG_HDD);
+	}
+	else if(response==REJECT_FILE_INFO_FOR_RIGHT)
+	{
+		configurationData->getConfigurationFile()->removeMediaDetection();
+		m->getDetectionState()->removeFirst();
+		Widget::addRowToTable("Réponse: Vos droits sont insuffisants",model,MSG_HDD);
+	}
+	else if(response==REJECT_FILE_INFO_FOR_CONFLICT)
+	{
+		configurationData->getConfigurationFile()->removeMediaDetection();
+		m->getDetectionState()->removeFirst();
+		Widget::addRowToTable("Réponse: Un conflit a été détecté",model,MSG_HDD);
+	}
+	else if(response==NOT_CONNECT)
+	{
+		Widget::addRowToTable("Vous n'etes pas connecté au serveur",model,MSG_HDD);
+	}
+	else if(response==NOT_IDENTIFICATE)
+	{
+		Widget::addRowToTable("Vous n'etes pas identifié sur serveur",model,MSG_HDD);
+	}
+	else if(response==NOT_SEND)
+	{
+		Widget::addRowToTable("Le message n'a pas été envoyé",model,MSG_HDD);
+	}
+	else if(response==NOT_TIMEOUT)
+	{
+		Widget::addRowToTable("Le serveur tarde trop à répondre",model,MSG_HDD);
+	}
+	else if(response==NOT_PARAMETERS)
+	{
+		Widget::addRowToTable("Le message à envoyer contient des parametres érronnés",model,MSG_HDD);
+	}
 
 	configurationData->save();
 	return 0;

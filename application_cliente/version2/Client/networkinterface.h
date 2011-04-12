@@ -25,10 +25,10 @@ public:
 	bool disconnectFromServer();
 
 	//Envoi de messages de divers types
-	bool sendMediaCreated(QString realPath,bool isDirectory);
-	bool sendMediaUpdated(QString realPath,QByteArray content);
-	bool sendMediaRemoved(QString realPath);
-	bool sendIdentification();
+	ResponseEnum sendMediaCreated(QString realPath,bool isDirectory);
+	ResponseEnum sendMediaUpdated(QString realPath,QByteArray content);
+	ResponseEnum sendMediaRemoved(QString realPath);
+	ResponseEnum sendIdentification();
 
 	void run();
 
@@ -37,6 +37,11 @@ public:
 	Request *getReceiveRequestList();
 	void setWaitReceiveRequestList(QWaitCondition *waitReceiveRequestList);
 
+	//Pour savoir si on est connecté
+	bool checkIsConnected();
+
+	//Bloquer le thread appelant tant qu'on est pas connecté
+	void blockWhileDisconnected();
 signals:
 	void connected();
 	void disconnected();
@@ -73,6 +78,9 @@ private:
 
 	//La condition pour synchroniser les messages
 	QWaitCondition waitMessages;
+
+	//Le mutex pour bloquer tant qu'on est pas connecté
+	QMutex blockDisconnectedMutex;
 
 	//Pour les réponses aux requetes envoyées par le client
 	ResponseEnum response;

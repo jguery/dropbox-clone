@@ -34,9 +34,10 @@ NetworkInterface::NetworkInterface(ConfigurationNetwork *configurationNetwork, C
 	this->isIdentified=false;
 	this->waitReceiveRequestList=NULL;
 	this->receiveRequestList=new QList<Request*>();
+	blockDisconnectedMutex.lock();
 
 	//On établit les connexion des évenement de socket à la classe.
-	QObject::connect(socket,SIGNAL(stateChanged(QAbstractSocket::SocketState)),this,SLOT(stateChangedAction(QAbstractSocket::SocketState)));
+	QObject::connect(socket,SIGNAL(stateChanged(QAbstractSocket::SocketState)),this,SLOT(stateChangedAction(QAbstractSocket::SocketState)),Qt::DirectConnection);
 	QObject::connect(socket,SIGNAL(connected()),this,SLOT(connectedToServer()));
 	QObject::connect(socket,SIGNAL(disconnected()),this,SLOT(disconnectedFromServer()));
 
@@ -70,7 +71,6 @@ void NetworkInterface::stateChangedAction(QAbstractSocket::SocketState state)
 void NetworkInterface::connectedToServer()
 {
 	Widget::addRowToTable("Connexion établie",model,MSG_NETWORK);
-	emit connected();
 }
 
 
@@ -80,6 +80,7 @@ void NetworkInterface::disconnectedFromServer()
 {
 	this->isConnected=false;
 	this->isIdentified=false;
+	blockDisconnectedMutex.lock();
 	Widget::addRowToTable("Connexion perdue",model,MSG_NETWORK);
 	emit disconnected();
 }
@@ -90,7 +91,9 @@ void NetworkInterface::disconnectedFromServer()
 void NetworkInterface::connexionEncrypted()
 {
 	this->isConnected=true;
+	blockDisconnectedMutex.unlock();
 	Widget::addRowToTable("Connexion avec le serveur correctement établie et cryptée",model,MSG_NETWORK);
+	emit connected();
 }
 
 
@@ -114,6 +117,19 @@ void NetworkInterface::run()
 }
 
 
+//Savoir si on est connecté au serveur
+bool NetworkInterface::checkIsConnected()
+{
+	return isConnected;
+}
+
+
+//Bloquer le thread appelant tant qu'on est pas connecté
+void NetworkInterface::blockWhileDisconnected()
+{
+	blockDisconnectedMutex.lock();
+	blockDisconnectedMutex.unlock();
+}
 
 
 //Pour se connecter au serveur
@@ -173,11 +189,11 @@ void NetworkInterface::receiveMessageAction(QByteArray *message)
 //Pour envoyer un message d'identification
 //cette fonction est bloquante tant qu'elle ne recoit pas de réponse
 //il l'appeller dans un thread externe
-bool NetworkInterface::sendIdentification()
+ResponseEnum NetworkInterface::sendIdentification()
 {
-	//On vérifie que la socket est bien connectée
-	if(!isConnected) return false;
-	this->isIdentified=false;
+	//On vérifie que la socket est bien connectée et qu'on est identifié
+	if(!isConnected) return NOT_CONNECT;
+	if(!isIdentified) return NOT_IDENTIFICATE;
 
 	//On récupère le pseudo et le mot de passe de la configuration d'identification
 	QString pseudo=configurationIdentification->getPseudo();
@@ -191,31 +207,25 @@ bool NetworkInterface::sendIdentification()
 	//On crèe le message d'identification
 	QByteArray *message=request.toXml();
 	bool r=socket->sendMessage(message);
-	if(!r) return false;
+	if(!r) return NOT_SEND;
 
-	//On attends la réponse
 	QMutex mutex;
-	waitMessages.wait(&mutex);
+	if(!waitMessages.wait(&mutex,20000)) return NOT_TIMEOUT;
 
-	if(response==VALID_IDENTIFICATION)
-	{
-		this->isIdentified=true;
-		return true;
-	}
-	return false;
+	return response;
 }
 
 
 
 //Pour envoyer un message de fichier modifié
-bool NetworkInterface::sendMediaUpdated(QString realPath,QByteArray content)
+ResponseEnum NetworkInterface::sendMediaUpdated(QString realPath,QByteArray content)
 {
 	//On vérifie que la socket est bien connectée et qu'on est identifié
-	if(!isConnected) return false;
-	if(!isIdentified) return false;
+	if(!isConnected) return NOT_CONNECT;
+	if(!isIdentified) return NOT_IDENTIFICATE;
 
 	//On vérifie que le realPath n'est pas vide
-	if(realPath.isEmpty()) return false;
+	if(realPath.isEmpty()) return NOT_PARAMETERS;
 
 	Request request;
 	request.setType(UPDATE_FILE_INFO);
@@ -225,29 +235,25 @@ bool NetworkInterface::sendMediaUpdated(QString realPath,QByteArray content)
 	//On rédige le message et on l'envoi
 	QByteArray *message=request.toXml();
 	bool r=socket->sendMessage(message);
-	if(!r) return false;
+	if(!r) return NOT_SEND;
 
 	QMutex mutex;
-	waitMessages.wait(&mutex);
+	if(!waitMessages.wait(&mutex,20000)) return NOT_TIMEOUT;
 
-	if(response==ACK_FILE_INFO)
-	{
-		return true;
-	}
-	return false;
+	return response;
 }
 
 
 
 //Pour envoyer un message de média créé
-bool NetworkInterface::sendMediaCreated(QString realPath, bool isDirectory)
+ResponseEnum NetworkInterface::sendMediaCreated(QString realPath, bool isDirectory)
 {
 	//On vérifie que la socket est bien connectée et qu'on est identifié
-	if(!isConnected) return false;
-	if(!isIdentified) return false;
+	if(!isConnected) return NOT_CONNECT;
+	if(!isIdentified) return NOT_IDENTIFICATE;
 
 	//On vérifie que le realPath n'est pas vide
-	if(realPath.isEmpty()) return false;
+	if(realPath.isEmpty()) return NOT_PARAMETERS;
 
 	Request request;
 	request.setType(CREATE_FILE_INFO);
@@ -257,16 +263,12 @@ bool NetworkInterface::sendMediaCreated(QString realPath, bool isDirectory)
 	//On rédige le message et on l'envoi
 	QByteArray *message=request.toXml();
 	bool r=socket->sendMessage(message);
-	if(!r) return false;
+	if(!r) return NOT_SEND;
 
 	QMutex mutex;
-	waitMessages.wait(&mutex);
+	if(!waitMessages.wait(&mutex,20000)) return NOT_TIMEOUT;
 
-	if(response==ACK_FILE_INFO)
-	{
-		return true;
-	}
-	return false;
+	return response;
 }
 
 
@@ -275,14 +277,14 @@ bool NetworkInterface::sendMediaCreated(QString realPath, bool isDirectory)
 
 
 //Envoyer un message de média supprimé
-bool NetworkInterface::sendMediaRemoved(QString realPath)
+ResponseEnum NetworkInterface::sendMediaRemoved(QString realPath)
 {
 	//On vérifie que la socket est bien connectée et qu'on est identifié
-	if(!isConnected) return false;
-	if(!isIdentified) return false;
+	if(!isConnected) return NOT_CONNECT;
+	if(!isIdentified) return NOT_IDENTIFICATE;
 
 	//On vérifie que le realPath n'est pas vide
-	if(realPath.isEmpty()) return false;
+	if(realPath.isEmpty()) return NOT_PARAMETERS;
 
 	Request request;
 	request.setType(REMOVE_FILE_INFO);
@@ -291,16 +293,12 @@ bool NetworkInterface::sendMediaRemoved(QString realPath)
 	//On rédige le message et on l'envoi
 	QByteArray *message=request.toXml();
 	bool r=socket->sendMessage(message);
-	if(!r) return false;
+	if(!r) return NOT_SEND;
 
 	QMutex mutex;
-	waitMessages.wait(&mutex);
+	if(!waitMessages.wait(&mutex,20000)) return NOT_TIMEOUT;
 
-	if(response==ACK_FILE_INFO)
-	{
-		return true;
-	}
-	return false;
+	return response;
 }
 
 

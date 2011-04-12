@@ -4,7 +4,6 @@
 
 //Pour créer un repertoire à partir de son localPath et de son realPath
 //Les paramètres localPath et realPath ne doivent pas être vides
-//Le repertoire doit exister à l'adresse localPath
 //On retourne un repertoire vide, même si celui d'origine contient des fichiers
 
 Dir *Dir::createDir(QString localPath,QString realPath,Dir *parent,int revision,bool readOnly)
@@ -31,9 +30,6 @@ Dir *Dir::createDir(QString localPath,QString realPath,Dir *parent,int revision,
 
 
 //Permet de charger le repertoire à partir d'un noeud xml.
-//A noter qu'il faut que le contenu du repertoire tel qu'il est décrit dans le noeud corresponde
-//exactement au contenu réel du repertoire sur le disque. C'est à dire qu'il n'y ai eu aucune modif
-//quand l'application n'était pas en marche
 Dir *Dir::loadDir(QDomNode noeud,Dir *parent)
 {
 
@@ -44,7 +40,6 @@ Dir *Dir::loadDir(QDomNode noeud,Dir *parent)
 	//On récupère le localPath et realPath du noeud xml et on vérifie qu'ils ne sont pas vides
 	QString localPath=noeud.toElement().attribute("localPath","");
 	QString realPath=noeud.toElement().attribute("realPath","");
-
 	if(localPath.isEmpty() || realPath.isEmpty())
 		return NULL;
 
@@ -151,7 +146,7 @@ void Dir::directoryChangedAction()
 	for(int i=0;i<subMedias->size();i++)
 	{
 		Media *m=subMedias->at(i);
-		if(!(m->getDetectionState()->isEmpty()) && m->getDetectionState()->last()==MediaIsRemoving) continue;
+		if(m->getDetectionState()->contains(MediaIsRemoving)) continue;
 
 		if(!m->isDirectory())   //Si le Media est un fichier
 		{
@@ -303,8 +298,7 @@ Media *Dir::getSubMedia(int i)
 //Ajouter un sous fichier
 File *Dir::addSubFile(QString localPath,QString realPath,int revision,bool readOnly)
 {
-	File *f;
-	f=File::createFile(localPath,realPath,this,revision,readOnly);
+	File *f=File::createFile(localPath,realPath,this,revision,readOnly);
 	if(f==NULL) return NULL;
 	subMedias->append(f);
 	return f;
@@ -315,8 +309,7 @@ File *Dir::addSubFile(QString localPath,QString realPath,int revision,bool readO
 //Ajouter un sous repertoire
 Dir *Dir::addSubDir(QString localPath,QString realPath,int revision,bool readOnly)
 {
-	Dir *d;
-	d=Dir::createDir(localPath,realPath,this,revision,readOnly);
+	Dir *d=Dir::createDir(localPath,realPath,this,revision,readOnly);
 	if(d==NULL) return NULL;
 	subMedias->append(d);
 	d->setListenning(listen);
@@ -326,7 +319,7 @@ Dir *Dir::addSubDir(QString localPath,QString realPath,int revision,bool readOnl
 
 
 
-//Supprimer un sous média
+//Supprimer un sous média de la liste des sous médias, mais ne fait pas la désallocation
 void Dir::delSubMedia(Media *m)
 {
 	if(m==NULL) return;
@@ -449,10 +442,9 @@ void Dir::setListenning(bool listen)
 	{
 		if(!subMedias->at(i)->isDirectory()) continue;
 		Dir *d=(Dir*)subMedias->at(i);
-		if(!(d->getDetectionState()->isEmpty()) && d->getDetectionState()->last()==MediaIsRemoving) continue;
+		if(d->getDetectionState()->contains(MediaIsRemoving)) continue;
 		d->setListenning(listen);
 	}
-
 }
 
 
@@ -465,18 +457,18 @@ void Dir::setListenning(bool listen)
 //Une méthode statique qui supprime un répertoire non vide
 void Dir::removeNonEmptyDirectory(QString path)
 {
-    QDir dir(path);
+	QDir dir(path);
 
-    //Supprime tous les fichier contenus dans le dossier path
-    QFileInfoList fileList = dir.entryInfoList( QDir::Files | QDir::Hidden );
-    foreach(QFileInfo file, fileList) dir.remove( file.absoluteFilePath());
+	//Supprime tous les fichier contenus dans le dossier path
+	QFileInfoList fileList = dir.entryInfoList( QDir::Files | QDir::Hidden );
+	foreach(QFileInfo file, fileList) dir.remove( file.absoluteFilePath());
 
-    //Supprime tous les dossiers contenus dans le dossier path
-    QFileInfoList dirList = dir.entryInfoList( QDir::AllDirs | QDir::Hidden | QDir::NoDotAndDotDot );
-    foreach(QFileInfo dir, dirList) Dir::removeNonEmptyDirectory(dir.absoluteFilePath());
+	//Supprime tous les dossiers contenus dans le dossier path
+	QFileInfoList dirList = dir.entryInfoList( QDir::AllDirs | QDir::Hidden | QDir::NoDotAndDotDot );
+	foreach(QFileInfo dir, dirList) Dir::removeNonEmptyDirectory(dir.absoluteFilePath());
 
-    //On supprime enfin le dossier name
-    dir.rmdir(dir.absolutePath());
+	//On supprime enfin le dossier name
+	dir.rmdir(dir.absolutePath());
 }
 
 
@@ -492,7 +484,7 @@ Dir::~Dir()
 	//On delete tous les sous médias, et on vide la liste des sous médias
 	while(!(subMedias->isEmpty()))
 	{
-		delete subMedias->at(0);
+		delete subMedias->first();
 		subMedias->remove(0);
 	}
 	//On delete la liste des sous médias

@@ -19,7 +19,8 @@ SOURCES += main.cpp\
     hddinterface.cpp \
     dir.cpp \
     file.cpp \
-    media.cpp
+    media.cpp \
+    depot.cpp
 
 HEADERS  += widget.h \
     socket.h \
@@ -29,4 +30,5 @@ HEADERS  += widget.h \
     hddinterface.h \
     dir.h \
     file.h \
-    media.h
+    media.h \
+    depot.h

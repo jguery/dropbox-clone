@@ -3,7 +3,8 @@
 
 #include "file.h"
 #include <QtCore/QFileSystemWatcher>
-#include <QtCore>
+#include <QtCore/QDir>
+#include <QtCore/QVector>
 
 
 
@@ -57,7 +58,7 @@ private slots:
 signals:
 	void detectChangement(Media *m);
 
-private:
+protected:
 	//Constructeur
 	Dir(QString localPath,QString realPath,Dir *parent,int revision,bool readOnly);
 

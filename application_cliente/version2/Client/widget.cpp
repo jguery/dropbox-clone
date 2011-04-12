@@ -45,8 +45,8 @@ Widget::Widget(QString localPath, QString realPath, QString configSavePath): QWi
 	else {addRowToTable("Echec de la création de la configuration d'indentification",model,MSG_INIT);return;}
 
 	//On créé la configuration de fichier
-	QList<Dir*> *depots=new QList<Dir*>();
-	Dir *d = Dir::createDir(localPath,realPath,NULL,0,false);depots->append(d);
+	QList<Depot*> *depots=new QList<Depot*>();
+	Depot *d = Depot::createDepot(localPath,realPath,0,false);depots->append(d);
 	if(!d){addRowToTable("Echec de la création du repertoire 1",model,MSG_INIT);return;}
 	ConfigurationFile *configurationFile=ConfigurationFile::createConfigurationFile(depots);
 	if(configurationFile) addRowToTable("Les configurations des repertoires surveillés ont été créés",model,MSG_INIT);
@@ -55,15 +55,15 @@ Widget::Widget(QString localPath, QString realPath, QString configSavePath): QWi
 	//On créé la configuration totale
 	this->configurationData=ConfigurationData::createConfigurationData(configurationNetwork,configurationIdentification,configurationFile,configSavePath);
 	configurationFile->setListenning(true);
-	/*
+
 	//On créé l'interface réseau
-	this->networkInterface=NetworkInterface::createNetworkInterface(configurationData,model);
+	this->networkInterface=NetworkInterface::createNetworkInterface(configurationNetwork,configurationIdentification,model);
 	if(networkInterface) addRowToTable("L'interface réseau a été crée",model,MSG_INIT);
 	else {addRowToTable("Echec de la création de l'interface réseau",model,MSG_INIT);return;}
 
 	//On tente de se connecter au serveur
 	addRowToTable("Tentative de connexion au serveur",model,MSG_NETWORK);
-	bool a=networkInterface->connect();
+	bool a=networkInterface->connectToServer();
 	if(a) addRowToTable("Success: Connexion réuissie",model,MSG_NETWORK);
 	else addRowToTable("Echec: Connexion échouée",model,MSG_NETWORK);
 
@@ -71,7 +71,7 @@ Widget::Widget(QString localPath, QString realPath, QString configSavePath): QWi
 	this->hddInterface=HddInterface::createHddInterface(configurationData,networkInterface,model);
 	if(hddInterface) addRowToTable("L'interface disque a été crée",model,MSG_INIT);
 	else {addRowToTable("Echec de la création de l'interface disque",model,MSG_INIT);return;}
-*/
+
 }
 
 

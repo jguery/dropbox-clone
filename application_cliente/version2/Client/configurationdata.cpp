@@ -204,7 +204,7 @@ QDomElement ConfigurationIdentification::toXml(QDomDocument *document)
 
 
 //Une fonction statique pour créer une configuration de dépots initiale
-ConfigurationFile *ConfigurationFile::createConfigurationFile(QList<Dir*> *depots)
+ConfigurationFile *ConfigurationFile::createConfigurationFile(QList<Depot*> *depots)
 {
 	//La liste de dépots passée ne doit être ni NULLe, ni vide
 	if(depots==NULL)        return NULL;
@@ -223,7 +223,7 @@ ConfigurationFile *ConfigurationFile::createConfigurationFile(QList<Dir*> *depot
 ConfigurationFile *ConfigurationFile::loadConfigurationFile(QDomNode noeud)
 {
 	//On alloue la liste des dépots dans laquelle seront chargées les dépots lues
-	QList<Dir*> *depots=new QList<Dir*>();
+	QList<Depot*> *depots=new QList<Depot*>();
 
 	//On vérifie que le nom du noeud est bien ConfigurationData
 	QDomElement element=noeud.toElement();
@@ -238,7 +238,7 @@ ConfigurationFile *ConfigurationFile::loadConfigurationFile(QDomNode noeud)
 		QDomNode n=list.at(i);
 
 		//On charge le noeud avec la méthode statique loadDir
-		Dir *d=Dir::loadDir(n,NULL);
+		Depot *d=Depot::loadDepot(n);
 		if(d==NULL)
 			return NULL;
 
@@ -254,16 +254,13 @@ ConfigurationFile *ConfigurationFile::loadConfigurationFile(QDomNode noeud)
 
 
 //Constructeur
-ConfigurationFile::ConfigurationFile(QList<Dir*> *depots) : QObject()
+ConfigurationFile::ConfigurationFile(QList<Depot*> *depots) : QObject()
 {
 	this->depots=depots;
 	this->detectMediaList=new QList<Media*>();
 	this->waitConditionDetect=NULL;
 	for(int i=0;i<depots->length();i++)
 	{
-		//cette ligne est à décommenter si on définit le ConfigurationFile comme thread.
-		//A discuter avec Julien
-		//depots->at(i)->moveToThread(this);
 		QObject::connect(depots->at(i),SIGNAL(detectChangement(Media*)),this,SLOT(putMediaDetection(Media*)),Qt::QueuedConnection);
 	}
 }
@@ -296,7 +293,7 @@ QDomElement ConfigurationFile::toXml(QDomDocument *document)
 //Recherche quel média a ce localPath
 Media *ConfigurationFile::findMediaByLocalPath(QString localPath)
 {
-	QList<Dir*>::iterator i;
+	QList<Depot*>::iterator i;
 
 	//On parcours la liste des dépots
 	for(i=depots->begin(); i!=depots->end(); i++)
@@ -314,7 +311,7 @@ Media *ConfigurationFile::findMediaByLocalPath(QString localPath)
 //Recherche quel média a ce realPath
 Media *ConfigurationFile::findMediaByRealPath(QString realPath)
 {
-	QList<Dir*>::iterator i;
+	QList<Depot*>::iterator i;
 
 	//On parcours la liste des dépots
 	for(i=depots->begin(); i!=depots->end(); i++)
@@ -337,10 +334,23 @@ Media *ConfigurationFile::getMediaDetection()
 	if(detectMediaList->size()>0)
 	{
 		m=detectMediaList->first();
-		detectMediaList->removeFirst();
 	}
 	detectMediaListMutex.unlock();
 	return m;
+}
+
+
+
+
+//Pour supprimer une détection qui a été traitée
+void ConfigurationFile::removeMediaDetection()
+{
+	detectMediaListMutex.lock();
+	if(detectMediaList->size()>0)
+	{
+		detectMediaList->removeFirst();
+	}
+	detectMediaListMutex.unlock();
 }
 
 
@@ -351,9 +361,7 @@ void ConfigurationFile::putMediaDetection(Media *m)
 {
 	detectMediaListMutex.lock();
 	detectMediaList->append(m);
-	qDebug((m->getLocalPath()+" : "+Media::stateToString(m->getDetectionState()->first())).toAscii());
 	if(waitConditionDetect!=NULL) waitConditionDetect->wakeAll();
-	/*********************/m->getDetectionState()->removeFirst();
 	detectMediaListMutex.unlock();
 }
 
@@ -371,7 +379,7 @@ void ConfigurationFile::setWaitConditionDetection(QWaitCondition *waitConditionD
 //Permet de mettre les dépots à l'écoute de changements
 void ConfigurationFile::setListenning(bool listen)
 {
-	QList<Dir*>::iterator i;
+	QList<Depot*>::iterator i;
 
 	//On parcours tous les dépots et on appelle récursivement la fonction setListenning
 	for(i=depots->begin(); i!=depots->end(); i++)

@@ -111,7 +111,7 @@ private:
 #ifndef CONFIGURATIONFILE_H
 #define CONFIGURATIONFILE_H
 
-#include "dir.h"
+#include "depot.h"
 #include <QtCore>
 #include <QtXml>
 
@@ -126,7 +126,7 @@ class ConfigurationFile: public QObject
 
 public:
 	//Des fonctions statiques pour créer l'objet
-	static ConfigurationFile *createConfigurationFile(QList<Dir*> *depots);
+	static ConfigurationFile *createConfigurationFile(QList<Depot*> *depots);
 	static ConfigurationFile *loadConfigurationFile(QDomNode noeud);
 
 	//Pour retourner le code xml de la configuration
@@ -142,6 +142,7 @@ public:
 
 	//Pour récupérer la détection à traiter
 	Media *getMediaDetection();
+	void removeMediaDetection();
 
 	void setWaitConditionDetection(QWaitCondition *waitConditionDetect);
 
@@ -152,7 +153,7 @@ private slots:
 
 private:
 	//le constructeur
-	ConfigurationFile(QList<Dir*> *depots);
+	ConfigurationFile(QList<Depot*> *depots=NULL);
 
 	//La liste des changements détectés en cours de communication au serveur
 	QList<Media*> *detectMediaList;
@@ -161,7 +162,7 @@ private:
 	QWaitCondition *waitConditionDetect;
 
 	//La liste des dépots à surveiller
-	QList<Dir*> *depots;
+	QList<Depot*> *depots;
 };
 
 #endif // CONFIGURATIONFILE_H
