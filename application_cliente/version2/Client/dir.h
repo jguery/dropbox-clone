@@ -20,14 +20,14 @@ class Dir: public Media
 
 public:
 	//Des fonctions statiques createDir et loadDir pour allouer un objet Dir
-	static Dir *createDir(QString localPath,QString realPath,Dir *parent,State state,int revision,bool readOnly);
+	static Dir *createDir(QString localPath,QString realPath,Dir *parent,int revision,bool readOnly);
 	static Dir *loadDir(QDomNode noeud,Dir *parent);
 
 	//Pour gérer la liste de ses sous médias
 	int numberSubMedia();
 	Media *getSubMedia(int i);
-	File *addSubFile(QString localPath,QString realPath,State state,int revision,bool readOnly);
-	Dir *addSubDir(QString localPath,QString realPath,State state,int revision,bool readOnly);
+	File *addSubFile(QString localPath,QString realPath,int revision,bool readOnly);
+	Dir *addSubDir(QString localPath,QString realPath,int revision,bool readOnly);
 	void delSubMedia(Media *m);
 
 	//implémentation des fonctions virtuelles de la classe Media dont elle hérite
@@ -59,7 +59,7 @@ signals:
 
 private:
 	//Constructeur
-	Dir(QString localPath,QString realPath,Dir *parent,State state,int revision,bool readOnly);
+	Dir(QString localPath,QString realPath,Dir *parent,int revision,bool readOnly);
 
 	//La liste de ses sous médias
 	QVector<Media*> *subMedias;

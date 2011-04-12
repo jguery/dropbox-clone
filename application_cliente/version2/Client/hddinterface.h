@@ -6,10 +6,13 @@
 #include "configurationdata.h"
 #include "networkinterface.h"
 
+
+
 /*
  Cette classe représente l'interaction avec le disque dur.
  Elle est avertie à chaque fois qu'un média est créé, modifié ou supprimé.
 */
+
 
 class HddInterface: public QThread
 {
@@ -20,23 +23,25 @@ public:
 	static HddInterface *createHddInterface(ConfigurationData *configurationData,NetworkInterface *networkInterface,QStandardItemModel *model);
 
 	//Les fonctions qui sont appélées lors d'une modif sur un média
-	int detectRemovedMedia(Media *m);
-	int detectCreatedMedia(Media *m);
-	int detectUpdatedMedia(Media *m);
+	int detectedRemovedMedia(Media *m);
+	int detectedCreatedMedia(Media *m);
+	int detectedUpdatedMedia(Media *m);
+
+	//Les fonctions appelées à la reception d'une requete
+	void receivedRemovedRequest(QString realPath);
+	void receivedCreatedRequest(QString realPath,bool isDirectory);
+	void receivedUpdatedRequest(QString realPath,QByteArray content);
 
 	//Pour l'exécution du Thread
 	void run();
 
-public slots:
-	//Les slots appelés lorsqu'on recoit un message du serveur
-	void receiveRemovedMedia(QString realPath);
-	void receiveCreatedMedia(QString realPath,bool isDirectory);
-	void receiveUpdatedMedia(QString realPath,QByteArray content);
-	void receiveError(int errorNumber);
-
 private:
 	//Le constructeur
 	HddInterface(ConfigurationData *configurationData,NetworkInterface *networkInterface,QStandardItemModel *model);
+
+	//On a recu une requete
+	void receivedRequest(Request *r);
+	void detectedMedia(Media *m);
 
 	//Les autres interfaces
 	ConfigurationData *configurationData;
@@ -44,7 +49,7 @@ private:
 
 	//Pour reveiller le thread dès la détection d'une modification
 	QMutex mutexWaitCondition;
-	QWaitCondition waitConditionDetect;
+	QWaitCondition waitCondition;
 
 	//Juste pour l'affichage
 	QStandardItemModel *model;

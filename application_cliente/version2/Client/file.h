@@ -16,7 +16,7 @@ class File : public Media
 {
 public:
 	//Pour créer le fichier on ne passe pas directement par le constructeur, mais plutôt par les fonctions createFile et loadFile
-	static File *createFile(QString localPath,QString realPath,Dir *parent,State state,int revision,bool readOnly);
+	static File *createFile(QString localPath,QString realPath,Dir *parent,int revision,bool readOnly);
 	static File *loadFile(QDomNode noeud,Dir *parent);
 
 	//Ensuite on ré-implemente les fonctions virtuelles de la classe Media
@@ -36,11 +36,14 @@ public:
 	//Une méthode pour mettre à jour sa signature (par exemple après une modif)
 	void updateHash();
 
+	//Une méthode pour récupérer le contenu du fichier
+	QByteArray getFileContent();
+
 	//Destructeur
 	virtual ~File();
 private:
 	//Un constructeur privé pour qu'on ne puisse pas créer des fichiers non valides. (passons plutôt par createFile ou loadFile)
-	File(QString localPath,QString realPath,Dir *parent,QByteArray *hash,State state,int revision,bool readOnly);
+	File(QString localPath,QString realPath,Dir *parent,QByteArray *hash,int revision,bool readOnly);
 
 	//Contient la signature (le hash) du fichier
 	QByteArray *hash;

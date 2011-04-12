@@ -333,13 +333,12 @@ Media *ConfigurationFile::findMediaByRealPath(QString realPath)
 Media *ConfigurationFile::getMediaDetection()
 {
 	detectMediaListMutex.lock();
-	Media *m;
+	Media *m=NULL;
 	if(detectMediaList->size()>0)
 	{
 		m=detectMediaList->first();
 		detectMediaList->removeFirst();
 	}
-	else m=NULL;
 	detectMediaListMutex.unlock();
 	return m;
 }
@@ -352,7 +351,9 @@ void ConfigurationFile::putMediaDetection(Media *m)
 {
 	detectMediaListMutex.lock();
 	detectMediaList->append(m);
+	qDebug((m->getLocalPath()+" : "+Media::stateToString(m->getDetectionState()->first())).toAscii());
 	if(waitConditionDetect!=NULL) waitConditionDetect->wakeAll();
+	/*********************/m->getDetectionState()->removeFirst();
 	detectMediaListMutex.unlock();
 }
 

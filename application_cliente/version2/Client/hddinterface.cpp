@@ -34,12 +34,15 @@ HddInterface::HddInterface(ConfigurationData *configurationData,
 
 	this->moveToThread(this);
 
-	//On demande aux repertoires de nous prevenir lorsqu'ils détectent une modif
-	this->configurationData->getConfigurationFile()->setWaitConditionDetection(&waitConditionDetect);
-	this->configurationData->getConfigurationFile()->setListenning(true);
-
 	//On démarre l'exécution
 	this->start();
+
+	//On demande au network de nous prevenir lorsqu'ils détectent une modif
+	this->networkInterface->setWaitReceiveRequestList(&waitCondition);
+
+	//On demande aux repertoires de nous prevenir lorsqu'ils détectent une modif
+	this->configurationData->getConfigurationFile()->setWaitConditionDetection(&waitCondition);
+	this->configurationData->getConfigurationFile()->setListenning(true);
 }
 
 
@@ -49,35 +52,71 @@ void HddInterface::run()
 	forever
 	{
 		mutexWaitCondition.lock();
-		waitConditionDetect.wait(&mutexWaitCondition);
+		waitCondition.wait(&mutexWaitCondition,5000);
 		mutexWaitCondition.unlock();
+		//y a t-il des medias détecté?
 		Media *m=configurationData->getConfigurationFile()->getMediaDetection();
-		if(m==NULL) continue;
-		int reponse;
-		State state=m->getState();
-		if(state==MediaIsCreating) reponse=detectCreatedMedia(m);
-		else if(state==MediaIsUpdating) reponse=detectUpdatedMedia(m);
-		else if(state==MediaIsRemoving) reponse=detectRemovedMedia(m);
-		if(reponse!=0) receiveError(reponse);
+		if(m!=NULL)
+		{
+			this->detectedMedia(m);
+		}
+		//y a t-il des requetes recues?
+		Request *r=networkInterface->getReceiveRequestList();
+		if(r!=NULL)
+		{
+			this->receivedRequest(r);
+		}
+	}
+}
+
+
+//Lorsqu'on détecte un média
+void HddInterface::detectedMedia(Media *m)
+{
+	State state=m->getDetectionState()->first();
+	if(state==MediaIsCreating) detectedCreatedMedia(m);
+	else if(state==MediaIsUpdating) detectedUpdatedMedia(m);
+	else if(state==MediaIsRemoving) detectedRemovedMedia(m);
+}
+
+
+//Lorsqu'on recoit une requete
+void HddInterface::receivedRequest(Request *r)
+{
+	RequestEnum e=r->getType();
+	if(e==CREATE_FILE_INFO)
+	{
+		QString realPath=r->getParameters().value("realPath","");
+		bool isDirectory=(r->getParameters().value("isDirectory","")=="true")?true:false;
+		receivedCreatedRequest(realPath,isDirectory);
+	}
+	else if(e==UPDATE_FILE_INFO)
+	{
+		QString realPath=r->getParameters().value("realPath","");
+		QByteArray content=r->getParameters().value("content","");
+		receivedUpdatedRequest(realPath,content);
+	}
+	else if(e==REMOVE_FILE_INFO)
+	{
+		QString realPath=r->getParameters().value("realPath","");
+		receivedRemovedRequest(realPath);
 	}
 }
 
 
 
 
-
 //Lorsqu'un média est créé... On prévient l'interface réseau (pour prévenir les autres clients connectés)
 //Principalement appelée par Dir::directoryChangedAction (car le watcher est installé dans la classe Dir)
-int HddInterface::detectCreatedMedia(Media *m)
+int HddInterface::detectedCreatedMedia(Media *m)
 {
 	//On récupère le realPath de l'objet
 	QString realPath=m->getRealPath();
 
 	//On prévient l'interface réseau, en passant le realPath
-	int errorType=networkInterface->sendMediaCreated(realPath,m->isDirectory());
+	networkInterface->sendMediaCreated(realPath,m->isDirectory());
 
-	if(errorType==0) m->setState(MediaNormalState);
-	else ; ////////////////////// erreur
+	m->getDetectionState()->removeFirst();
 
 	Widget::addRowToTable("Le media "+m->getLocalPath()+" a été créé",model,MSG_HDD);
 
@@ -91,14 +130,13 @@ int HddInterface::detectCreatedMedia(Media *m)
 
 //Lorsqu'un média est supprimé
 //Même shéma que la méthode du dessus
-int HddInterface::detectRemovedMedia(Media *m)
+int HddInterface::detectedRemovedMedia(Media *m)
 {
 	//On récupère le realPath et on prévient le networkInterface
 	QString realPath=m->getRealPath();
-	int errorType=networkInterface->sendMediaRemoved(realPath);
+	networkInterface->sendMediaRemoved(realPath);
 
-	if(errorType==0) m->getParent()->delSubMedia(m);
-	else ; /////////////////////erreur
+	m->getParent()->delSubMedia(m);
 
 	Widget::addRowToTable("Le media "+m->getLocalPath()+" a été supprimé",model,MSG_HDD);
 
@@ -109,7 +147,7 @@ int HddInterface::detectRemovedMedia(Media *m)
 
 
 //Lorsqu'un fichier est modifié
-int HddInterface::detectUpdatedMedia(Media *m)
+int HddInterface::detectedUpdatedMedia(Media *m)
 {
 	if(m->isDirectory()) return 1;
 	File *f=(File*)m;
@@ -119,9 +157,9 @@ int HddInterface::detectUpdatedMedia(Media *m)
 	file.open(QIODevice::ReadOnly);
 
 	//Envoie le contenu de tout le fichier à l'interface réseau
-	int errorType=networkInterface->sendFileModified(realPath,file.readAll());
-	if(errorType==0) f->setState(MediaNormalState);
-	else ; //errrrrrrrrrreeeurr
+	networkInterface->sendMediaUpdated(realPath,file.readAll());
+
+	f->getDetectionState()->removeFirst();
 
 	file.close();
 
@@ -135,7 +173,7 @@ int HddInterface::detectUpdatedMedia(Media *m)
 
 
 //on a recu la modif d'un fichier
-void HddInterface::receiveUpdatedMedia(QString realPath, QByteArray content)
+void HddInterface::receivedUpdatedRequest(QString realPath, QByteArray content)
 {
 	Media *m=configurationData->getConfigurationFile()->findMediaByRealPath(realPath);
 	if(m==NULL) return;
@@ -175,7 +213,7 @@ void HddInterface::receiveUpdatedMedia(QString realPath, QByteArray content)
 
 
 //on a recu la création d'un media
-void HddInterface::receiveCreatedMedia(QString realPath, bool isDirectory)
+void HddInterface::receivedCreatedRequest(QString realPath, bool isDirectory)
 {
 	Media *mParent=configurationData->getConfigurationFile()->findMediaByRealPath(Media::extractParentPath(realPath));
 	if(mParent==NULL) return;
@@ -194,7 +232,7 @@ void HddInterface::receiveCreatedMedia(QString realPath, bool isDirectory)
 			return;
 
 		//Crée le répertoire dans l'arborescence de synchronisation du client
-		Dir *d=parent->addSubDir(parent->getLocalPath()+"/"+realName,parent->getRealPath()+"/"+realName,MediaNormalState,0,false);
+		Dir *d=parent->addSubDir(parent->getLocalPath()+"/"+realName,parent->getRealPath()+"/"+realName,0,false);
 		if(!d)
 			return;
 
@@ -216,7 +254,7 @@ void HddInterface::receiveCreatedMedia(QString realPath, bool isDirectory)
 		file.close();
 
 		//Crée le fichier à l'arbo de synchronisation
-		File *f=parent->addSubFile(parent->getLocalPath()+"/"+realName,parent->getRealPath()+"/"+realName,MediaNormalState,0,false);
+		File *f=parent->addSubFile(parent->getLocalPath()+"/"+realName,parent->getRealPath()+"/"+realName,0,false);
 		if(!f)
 			return;
 
@@ -231,7 +269,7 @@ void HddInterface::receiveCreatedMedia(QString realPath, bool isDirectory)
 
 
 
-void HddInterface::receiveRemovedMedia(QString realPath)
+void HddInterface::receivedRemovedRequest(QString realPath)
 {
 	Media *m=configurationData->getConfigurationFile()->findMediaByRealPath(realPath);
 	if(m==NULL) return ;
@@ -268,15 +306,6 @@ void HddInterface::receiveRemovedMedia(QString realPath)
 	parent->setListenning(true);
 
 	configurationData->save();
-}
-
-
-
-
-//Un message inconnu a été recu, on l'affiche (pour le débogage)
-void HddInterface::receiveError(int errorNumber)
-{
-	QMessageBox::information(NULL,"",QString::number(errorNumber));
 }
 
 

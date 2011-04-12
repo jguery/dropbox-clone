@@ -6,7 +6,7 @@
 //Permet de créer un objet fichier en passant son localPath et son realPath
 //Le fichier doit exister sur le disque dur
 //On crée enfaite une synchronisation, pas un vrai fichier
-File *File::createFile(QString localPath,QString realPath,Dir *parent,State state,int revision,bool readOnly)
+File *File::createFile(QString localPath,QString realPath,Dir *parent,int revision,bool readOnly)
 {
 	if(localPath.isEmpty() || realPath.isEmpty())
 		return NULL;
@@ -19,7 +19,7 @@ File *File::createFile(QString localPath,QString realPath,Dir *parent,State stat
 	QByteArray *hash=File::hashFile();
 
 	//On peut créer le fichier
-	return new File(localPath,realPath,parent,hash,state,revision,readOnly);
+	return new File(localPath,realPath,parent,hash,revision,readOnly);
 }
 
 
@@ -42,14 +42,12 @@ File *File::loadFile(QDomNode noeud,Dir *parent)
 	if(localPath.isEmpty() || realPath.isEmpty())
 		return NULL;
 
-	//On récupère les attributs state, révision et readOnly du noeud xml.
-	QString stateString=noeud.toElement().attribute("state","");
+	//On récupère les attributs révision et readOnly du noeud xml.
 	QString revisionString=noeud.toElement().attribute("revision","");
 	QString readOnlyString=noeud.toElement().attribute("readOnly","");
 
-	//On convertit ces attributs en state, int et bool
-	State state;int revision;bool readOnly;bool ok;
-	state=Media::stateFromString(stateString);
+	//On convertit ces attributs en int et bool
+	int revision;bool readOnly;bool ok;
 	revision=revisionString.toInt(&ok); if(!ok) revision=0;
 	readOnly=readOnlyString=="true"?true:false;
 
@@ -66,7 +64,7 @@ File *File::loadFile(QDomNode noeud,Dir *parent)
 	}
 
 	 //On peut maintenant créer l'objet
-	return new File(localPath,realPath,parent,hash,state,revision,readOnly);
+	return new File(localPath,realPath,parent,hash,revision,readOnly);
 }
 
 
@@ -98,7 +96,7 @@ QByteArray *File::hashFile(QString path)
 	QCryptographicHash hasher(QCryptographicHash::Sha1);
 	hasher.addData(content);  //On met les données à hasher
 
-	return new QByteArray(hasher.result().toBase64()); //On hash, on met le hash en base64 et on retourne le resultat
+	return new QByteArray(hasher.result()); //On hash et on retourne le resultat
 }
 
 
@@ -136,6 +134,21 @@ bool File::hasBeenUpdated()
 
 
 
+//Pour récupérer le contenu
+QByteArray File::getFileContent()
+{
+	QByteArray content;
+	//on ouvre le fichier en lecture
+	QFile f(localPath);
+	if(!f.open(QIODevice::ReadOnly))
+		return content;
+	content=f.readAll(); //On récupère le contenu du fichier
+	f.close();
+	return content;
+}
+
+
+
 
 //Retourne false car ce n'est pas un repertoire ;)
 bool File::isDirectory()
@@ -148,7 +161,7 @@ bool File::isDirectory()
 
 
 //Constructeur qui ne fait qu'initialiser
-File::File(QString localPath,QString realPath,Dir *parent,QByteArray *hash,State state,int revision,bool readOnly): Media(localPath,realPath,parent,state,revision,readOnly)
+File::File(QString localPath,QString realPath,Dir *parent,QByteArray *hash,int revision,bool readOnly): Media(localPath,realPath,parent,revision,readOnly)
 {
 	this->hash=hash;
 }
@@ -168,8 +181,7 @@ QDomElement File::toXml(QDomDocument *document)
 	element.setAttribute("localPath",localPath);
 	element.setAttribute("realPath",realPath);
 
-	//On écrit ses attributs state, revision et readOnly
-	element.setAttribute("state",Media::stateToString(state));
+	//On écrit ses attributs revision et readOnly
 	element.setAttribute("revision",QString::number(revision));
 	element.setAttribute("readOnly",readOnly?"true":"false");
 

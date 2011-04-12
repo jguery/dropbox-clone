@@ -4,14 +4,14 @@
 
 
 //le constructeur pour initialiser les attributs
-Media::Media(QString localPath,QString realPath,Dir *parent,State state,int revision,bool readOnly): QObject((QObject*)parent)
+Media::Media(QString localPath,QString realPath,Dir *parent,int revision,bool readOnly): QObject((QObject*)parent)
 {
 	this->localPath=localPath;
 	this->realPath=realPath;
 	this->parent=parent;
-	this->state=state;
 	this->revision=revision;
 	this->readOnly=readOnly;
+	this->detectionState=new QList<State>();
 }
 
 
@@ -60,17 +60,13 @@ void Media::setParent(Dir *parent)
 
 
 
-//les accesseurs d'accès et de modifications à l'attribut state
+//les accesseurs d'accès à l'attribut state
 
-State Media::getState()
+QList<State> *Media::getDetectionState()
 {
-	return state;
+	return detectionState;
 }
 
-void Media::setState(State state)
-{
-	this->state=state;
-}
 
 
 
@@ -116,8 +112,6 @@ void Media::setReadOnly(bool readOnly)
 
 
 
-
-
 //méthode statique qui extrait d'un chemin, son repertoire parent.
 QString Media::extractParentPath(QString path)
 {
@@ -127,6 +121,7 @@ QString Media::extractParentPath(QString path)
 	if(path.endsWith("/")) parentPath=parentPath+"/";
 	return parentPath;
 }
+
 
 
 
@@ -141,6 +136,7 @@ QString Media::extractName(QString path)
 }
 
 
+
 //Méthode qui convertit une QString en une vrai state
 State Media::stateFromString(QString stateString)
 {
@@ -153,6 +149,7 @@ State Media::stateFromString(QString stateString)
 }
 
 
+
 //Méthode qui convertit une state en une QString
 QString Media::stateToString(State state)
 {
@@ -162,4 +159,12 @@ QString Media::stateToString(State state)
 	else if(state==MediaIsRemoving) stateString="MediaIsRemoving";
 	else stateString="MediaNormalState";
 	return stateString;
+}
+
+
+
+//destructeur
+Media::~Media()
+{
+	delete detectionState;
 }

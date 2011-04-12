@@ -11,58 +11,74 @@
  Toutes les requêtes passent par ici
 */
 
-class NetworkInterface: public QObject
+class NetworkInterface: public QThread
 {
+
 	Q_OBJECT
 
 public:
 	//Une méthode statique pour créer l'objet
-	static NetworkInterface *createNetworkInterface(ConfigurationData *configurationData, QStandardItemModel *model);
+	static NetworkInterface *createNetworkInterface(ConfigurationNetwork *configurationNetwork,ConfigurationIdentification *configurationIdentification, QStandardItemModel *model);
 
 	//Les fonction de connexion et déconnexion
-	bool connect();
-	bool disconnect();
+	bool connectToServer();
+	bool disconnectFromServer();
 
 	//Envoi de messages de divers types
 	bool sendMediaCreated(QString realPath,bool isDirectory);
-	bool sendFileModified(QString realPath,QByteArray content);
+	bool sendMediaUpdated(QString realPath,QByteArray content);
 	bool sendMediaRemoved(QString realPath);
-
 	bool sendIdentification();
 
-signals:
-	//Signaux pour connaitre l'état de la connexion
-	void connexionStateChanged(QAbstractSocket::SocketState state,QString stateDescription);
-	void connectedToServer();
-	void disconnectedFromServer();
+	void run();
 
-	//Signaux de réceptions de messages de divers types
+	//Gérer la liste des requetes recues
+	void putReceiveRequestList(Request *r);
+	Request *getReceiveRequestList();
+	void setWaitReceiveRequestList(QWaitCondition *waitReceiveRequestList);
+
+signals:
+	void connected();
+	void disconnected();
 	void receiveErrorMessage(QString);
-	void receiveModifiedFileMessage(File*,QByteArray);
-	void receiveCreatedMediaMessage(Dir *parent,QString realName);
-	void receiveRemovedMediaMessage(Media*);
-	void receiveValidationMessage();
-	void receiveAnnulationMessage();
 
 private slots:
 	//Slots pour recevoir les évènement de la socket
 	void stateChangedAction(QAbstractSocket::SocketState);
-	void receiveMessageAction(QByteArray *message);
+	void connectedToServer();
+	void disconnectedFromServer();
 	void connexionEncrypted();
 	void erreursSsl(const QList<QSslError>&);
+	void receiveMessageAction(QByteArray *message);
 
 private:
 	//Le constructeur
-        NetworkInterface(ConfigurationData *configurationData, QStandardItemModel *model);
+	NetworkInterface(ConfigurationNetwork *configurationNetwork,ConfigurationIdentification *configurationIdentification, QStandardItemModel *model);
 
 	//La socket qui servira à se connecter au serveur
 	Socket *socket;
+	bool isConnected;
+	bool isIdentified;
 
-	//La configuration totale
-	ConfigurationData *configurationData;
+	//Les configurations nécéssaires
+	ConfigurationNetwork *configurationNetwork;
+	ConfigurationIdentification *configurationIdentification;
 
-        //Juste pour l'affichage
-        QStandardItemModel *model;
+	//La condition pour les requetes recus
+	QWaitCondition *waitReceiveRequestList;
+
+	//La liste des requetes recus
+	QList<Request*> *receiveRequestList;
+	QMutex receiveRequestListMutex;
+
+	//La condition pour synchroniser les messages
+	QWaitCondition waitMessages;
+
+	//Pour les réponses aux requetes envoyées par le client
+	ResponseEnum response;
+
+	//Juste pour l'affichage
+	QStandardItemModel *model;
 };
 
 

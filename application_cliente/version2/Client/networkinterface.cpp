@@ -3,62 +3,97 @@
 
 
 //La méthode statique d'allocation
-NetworkInterface *NetworkInterface::createNetworkInterface(ConfigurationData *configurationData, QStandardItemModel *model)
+NetworkInterface *NetworkInterface::createNetworkInterface(ConfigurationNetwork *configurationNetwork,ConfigurationIdentification *configurationIdentification, QStandardItemModel *model)
 {
 	//On teste la validité de la configuration
-	if(configurationData==NULL)
+	if(configurationNetwork==NULL || configurationIdentification==NULL)
 		return NULL;
 
 	if(model==NULL)
 		return NULL;
 
 	//On retourne l'objet créé
-	return new NetworkInterface(configurationData,model);
+	return new NetworkInterface(configurationNetwork,configurationIdentification,model);
 }
 
 
+
+
 //Le constructeur
-NetworkInterface::NetworkInterface(ConfigurationData *configurationData, QStandardItemModel *model): QObject()
+NetworkInterface::NetworkInterface(ConfigurationNetwork *configurationNetwork, ConfigurationIdentification *configurationIdentification, QStandardItemModel *model): QThread()
 {
+	this->moveToThread(this);
+
 	//On crèe la socket
-	socket=new Socket();
+	this->socket=new Socket();
+	this->configurationNetwork=configurationNetwork;
+	this->configurationIdentification=configurationIdentification;
+
+	//On fait les initialisations
+	this->isConnected=false;
+	this->isIdentified=false;
+	this->waitReceiveRequestList=NULL;
+	this->receiveRequestList=new QList<Request*>();
 
 	//On établit les connexion des évenement de socket à la classe.
 	QObject::connect(socket,SIGNAL(stateChanged(QAbstractSocket::SocketState)),this,SLOT(stateChangedAction(QAbstractSocket::SocketState)));
-	QObject::connect(socket,SIGNAL(encrypted()),this,SLOT(connexionEncrypted()));
-	QObject::connect(socket,SIGNAL(connected()),this,SIGNAL(connectedToServer()));
-	QObject::connect(socket,SIGNAL(sslErrors(QList<QSslError>)),this,SLOT(erreursSsl(QList<QSslError>)));
-	QObject::connect(socket,SIGNAL(disconnected()),this,SIGNAL(disconnectedFromServer()));
-	QObject::connect(socket,SIGNAL(receiveMessage(QByteArray*)),this,SLOT(receiveMessageAction(QByteArray*)));
+	QObject::connect(socket,SIGNAL(connected()),this,SLOT(connectedToServer()));
+	QObject::connect(socket,SIGNAL(disconnected()),this,SLOT(disconnectedFromServer()));
 
-	//On initialise la socket
-	this->configurationData=configurationData;
+	QObject::connect(socket,SIGNAL(encrypted()),this,SLOT(connexionEncrypted()));
+	QObject::connect(socket,SIGNAL(sslErrors(QList<QSslError>)),this,SLOT(erreursSsl(QList<QSslError>)));
+	QObject::connect(socket,SIGNAL(receiveMessage(QByteArray*)),this,SLOT(receiveMessageAction(QByteArray*)));
 
 	this->model = model;
 }
 
 
-//Pour se connecter au serveur
-bool NetworkInterface::connect()
+
+//Slot appelé lorsque l'état de la socket a changé
+void NetworkInterface::stateChangedAction(QAbstractSocket::SocketState state)
 {
-	//C'est le socket qui s'en charge
-	return socket->connectToServer(configurationData->getConfigurationNetwork()->getAddress(),configurationData->getConfigurationNetwork()->getPort());
+	//Le nouvel état est dans state. Selon sa valeur, on rédige une description à afficher
+	QString description;
+	if(state==QAbstractSocket::UnconnectedState) description="L'application déconnectée du serveur";
+	else if(state==QAbstractSocket::HostLookupState) description="L'application recherche le serveur à l'adresse: "+configurationNetwork->getFullAddress();
+	else if(state==QAbstractSocket::ConnectingState) description="L'application tente de se connecter au serveur";
+	else if(state==QAbstractSocket::ConnectedState) description="L'application est connectée au serveur en mode non crypté";
+	else if(state==QAbstractSocket::ClosingState) description="L'application coupe sa connexion au serveur";
+	else description="La connexion réseau est à un état inconnu";
+
+	Widget::addRowToTable("socket::stateChanged: "+description,model,MSG_NETWORK);
 }
 
 
-//Pour se déconnecter du servuer
-bool NetworkInterface::disconnect()
+
+//Slot appelé lorsque la socket est connectée
+void NetworkInterface::connectedToServer()
 {
-	//C'est le socket qui s'en charge
-	return socket->disconnectFromServer();
+	Widget::addRowToTable("Connexion établie",model,MSG_NETWORK);
+	emit connected();
 }
+
+
+
+//Slot appelé lorsque la socket est déconnectée
+void NetworkInterface::disconnectedFromServer()
+{
+	this->isConnected=false;
+	this->isIdentified=false;
+	Widget::addRowToTable("Connexion perdue",model,MSG_NETWORK);
+	emit disconnected();
+}
+
 
 
 //Recu quand la connexion a été correctement cryptée
 void NetworkInterface::connexionEncrypted()
 {
+	this->isConnected=true;
 	Widget::addRowToTable("Connexion avec le serveur correctement établie et cryptée",model,MSG_NETWORK);
 }
+
+
 
 
 //Erreurs SSL recues pendant la phase de handshake
@@ -71,92 +106,64 @@ void NetworkInterface::erreursSsl(const QList<QSslError> &errors)
 }
 
 
+
+//La méthode exec pour lancer le thread
+void NetworkInterface::run()
+{
+	exec();
+}
+
+
+
+
+//Pour se connecter au serveur
+//Cette fonction est bloquante pendant quelques secondes
+//elle doit être appelée par un thread externe (si gui revoir socket.connect)
+bool NetworkInterface::connectToServer()
+{
+	return socket->connectToServer(configurationNetwork->getAddress(),configurationNetwork->getPort());
+}
+
+
+
+//Pour se déconnecter du servuer
+//Cette fonction est bloquante pendant quelques secondes
+//elle doit être appelée par un thread externe (si gui revoir socket.disconnect)
+bool NetworkInterface::disconnectFromServer()
+{
+	return socket->disconnectFromServer();
+}
+
+
+
+
 //Ce slot est apellé lorsqu'un message est recu par la socket
 void NetworkInterface::receiveMessageAction(QByteArray *message)
 {
-	//On parse pour récupérer le message
-	QHash<QString,QByteArray> *arg=Messages::parseMessage(message);
+	//On récupère le message
+	Message *m=Messages::parseMessage(message);
 
 	//Si le message est inconnu on emet un signal d'erreur
-	if(!arg){emit receiveErrorMessage("4");return;}
+	if(!m){emit receiveErrorMessage("NON_XML_MESSAGE");return;}
 
-	//On récupere le realPath
-	QString realPath=arg->value("realPath","");
-	if(realPath.isEmpty()){emit receiveErrorMessage("5");return;}
-
-	//Si l'action demandée est une modification
-	if(arg->value("action")=="MODIFIED")
+	//Si c'est une requete
+	if(m->isRequest())
 	{
-
-		//On récupère le média à modifier
-		Media *m=configurationData->getConfigurationFile()->findMediaByRealPath(realPath);
-
-		//On vérifie qu'il existe et que c'est bien est fichier
-		if(m==NULL){emit receiveErrorMessage("2");return;}
-		if(m->isDirectory()){emit receiveErrorMessage("3");return;}
-		File *f=(File*)m;
-
-		//On récupère le contenu du fichier
-		QByteArray content=arg->value("content","");
-
-		//On émet le signal de modification de fichier
-		emit receiveModifiedFileMessage(f,content);
+		Request *r=(Request*)m;
+		putReceiveRequestList(r);
 		return;
 	}
-
-	//Sinon, si c'est une action de création
-	else if(arg->value("action")=="CREATED")
+	//sinon une réponse
+	else
 	{
-
-		//On récupère le média parent
-		Media *parentMedia=configurationData->getConfigurationFile()->findMediaByRealPath(Media::extractParentPath(realPath));
-
-		//On vérifie que le parent n'est pas NULL et que c'est bien un repertoire
-		if(parentMedia==NULL){emit receiveErrorMessage("7");return;}
-		if(!parentMedia->isDirectory()){emit receiveErrorMessage("10");return;}
-
-		//On cast le parent en Dir
-		Dir *parent=(Dir*)parentMedia;
-
-		//On récupère le nom du média créé. NB: Si c'est un repertoire on fait terminé le nom par "/"
-		QString realName=Media::extractName(realPath);
-
-		//On émet le signal de création du média
-		emit receiveCreatedMediaMessage(parent,realName);
-		return;
-	}
-
-	//Sinon si c'est une action de suppression
-	else if(arg->value("action")=="REMOVED")
-	{
-
-		//On récupère le média supprimé
-		Media *m=configurationData->getConfigurationFile()->findMediaByRealPath(realPath);
-
-		//On vérifie qu'il n'est pas NULL
-		if(m==NULL){emit receiveErrorMessage("6");return;}
-
-		//On émet un signal de suppression du média
-		emit receiveRemovedMediaMessage(m);
-		return;
-	}
-	else if(arg->value("action")=="VALIDATION")
-	{
-
-		//On émet un signal de validation
-		emit receiveValidationMessage();
-		return;
-	}
-	else if(arg->value("action")=="ANNULATION")
-	{
-
-		//on émet un signal d'annulation
-		emit receiveAnnulationMessage();
+		Response *r=(Response*)m;
+		response=r->getType();
+		waitMessages.wakeAll();
 		return;
 	}
 
 	//Si on ne trouve pas le type de message, on emet un signal d'érreur.
-	emit receiveErrorMessage("8");
+	emit receiveErrorMessage("UNKNOWN_MESSAGE");
 	return;
 }
 
@@ -164,87 +171,176 @@ void NetworkInterface::receiveMessageAction(QByteArray *message)
 
 
 //Pour envoyer un message d'identification
+//cette fonction est bloquante tant qu'elle ne recoit pas de réponse
+//il l'appeller dans un thread externe
 bool NetworkInterface::sendIdentification()
 {
 	//On vérifie que la socket est bien connectée
-	if(!socket->isWritable()) return false;
+	if(!isConnected) return false;
+	this->isIdentified=false;
 
 	//On récupère le pseudo et le mot de passe de la configuration d'identification
-	QString pseudo=configurationData->getConfigurationIdentification()->getPseudo();
-	QString password=configurationData->getConfigurationIdentification()->getPassword();
+	QString pseudo=configurationIdentification->getPseudo();
+	QString password=configurationIdentification->getPassword();
+
+	Request request;
+	request.setType(IDENTIFICATION);
+	request.getParameters().insert("pseudo",pseudo.toAscii());
+	request.getParameters().insert("password",password.toAscii());
 
 	//On crèe le message d'identification
-	QByteArray *message=Messages::createIdentificationMessage(pseudo,password);
+	QByteArray *message=request.toXml();
+	bool r=socket->sendMessage(message);
+	if(!r) return false;
 
-	//On envoi le message avec la socket et on retourne le resultat
-	return socket->sendMessage(message);
+	//On attends la réponse
+	QMutex mutex;
+	waitMessages.wait(&mutex);
+
+	if(response==VALID_IDENTIFICATION)
+	{
+		this->isIdentified=true;
+		return true;
+	}
+	return false;
 }
 
 
 
 //Pour envoyer un message de fichier modifié
-bool NetworkInterface::sendFileModified(QString realPath,QByteArray content)
+bool NetworkInterface::sendMediaUpdated(QString realPath,QByteArray content)
 {
-	//On vérifie que la socket est bien connectée
-	if(!socket->isWritable()) return false;
+	//On vérifie que la socket est bien connectée et qu'on est identifié
+	if(!isConnected) return false;
+	if(!isIdentified) return false;
 
 	//On vérifie que le realPath n'est pas vide
 	if(realPath.isEmpty()) return false;
 
+	Request request;
+	request.setType(UPDATE_FILE_INFO);
+	request.getParameters().insert("realPath",realPath.toAscii());
+	request.getParameters().insert("content",content);
+
 	//On rédige le message et on l'envoi
-	QByteArray *message=Messages::createFileContentMessage(realPath,content);
-	return socket->sendMessage(message);
+	QByteArray *message=request.toXml();
+	bool r=socket->sendMessage(message);
+	if(!r) return false;
+
+	QMutex mutex;
+	waitMessages.wait(&mutex);
+
+	if(response==ACK_FILE_INFO)
+	{
+		return true;
+	}
+	return false;
 }
+
 
 
 //Pour envoyer un message de média créé
 bool NetworkInterface::sendMediaCreated(QString realPath, bool isDirectory)
 {
-	//On vérifie que la socket est connectée
-	if(!socket->isWritable())
-		return false;
+	//On vérifie que la socket est bien connectée et qu'on est identifié
+	if(!isConnected) return false;
+	if(!isIdentified) return false;
 
-	if(realPath.isEmpty())
-		return false;
+	//On vérifie que le realPath n'est pas vide
+	if(realPath.isEmpty()) return false;
 
-	if(isDirectory) realPath=realPath+"/";
+	Request request;
+	request.setType(CREATE_FILE_INFO);
+	request.getParameters().insert("realPath",realPath.toAscii());
+	request.getParameters().insert("isDirectory",isDirectory?"true":"false");
 
 	//On rédige le message et on l'envoi
-	QByteArray *message=Messages::createMediaCreatedMessage(realPath);
-	return socket->sendMessage(message);
+	QByteArray *message=request.toXml();
+	bool r=socket->sendMessage(message);
+	if(!r) return false;
+
+	QMutex mutex;
+	waitMessages.wait(&mutex);
+
+	if(response==ACK_FILE_INFO)
+	{
+		return true;
+	}
+	return false;
 }
+
+
+
 
 
 
 //Envoyer un message de média supprimé
 bool NetworkInterface::sendMediaRemoved(QString realPath)
 {
-	//On vérifie que la socket est bien connectée
-	if(!socket->isWritable()) return false;
+	//On vérifie que la socket est bien connectée et qu'on est identifié
+	if(!isConnected) return false;
+	if(!isIdentified) return false;
+
+	//On vérifie que le realPath n'est pas vide
 	if(realPath.isEmpty()) return false;
 
-	//On rédihe le message et on l'envoi
-	QByteArray *message=Messages::createMediaRemovedMessage(realPath);
-	return socket->sendMessage(message);
+	Request request;
+	request.setType(REMOVE_FILE_INFO);
+	request.getParameters().insert("realPath",realPath.toAscii());
+
+	//On rédige le message et on l'envoi
+	QByteArray *message=request.toXml();
+	bool r=socket->sendMessage(message);
+	if(!r) return false;
+
+	QMutex mutex;
+	waitMessages.wait(&mutex);
+
+	if(response==ACK_FILE_INFO)
+	{
+		return true;
+	}
+	return false;
 }
 
 
-//Slot appelé lorsque l'état de la socket a changé
-void NetworkInterface::stateChangedAction(QAbstractSocket::SocketState state)
+
+
+
+//Pour récupérer la prochaine requete à traiter
+Request *NetworkInterface::getReceiveRequestList()
 {
-	//Le nouvel état est dans state.
-	//Selon sa valeur, on rédige une description à renvoyer
-	QString description;
-        if(state==QAbstractSocket::UnconnectedState) description="L'application déconnectée du serveur";
-        else if(state==QAbstractSocket::HostLookupState) description="L'application recherche le serveur à l'adresse: "+configurationData->getConfigurationNetwork()->getFullAddress();
-	else if(state==QAbstractSocket::ConnectingState) description="L'application tente de se connecter au serveur";
-        else if(state==QAbstractSocket::ConnectedState) description="L'application est connectée au serveur en mode non crypté";
-        else if(state==QAbstractSocket::ClosingState) description="L'application coupe sa connexion au serveur";
-	else description="La connexion réseau est à un état inconnu";
-
-        Widget::addRowToTable("socket::stateChanged: "+description,model,MSG_NETWORK);
-
-	//On émet un signal contenant l'état et sa description
-	emit connexionStateChanged(state,description);
+	receiveRequestListMutex.lock();
+	Request *r;
+	if(receiveRequestList->size()>0)
+	{
+		r=receiveRequestList->first();
+		receiveRequestList->removeFirst();
+	}
+	else r=NULL;
+	receiveRequestListMutex.unlock();
+	return r;
 }
+
+
+
+
+//pour ajouter une requete à traiter prochainement
+void NetworkInterface::putReceiveRequestList(Request *r)
+{
+	receiveRequestListMutex.lock();
+	receiveRequestList->append(r);
+	if(waitReceiveRequestList!=NULL) waitReceiveRequestList->wakeAll();
+	receiveRequestListMutex.unlock();
+}
+
+
+
+//Indiquer l'objet de reveil du controleur
+void NetworkInterface::setWaitReceiveRequestList(QWaitCondition *waitReceiveRequestList)
+{
+	this->waitReceiveRequestList=waitReceiveRequestList;
+}
+
+
 

@@ -148,7 +148,7 @@ public:
 
 private slots:
 	//Un slot pour stocker tous les changements détectés dans une liste
-	void putMediaDetection(Media *m);
+	void putMediaDetection(Media *media);
 
 private:
 	//le constructeur
