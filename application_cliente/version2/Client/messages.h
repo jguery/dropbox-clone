@@ -41,12 +41,12 @@ public:
 	Request();
 	void setType(RequestEnum type);
 	RequestEnum getType();
-	QHash<QString,QByteArray> getParameters();
+	QHash<QString,QByteArray> *getParameters();
 	QByteArray *toXml();
 	bool isRequest();
 private:
 	RequestEnum type;
-	QHash<QString,QByteArray> parameters;
+	QHash<QString,QByteArray> *parameters;
 };
 
 

@@ -1,5 +1,5 @@
 #include "file.h"
-
+#include "dir.h"
 
 
 
@@ -41,11 +41,13 @@ File *File::loadFile(QDomNode noeud,Dir *parent)
 	if(localPath.isEmpty() || realPath.isEmpty())
 		return NULL;
 
-	//On récupère les attributs révision et readOnly du noeud xml.
+	//On récupère les attributs detectionState, révision et readOnly du noeud xml.
+	QString detectionStateString=noeud.toElement().attribute("detectionState","");
 	QString revisionString=noeud.toElement().attribute("revision","");
 	QString readOnlyString=noeud.toElement().attribute("readOnly","");
 
-	//On convertit ces attributs en int et bool
+	//On convertit ces attributs en list, int et bool
+	QStringList listDetectionState=detectionStateString.split("/");
 	int revision;bool readOnly;bool ok;
 	revision=revisionString.toInt(&ok); if(!ok) revision=0;
 	readOnly=readOnlyString=="true"?true:false;
@@ -62,8 +64,11 @@ File *File::loadFile(QDomNode noeud,Dir *parent)
 		hash=new QByteArray(noeud.firstChild().toText().data().toAscii());
 	}
 
-	 //On peut maintenant créer l'objet
-	return new File(localPath,realPath,parent,hash,revision,readOnly);
+	//On peut maintenant créer l'objet
+	File *f=new File(localPath,realPath,parent,hash,revision,readOnly);
+	for(int i=0;i<listDetectionState.size();i++)
+		f->getDetectionState()->append(Media::stateFromString(listDetectionState.at(i)));
+	return f;
 }
 
 
@@ -121,13 +126,16 @@ bool File::hasBeenRemoved()
 //Pour cela, on compare les signatures actuelle et dans le xml
 bool File::hasBeenUpdated()
 {
+	this->lock();
 	QByteArray *h=File::hashFile(localPath);
 	if(*h!=*hash)
 	{
 		delete h;
+		this->unlock();
 		return true;
 	}
 	delete h;
+	this->unlock();
 	return false;
 }
 
@@ -144,6 +152,26 @@ QByteArray File::getFileContent()
 	content=f.readAll(); //On récupère le contenu du fichier
 	f.close();
 	return content;
+}
+
+
+
+//Pour écrire le contenu du fichier
+bool File::putFileContent(QByteArray content)
+{
+	//on ouvre le fichier en écriture
+	this->getParent()->setListenning(false);
+	QFile f(localPath);
+	if(!f.open(QIODevice::WriteOnly))
+	{
+		this->getParent()->setListenning(true);
+		return false;
+	}
+	f.write(content);
+	f.close();
+	updateHash();
+	this->getParent()->setListenning(false);
+	return true;
 }
 
 
@@ -180,7 +208,11 @@ QDomElement File::toXml(QDomDocument *document)
 	element.setAttribute("localPath",localPath);
 	element.setAttribute("realPath",realPath);
 
-	//On écrit ses attributs revision et readOnly
+	//On écrit ses attributs detectionState, revision et readOnly
+	QStringList listDetectionState;
+	for(int i=0;i<this->detectionState->length();i++)
+		listDetectionState.append(Media::stateToString(this->detectionState->at(i)));
+	element.setAttribute("detectionState",listDetectionState.join("/"));
 	element.setAttribute("revision",QString::number(revision));
 	element.setAttribute("readOnly",readOnly?"true":"false");
 
@@ -226,11 +258,13 @@ Media *File::findMediaByRealPath(QString realPath)
 //Met à jour le hash du fichier
 void File::updateHash()
 {
+	this->lock();
 	//On supprime l'ancien hash
 	delete this->hash;
 
 	//On récalcule le nouveau hash
 	this->hash=hashFile(localPath);
+	this->unlock();
 }
 
 

@@ -8,71 +8,39 @@
 Widget::Widget(QString localPath, QString realPath, QString configSavePath): QWidget()
 {
 	//On initialise la fenetre
-	this->setWindowTitle("Client B");
-	setMinimumSize(840,480);
-
-	//On crèe une table view non éditable
-	QTableView *tableView=new QTableView();
-	tableView->setEditTriggers(QAbstractItemView::NoEditTriggers);
-
-	//On crèe le model à 2 colonnes de la qtableview
-	this->model=new QStandardItemModel(0,2,tableView);
-
-	//On écrit l'entete du model
-	QStringList list;
-	list<<"Evenement"<<"Heure";
-	model->setHorizontalHeaderLabels(list);
-
-	//On affecte le model à sa qtableview, et on configure cette dernière
-	tableView->setModel(model);
-	tableView->horizontalHeader()->setStretchLastSection(true);
-	tableView->setColumnWidth(0,700);
-
-	//On range la qtableview dans la fenetre avec une layout
-	QHBoxLayout *layout = new QHBoxLayout;
-	layout->addWidget(tableView);
-	this->setLayout(layout);
-	addRowToTable("Démarage de l'application",model,MSG_INIT);
+	this->setWindowTitle("Client A");
+	buildInterface();
 
 	//On créé la configuration réseau
 	ConfigurationNetwork *configurationNetwork=ConfigurationNetwork::createConfigurationNetwork("127.0.0.1",4321);
-	if(configurationNetwork) addRowToTable("La configuration réseau a été crée",model,MSG_INIT);
-	else {addRowToTable("Echec de la création de la configuration réseau",model,MSG_INIT);return;}
+	if(configurationNetwork) addRowToTable("La configuration réseau a été crée",detectionModel,MSG_1);
+	else {addRowToTable("Echec de la création de la configuration réseau",detectionModel,MSG_1);return;}
 
 	//On créé la configuration d'identification
 	ConfigurationIdentification *configurationIdentification=ConfigurationIdentification::createConfigurationIdentification("hky","hky");
-	if(configurationIdentification) addRowToTable("La configuration d'identification' a été crée",model,MSG_INIT);
-	else {addRowToTable("Echec de la création de la configuration d'indentification",model,MSG_INIT);return;}
+	if(configurationIdentification) addRowToTable("La configuration d'identification a été crée",detectionModel,MSG_1);
+	else {addRowToTable("Echec de la création de la configuration d'indentification",detectionModel,MSG_1);return;}
 
 	//On créé la configuration de fichier
 	QList<Depot*> *depots=new QList<Depot*>();
 	Depot *d = Depot::createDepot(localPath,realPath,0,false);depots->append(d);
-	if(!d){addRowToTable("Echec de la création du repertoire 1",model,MSG_INIT);return;}
-	ConfigurationFile *configurationFile=ConfigurationFile::createConfigurationFile(depots);
-	if(configurationFile) addRowToTable("Les configurations des repertoires surveillés ont été créés",model,MSG_INIT);
-	else {addRowToTable("Echec de la création des configurations de repertoires surveillés",model,MSG_INIT);return;}
+	if(!d){addRowToTable("Echec de la création du repertoire 1",detectionModel,MSG_1);return;}
+	ConfigurationFile *configurationFile=ConfigurationFile::createConfigurationFile(depots,detectionModel);
 
 	//On créé la configuration totale
 	this->configurationData=ConfigurationData::createConfigurationData(configurationNetwork,configurationIdentification,configurationFile,configSavePath);
-	configurationFile->setListenning(true);
 
 	//On créé l'interface réseau
-	this->networkInterface=NetworkInterface::createNetworkInterface(configurationNetwork,configurationIdentification,model);
-	if(networkInterface) addRowToTable("L'interface réseau a été crée",model,MSG_INIT);
-	else {addRowToTable("Echec de la création de l'interface réseau",model,MSG_INIT);return;}
-
-	//On tente de se connecter au serveur
-	addRowToTable("Tentative de connexion au serveur",model,MSG_NETWORK);
-	bool a=networkInterface->connectToServer();
-	if(a) addRowToTable("Success: Connexion réuissie",model,MSG_NETWORK);
-	else addRowToTable("Echec: Connexion échouée",model,MSG_NETWORK);
+	this->networkInterface=NetworkInterface::createNetworkInterface(configurationNetwork,configurationIdentification,networkModel);
 
 	//On créé l'interface disque dur
-	this->hddInterface=HddInterface::createHddInterface(configurationData,networkInterface,model);
-	if(hddInterface) addRowToTable("L'interface disque a été crée",model,MSG_INIT);
-	else {addRowToTable("Echec de la création de l'interface disque",model,MSG_INIT);return;}
+	this->hddInterface=HddInterface::createHddInterface(configurationData,networkInterface,transfertModel);
 
 }
+
+
+
+
 
 
 //Le constructeur à 1 paramètre
@@ -80,72 +48,138 @@ Widget::Widget(QString localPath, QString realPath, QString configSavePath): QWi
 Widget::Widget(QString configPath): QWidget()
 {
 	//On initialise la fenetre
-	this->setWindowTitle("Client B");
-	setMinimumSize(840,480);
-
-	//On crèe une table view non éditable
-	QTableView *tableView=new QTableView();
-	tableView->setEditTriggers(QAbstractItemView::NoEditTriggers);
-
-	//On crèe le model à 2 colonnes de la qtableview
-	this->model=new QStandardItemModel(0,2,tableView);
-
-	//On écrit l'entete du model
-	QStringList list;
-	list<<"Evenement"<<"Heure";
-	model->setHorizontalHeaderLabels(list);
-
-	//On affecte le model à sa qtableview, et on configure cette dernière
-	tableView->setModel(model);
-	tableView->horizontalHeader()->setStretchLastSection(true);
-	tableView->setColumnWidth(0,700);
-
-	//On range la qtableview dans la fenetre avec une layout
-	QHBoxLayout *layout = new QHBoxLayout;
-	layout->addWidget(tableView);
-	this->setLayout(layout);
-	addRowToTable("Démarage de l'application",model,MSG_INIT);
+	this->setWindowTitle("Client A");
+	buildInterface();
 
 	//On charge la configuration
-	this->configurationData=ConfigurationData::loadConfigurationData(configPath);
-	if(configurationData)  addRowToTable("La configuration a bien été chargée",model,MSG_INIT);
-	else {addRowToTable("Echec du chargement de la configuration",model,MSG_INIT);return;}
+	this->configurationData=ConfigurationData::loadConfigurationData(configPath,detectionModel);
+	if(configurationData)  addRowToTable("La configuration a bien été chargée",detectionModel,MSG_1);
+	else {addRowToTable("Echec du chargement de la configuration",detectionModel,MSG_1);return;}
 
 	//On créé l'interface réseau
-	this->networkInterface=NetworkInterface::createNetworkInterface(configurationData->getConfigurationNetwork(),configurationData->getConfigurationIdentification(),model);
-	if(networkInterface) addRowToTable("L'interface réseau a été crée",model,MSG_INIT);
-	else {addRowToTable("Echec de la création de l'interface réseau",model,MSG_INIT);return;}
-
-	//On tente de se connecter au serveur
-	addRowToTable("Tentative de connexion au serveur",model,MSG_NETWORK);
-	bool a=networkInterface->connectToServer();
-	if(a) addRowToTable("Success: Connexion réuissie",model,MSG_NETWORK);
-	else addRowToTable("Echec: Connexion échouée",model,MSG_NETWORK);
+	this->networkInterface=NetworkInterface::createNetworkInterface(configurationData->getConfigurationNetwork(),configurationData->getConfigurationIdentification(),networkModel);
 
 	//On créé l'interface disque dur
-	this->hddInterface=HddInterface::createHddInterface(configurationData,networkInterface,model);
-	if(hddInterface) addRowToTable("L'interface disque a été crée",model,MSG_INIT);
-	else {addRowToTable("Echec de la création de l'interface disque",model,MSG_INIT);return;}
+	this->hddInterface=HddInterface::createHddInterface(configurationData,networkInterface,transfertModel);
 
 }
 
 
 
 
-//Juste une méthode statique qui écrit un évenement dans le model, et l'heure р laquelle il s'est réalisé
-void Widget::addRowToTable(QString s,QStandardItemModel *model, QColor color)
+void Widget::networkButtonSlot()
 {
-	//Les attributs statiques permettent de faire varier la couleur de la ligne
+	if(networkInterface==NULL) return;
+	if(this->networkInterface->checkIsConnected())
+	{
+		this->networkInterface->disconnectFromServer();
+		this->networkButton->setText(trUtf8("Se connecter au serveur"));
+	}
+	else
+	{
+		this->networkInterface->connectToServer();
+		this->networkButton->setText(trUtf8("Se déconnecter du serveur"));
+	}
+}
 
+
+
+void Widget::detectionButtonSlot()
+{
+	if(configurationData==NULL || configurationData->getConfigurationFile()==NULL) return;
+	if(this->configurationData->getConfigurationFile()->isListenning())
+	{
+		this->configurationData->getConfigurationFile()->setListenning(false);;
+		this->detectionButton->setText(trUtf8("Démarer les détections"));
+	}
+	else
+	{
+		this->configurationData->getConfigurationFile()->setListenning(true);
+		this->detectionButton->setText(trUtf8("Arreter les détections"));
+	}
+}
+
+
+
+
+
+void Widget::buildInterface()
+{
+	setMinimumSize(840,480);
+
+	QStringList list;
+	list<<trUtf8("Evenement")<<trUtf8("Heure");
+
+	//On construit le QTabWidget
+	onglets=new QTabWidget(this);
+	QHBoxLayout *layout=new QHBoxLayout();
+	layout->addWidget(onglets);this->setLayout(layout);
+
+	//On construit l'onglet du network
+	networkOnglet=new QWidget();
+	QVBoxLayout *layout1=new QVBoxLayout();
+	QTableView *networkView=new QTableView();
+	networkView->setEditTriggers(QAbstractItemView::NoEditTriggers);
+	networkModel=new QStandardItemModel(0,2,networkView);
+	networkModel->setHorizontalHeaderLabels(list);
+	networkView->setModel(networkModel);
+	networkView->horizontalHeader()->setStretchLastSection(true);
+	networkView->setColumnWidth(0,650);
+	layout1->addWidget(networkView);
+	networkButton=new QPushButton(trUtf8("Se connecter au serveur"));
+	QObject::connect(networkButton,SIGNAL(clicked()),this,SLOT(networkButtonSlot()));
+	layout1->addWidget(networkButton);
+	networkOnglet->setLayout(layout1);
+	onglets->addTab(networkOnglet,trUtf8("Réseau"));
+
+	//On construit l'onglet des transferts
+	transfertOnglet=new QWidget();
+	QVBoxLayout *layout2=new QVBoxLayout();
+	QTableView *transfertView=new QTableView();
+	transfertView->setEditTriggers(QAbstractItemView::NoEditTriggers);
+	transfertModel=new QStandardItemModel(0,2,transfertView);
+	transfertModel->setHorizontalHeaderLabels(list);
+	transfertView->setModel(transfertModel);
+	transfertView->horizontalHeader()->setStretchLastSection(true);
+	transfertView->setColumnWidth(0,650);
+	layout2->addWidget(transfertView);
+	transfertOnglet->setLayout(layout2);
+	onglets->addTab(transfertOnglet,trUtf8("Transferts"));
+
+	//On construit l'onglet des détections
+	detectionOnglet=new QWidget();
+	QVBoxLayout *layout3=new QVBoxLayout();
+	QTableView *detectionView=new QTableView();
+	detectionView->setEditTriggers(QAbstractItemView::NoEditTriggers);
+	detectionModel=new QStandardItemModel(0,2,detectionView);
+	detectionModel->setHorizontalHeaderLabels(list);
+	detectionView->setModel(detectionModel);
+	detectionView->horizontalHeader()->setStretchLastSection(true);
+	detectionView->setColumnWidth(0,650);
+	layout3->addWidget(detectionView);
+	detectionButton=new QPushButton(trUtf8("Démarer les détections"));
+	QObject::connect(detectionButton,SIGNAL(clicked()),this,SLOT(detectionButtonSlot()));
+	layout3->addWidget(detectionButton);
+	detectionOnglet->setLayout(layout3);
+	onglets->addTab(detectionOnglet,trUtf8("Détections"));
+
+}
+
+
+
+
+
+
+//Juste une méthode statique qui écrit un évenement dans le model, et l'heure р laquelle il s'est réalisé
+void Widget::addRowToTable(QString s, QStandardItemModel *model, QColor color)
+{
 	//On récupère la liste des 2 colonnes de la lignes
 	QList<QStandardItem*> list;
 	QStandardItem *i1=new QStandardItem(trUtf8(s.toAscii()));
 	i1->setBackground(QBrush(color));
 	QStandardItem *i2=new QStandardItem(QTime::currentTime().toString("hh:mm:ss"));
 	i2->setBackground(QBrush(color));
-
 	list << i1 << i2;
-
 	//On ajoute la ligne
 	model->appendRow(list);
 }

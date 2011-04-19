@@ -7,8 +7,8 @@
 //                 IMPLEMENTATIONS DE LA CLASSE REQUEST
 //****************************************************************
 
-Request::Request(): Message() {}
-QHash<QString,QByteArray> Request::getParameters() {return parameters;}
+Request::Request(): Message() {this->parameters=new QHash<QString,QByteArray>();}
+QHash<QString,QByteArray> *Request::getParameters() {return parameters;}
 RequestEnum Request::getType() {return type;}
 void Request::setType(RequestEnum type) {this->type=type;}
 bool Request::isRequest() {return true;}
@@ -17,25 +17,25 @@ QByteArray *Request::toXml()
 {
 	if(type==CREATE_FILE_INFO)
 	{
-		QString realPath=parameters.value("realPath","");
-		bool isDirectory=(parameters.value("isDirectory","")=="true")?true:false;
+		QString realPath=parameters->value("realPath","");
+		bool isDirectory=(parameters->value("isDirectory","")=="true")?true:false;
 		return Messages::createMediaCreatedMessage(realPath,isDirectory);
 	}
 	if(type==UPDATE_FILE_INFO)
 	{
-		QString realPath=parameters.value("realPath","");
-		QByteArray content=parameters.value("content","");
+		QString realPath=parameters->value("realPath","");
+		QByteArray content=parameters->value("content","");
 		return Messages::createMediaUpdatedMessage(realPath,content);
 	}
 	if(type==REMOVE_FILE_INFO)
 	{
-		QString realPath=parameters.value("realPath","");
+		QString realPath=parameters->value("realPath","");
 		return Messages::createMediaRemovedMessage(realPath);
 	}
 	if(type==IDENTIFICATION)
 	{
-		QString pseudo=parameters.value("pseudo","");
-		QString password=parameters.value("password","");
+		QString pseudo=parameters->value("pseudo","");
+		QString password=parameters->value("password","");
 		return Messages::createIdentificationMessage(pseudo,password);
 	}
 	return NULL;
@@ -207,8 +207,8 @@ Message *Messages::parseMessage(QByteArray *message)
 				}
 
 				//On écrit un message à retourner
-				request->getParameters().insert("realPath",realPath.toAscii());
-				request->getParameters().insert("content",fileContent);
+				request->getParameters()->insert("realPath",realPath.toAscii());
+				request->getParameters()->insert("content",fileContent);
 				return request;
 			}
 
@@ -222,8 +222,8 @@ Message *Messages::parseMessage(QByteArray *message)
 				QString isDirectory=list.at(i).toElement().attribute("isDirectory");
 
 				//On écrit un message à retourner
-				request->getParameters().insert("realPath",realPath.toAscii());
-				request->getParameters().insert("isDirectory",isDirectory.toAscii());
+				request->getParameters()->insert("realPath",realPath.toAscii());
+				request->getParameters()->insert("isDirectory",isDirectory.toAscii());
 				return request;
 			}
 
@@ -236,7 +236,7 @@ Message *Messages::parseMessage(QByteArray *message)
 				QString realPath=list.at(i).toElement().attribute("realPath","");
 
 				//On écrit un message à retourner
-				request->getParameters().insert("realPath",realPath.toAscii());
+				request->getParameters()->insert("realPath",realPath.toAscii());
 				return request;
 			}
 			return NULL;
@@ -253,8 +253,8 @@ Message *Messages::parseMessage(QByteArray *message)
 			QString password=list.at(i).toElement().attribute("password","");
 
 			//On écrit un message hash à retourner
-			request->getParameters().insert("pseudo",pseudo.toAscii());
-			request->getParameters().insert("password",password.toAscii());
+			request->getParameters()->insert("pseudo",pseudo.toAscii());
+			request->getParameters()->insert("password",password.toAscii());
 			return request;
 		}
 

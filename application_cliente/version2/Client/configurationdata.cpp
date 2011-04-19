@@ -1,5 +1,5 @@
 #include "configurationdata.h"
-
+#include "widget.h"
 
 /*
 
@@ -204,14 +204,17 @@ QDomElement ConfigurationIdentification::toXml(QDomDocument *document)
 
 
 //Une fonction statique pour créer une configuration de dépots initiale
-ConfigurationFile *ConfigurationFile::createConfigurationFile(QList<Depot*> *depots)
+ConfigurationFile *ConfigurationFile::createConfigurationFile(QList<Depot*> *depots,QStandardItemModel *model)
 {
 	//La liste de dépots passée ne doit être ni NULLe, ni vide
-	if(depots==NULL)        return NULL;
-	if(depots->length()==0)      return NULL;
+	if(depots==NULL || depots->length()==0)
+	{
+		if(model!=NULL) Widget::addRowToTable("Echec à l'allocation du module de détections",model,MSG_1);
+		return NULL;
+	}
 
 	//On crèe la configuration et on la retourne
-	ConfigurationFile *config=new ConfigurationFile(depots);
+	ConfigurationFile *config=new ConfigurationFile(depots,model);
 	return config;
 }
 
@@ -220,7 +223,7 @@ ConfigurationFile *ConfigurationFile::createConfigurationFile(QList<Depot*> *dep
 //Pour charger la configuration des répertoires et fichiers depuis un noeud xml
 //Typiquement, appelé dés le lancement du client, en chargant la config
 //préalablement enregistrée dans un config.xml, grâce à ConfigurationData::save
-ConfigurationFile *ConfigurationFile::loadConfigurationFile(QDomNode noeud)
+ConfigurationFile *ConfigurationFile::loadConfigurationFile(QDomNode noeud,QStandardItemModel *model)
 {
 	//On alloue la liste des dépots dans laquelle seront chargées les dépots lues
 	QList<Depot*> *depots=new QList<Depot*>();
@@ -228,7 +231,10 @@ ConfigurationFile *ConfigurationFile::loadConfigurationFile(QDomNode noeud)
 	//On vérifie que le nom du noeud est bien ConfigurationData
 	QDomElement element=noeud.toElement();
 	if(element.tagName()!="ConfigurationFile")
+	{
+		Widget::addRowToTable("Erreur lors du chargement de la configuration de fichier.",model,MSG_1);
 		return NULL;
+	}
 
 	//Parcours l'ensemble des éléments fils de l'élement "COnfigurationFile"
 	//Ce sont donc des fichiers et des dossiers (toute l'arborescence  à synchroniser enfaite)
@@ -240,32 +246,44 @@ ConfigurationFile *ConfigurationFile::loadConfigurationFile(QDomNode noeud)
 		//On charge le noeud avec la méthode statique loadDir
 		Depot *d=Depot::loadDepot(n);
 		if(d==NULL)
+		{
+			Widget::addRowToTable("Erreur lors du chargement de la configuration de fichier.",model,MSG_1);
 			return NULL;
+		}
 
 		//On l'ajoute à la liste de dépots
 		depots->append(d);
 	}
 
 	//On crèe l'objet et on le retourne
-	ConfigurationFile *config=new ConfigurationFile(depots);
+	ConfigurationFile *config=new ConfigurationFile(depots,model);
 	return config;
 }
 
 
 
 //Constructeur
-ConfigurationFile::ConfigurationFile(QList<Depot*> *depots) : QObject()
+ConfigurationFile::ConfigurationFile(QList<Depot*> *depots,QStandardItemModel *model) : QObject()
 {
 	this->depots=depots;
 	this->detectMediaList=new QList<Media*>();
 	this->waitConditionDetect=NULL;
+	this->isListen=false;
+	this->model=model;
 	for(int i=0;i<depots->length();i++)
 	{
 		QObject::connect(depots->at(i),SIGNAL(detectChangement(Media*)),this,SLOT(putMediaDetection(Media*)),Qt::QueuedConnection);
 	}
+	Widget::addRowToTable("Le module de détections a bien été allouée",model,MSG_1);
 }
 
 
+
+
+bool ConfigurationFile::isListenning()
+{
+	return isListen;
+}
 
 
 
@@ -348,6 +366,8 @@ void ConfigurationFile::removeMediaDetection()
 	detectMediaListMutex.lock();
 	if(detectMediaList->size()>0)
 	{
+		Media *m=detectMediaList->first();
+		m->getDetectionState()->removeFirst();
 		detectMediaList->removeFirst();
 	}
 	detectMediaListMutex.unlock();
@@ -360,7 +380,10 @@ void ConfigurationFile::removeMediaDetection()
 void ConfigurationFile::putMediaDetection(Media *m)
 {
 	detectMediaListMutex.lock();
+	int index=0;
+	for(int i=0;i<detectMediaList->length();i++) if(detectMediaList->at(i)==m) index++;
 	detectMediaList->append(m);
+	Widget::addRowToTable(QString("Le ")+(m->isDirectory()?QString("repertoire"):QString("fichier"))+QString(" ")+m->getLocalPath()+QString(" est passé à l'état ")+Media::stateToString(m->getDetectionState()->at(index)),model,MSG_2);
 	if(waitConditionDetect!=NULL) waitConditionDetect->wakeAll();
 	detectMediaListMutex.unlock();
 }
@@ -380,12 +403,17 @@ void ConfigurationFile::setWaitConditionDetection(QWaitCondition *waitConditionD
 void ConfigurationFile::setListenning(bool listen)
 {
 	QList<Depot*>::iterator i;
+	if(listen)
+		Widget::addRowToTable("Le module de détection est mis à l'écoute de changements",model,MSG_2);
+	else
+		Widget::addRowToTable("Le module de détection a été désactivé",model,MSG_3);
 
 	//On parcours tous les dépots et on appelle récursivement la fonction setListenning
 	for(i=depots->begin(); i!=depots->end(); i++)
 	{
 		(*i)->setListenning(listen);
 	}
+	this->isListen=listen;
 }
 
 
@@ -436,16 +464,20 @@ ConfigurationData *ConfigurationData::createConfigurationData(ConfigurationNetwo
 
 
 //Pour charger toutes les config à partir du fichier xml
-ConfigurationData *ConfigurationData::loadConfigurationData(QString savePath)
+ConfigurationData *ConfigurationData::loadConfigurationData(QString savePath,QStandardItemModel *model)
 {
 	QFile file(savePath);
 	if(!file.open(QIODevice::ReadOnly))     //On tente d'ouvrir le fichier de config
+	{
+		Widget::addRowToTable("Echec d'ouverture en lecture du fichier de configuration.",model,MSG_1);
 		return NULL;
+	}
 
 	QDomDocument document;
 	if(!document.setContent(&file))         //On charge son contenu dans un objet QDomDocument
 	{
 		file.close();
+		Widget::addRowToTable("Echec de format XML du fichier de configuration.",model,MSG_1);
 		return NULL;
 	}
 
@@ -471,7 +503,7 @@ ConfigurationData *ConfigurationData::loadConfigurationData(QString savePath)
 		configurationIdentification=ConfigurationIdentification::loadConfigurationIdentification(n);
 
 		else if(element.tagName()=="ConfigurationFile")     //On charge la conf de l'arborescence des fichiers synchronisés
-		configurationFile=ConfigurationFile::loadConfigurationFile(n);
+		configurationFile=ConfigurationFile::loadConfigurationFile(n,model);
 	}
 
 	file.close();
@@ -482,6 +514,7 @@ ConfigurationData *ConfigurationData::loadConfigurationData(QString savePath)
 		delete configurationFile;
 		delete configurationNetwork;
 		delete configurationIdentification;
+		Widget::addRowToTable("Fichier de configuration non valide.",model,MSG_1);
 		return NULL;
 	}
 

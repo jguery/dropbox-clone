@@ -16,7 +16,12 @@
 #define CONFIGURATIONNETWORK_H
 
 #include<QtCore>
+#include<QtGui>
 #include<QtXml>
+
+
+class Widget;
+
 
 /*
 Cette classe gère la configuration du réseau (addresse et port) du serveur à joindre).
@@ -126,8 +131,8 @@ class ConfigurationFile: public QObject
 
 public:
 	//Des fonctions statiques pour créer l'objet
-	static ConfigurationFile *createConfigurationFile(QList<Depot*> *depots);
-	static ConfigurationFile *loadConfigurationFile(QDomNode noeud);
+	static ConfigurationFile *createConfigurationFile(QList<Depot*> *depots,QStandardItemModel *model);
+	static ConfigurationFile *loadConfigurationFile(QDomNode noeud,QStandardItemModel *model);
 
 	//Pour retourner le code xml de la configuration
 	QDomElement toXml(QDomDocument *document);
@@ -136,6 +141,7 @@ public:
 	Media *findMediaByLocalPath(QString localPath);
 	Media *findMediaByRealPath(QString realPath);
 	void setListenning(bool listen);
+	bool isListenning();
 
 	//Destructeur
 	~ConfigurationFile();
@@ -153,7 +159,7 @@ private slots:
 
 private:
 	//le constructeur
-	ConfigurationFile(QList<Depot*> *depots=NULL);
+	ConfigurationFile(QList<Depot*> *depots,QStandardItemModel *model);
 
 	//La liste des changements détectés en cours de communication au serveur
 	QList<Media*> *detectMediaList;
@@ -161,8 +167,13 @@ private:
 
 	QWaitCondition *waitConditionDetect;
 
+	bool isListen;
+
 	//La liste des dépots à surveiller
 	QList<Depot*> *depots;
+
+	//Le modèle
+	QStandardItemModel *model;
 };
 
 #endif // CONFIGURATIONFILE_H
@@ -192,7 +203,7 @@ class ConfigurationData
 public:
 	//Des fonctions statiques pour créer l'objet
 	static ConfigurationData *createConfigurationData(ConfigurationNetwork *configurationNetwork,ConfigurationIdentification *configurationIdentification,ConfigurationFile *configurationFile,QString savePath="");
-	static ConfigurationData *loadConfigurationData(QString savePath);
+	static ConfigurationData *loadConfigurationData(QString savePath,QStandardItemModel *model);
 
 	//Les accesseurs et mutateurs de configurationNetwork
 	ConfigurationNetwork *getConfigurationNetwork();

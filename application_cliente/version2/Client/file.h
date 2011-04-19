@@ -3,6 +3,7 @@
 
 #include "media.h"
 #include <QtCore/QFile>
+#include <QtCore/QStringList>
 #include <QtCore/QCryptographicHash>
 
 
@@ -38,8 +39,9 @@ public:
 	//Une méthode pour mettre à jour sa signature (par exemple après une modif)
 	void updateHash();
 
-	//Une méthode pour récupérer le contenu du fichier
+	//méthodes pour récupérer et écrire le contenu du fichier
 	QByteArray getFileContent();
+	bool putFileContent(QByteArray content);
 
 	//Destructeur
 	virtual ~File();

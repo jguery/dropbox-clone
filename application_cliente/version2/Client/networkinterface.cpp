@@ -2,15 +2,18 @@
 #include "widget.h"
 
 
+
+
+
 //La méthode statique d'allocation
 NetworkInterface *NetworkInterface::createNetworkInterface(ConfigurationNetwork *configurationNetwork,ConfigurationIdentification *configurationIdentification, QStandardItemModel *model)
 {
 	//On teste la validité de la configuration
 	if(configurationNetwork==NULL || configurationIdentification==NULL)
+	{
+		if(model!=NULL) Widget::addRowToTable("Echec lors de l'allocation du module d'interface réseau.",model,MSG_1);
 		return NULL;
-
-	if(model==NULL)
-		return NULL;
+	}
 
 	//On retourne l'objet créé
 	return new NetworkInterface(configurationNetwork,configurationIdentification,model);
@@ -41,12 +44,15 @@ NetworkInterface::NetworkInterface(ConfigurationNetwork *configurationNetwork, C
 	QObject::connect(socket,SIGNAL(connected()),this,SLOT(connectedToServer()));
 	QObject::connect(socket,SIGNAL(disconnected()),this,SLOT(disconnectedFromServer()));
 
-	QObject::connect(socket,SIGNAL(encrypted()),this,SLOT(connexionEncrypted()));
-	QObject::connect(socket,SIGNAL(sslErrors(QList<QSslError>)),this,SLOT(erreursSsl(QList<QSslError>)));
-	QObject::connect(socket,SIGNAL(receiveMessage(QByteArray*)),this,SLOT(receiveMessageAction(QByteArray*)));
+	QObject::connect(socket,SIGNAL(encrypted()),this,SLOT(connexionEncrypted()),Qt::DirectConnection);
+	QObject::connect(socket,SIGNAL(sslErrors(QList<QSslError>)),this,SLOT(erreursSsl(QList<QSslError>)),Qt::DirectConnection);
+	QObject::connect(socket,SIGNAL(receiveMessage(QByteArray*)),this,SLOT(receiveMessageAction(QByteArray*)),Qt::DirectConnection);
 
 	this->model = model;
+	Widget::addRowToTable("Le module d'interface réseau a bien été alloué.",model,MSG_1);
 }
+
+
 
 
 
@@ -62,7 +68,7 @@ void NetworkInterface::stateChangedAction(QAbstractSocket::SocketState state)
 	else if(state==QAbstractSocket::ClosingState) description="L'application coupe sa connexion au serveur";
 	else description="La connexion réseau est à un état inconnu";
 
-	Widget::addRowToTable("socket::stateChanged: "+description,model,MSG_NETWORK);
+	Widget::addRowToTable("socket::stateChanged: "+description,model,MSG_2);
 }
 
 
@@ -70,7 +76,7 @@ void NetworkInterface::stateChangedAction(QAbstractSocket::SocketState state)
 //Slot appelé lorsque la socket est connectée
 void NetworkInterface::connectedToServer()
 {
-	Widget::addRowToTable("Connexion établie",model,MSG_NETWORK);
+	Widget::addRowToTable("Connexion établie",model,MSG_2);
 }
 
 
@@ -81,7 +87,7 @@ void NetworkInterface::disconnectedFromServer()
 	this->isConnected=false;
 	this->isIdentified=false;
 	blockDisconnectedMutex.lock();
-	Widget::addRowToTable("Connexion perdue",model,MSG_NETWORK);
+	Widget::addRowToTable("Connexion perdue",model,MSG_3);
 	emit disconnected();
 }
 
@@ -92,7 +98,7 @@ void NetworkInterface::connexionEncrypted()
 {
 	this->isConnected=true;
 	blockDisconnectedMutex.unlock();
-	Widget::addRowToTable("Connexion avec le serveur correctement établie et cryptée",model,MSG_NETWORK);
+	Widget::addRowToTable("Connexion avec le serveur correctement établie et cryptée",model,MSG_2);
 	emit connected();
 }
 
@@ -104,7 +110,7 @@ void NetworkInterface::erreursSsl(const QList<QSslError> &errors)
 {
 	foreach(const QSslError &error, errors)
 	{
-		Widget::addRowToTable("Erreur SSL ignorée: "+ error.errorString(), model,MSG_NETWORK);
+		Widget::addRowToTable("Erreur SSL ignorée: "+ error.errorString(), model,MSG_3);
 	}
 }
 
@@ -137,7 +143,11 @@ void NetworkInterface::blockWhileDisconnected()
 //elle doit être appelée par un thread externe (si gui revoir socket.connect)
 bool NetworkInterface::connectToServer()
 {
-	return socket->connectToServer(configurationNetwork->getAddress(),configurationNetwork->getPort());
+	Widget::addRowToTable("Tentative de connexion au serveur",model,MSG_1);
+	bool a=socket->connectToServer(configurationNetwork->getAddress(),configurationNetwork->getPort());
+	if(a) Widget::addRowToTable("Success: Connexion réuissie",model,MSG_2);
+	else Widget::addRowToTable("Echec: Connexion échouée",model,MSG_3);
+	return a;
 }
 
 
@@ -158,7 +168,6 @@ void NetworkInterface::receiveMessageAction(QByteArray *message)
 {
 	//On récupère le message
 	Message *m=Messages::parseMessage(message);
-
 	//Si le message est inconnu on emet un signal d'erreur
 	if(!m){emit receiveErrorMessage("NON_XML_MESSAGE");return;}
 
@@ -193,7 +202,7 @@ ResponseEnum NetworkInterface::sendIdentification()
 {
 	//On vérifie que la socket est bien connectée et qu'on est identifié
 	if(!isConnected) return NOT_CONNECT;
-	if(!isIdentified) return NOT_IDENTIFICATE;
+	isIdentified=true;
 
 	//On récupère le pseudo et le mot de passe de la configuration d'identification
 	QString pseudo=configurationIdentification->getPseudo();
@@ -201,8 +210,8 @@ ResponseEnum NetworkInterface::sendIdentification()
 
 	Request request;
 	request.setType(IDENTIFICATION);
-	request.getParameters().insert("pseudo",pseudo.toAscii());
-	request.getParameters().insert("password",password.toAscii());
+	request.getParameters()->insert("pseudo",pseudo.toAscii());
+	request.getParameters()->insert("password",password.toAscii());
 
 	//On crèe le message d'identification
 	QByteArray *message=request.toXml();
@@ -229,8 +238,8 @@ ResponseEnum NetworkInterface::sendMediaUpdated(QString realPath,QByteArray cont
 
 	Request request;
 	request.setType(UPDATE_FILE_INFO);
-	request.getParameters().insert("realPath",realPath.toAscii());
-	request.getParameters().insert("content",content);
+	request.getParameters()->insert("realPath",realPath.toAscii());
+	request.getParameters()->insert("content",content);
 
 	//On rédige le message et on l'envoi
 	QByteArray *message=request.toXml();
@@ -257,8 +266,8 @@ ResponseEnum NetworkInterface::sendMediaCreated(QString realPath, bool isDirecto
 
 	Request request;
 	request.setType(CREATE_FILE_INFO);
-	request.getParameters().insert("realPath",realPath.toAscii());
-	request.getParameters().insert("isDirectory",isDirectory?"true":"false");
+	request.getParameters()->insert("realPath",realPath.toAscii());
+	request.getParameters()->insert("isDirectory",isDirectory?"true":"false");
 
 	//On rédige le message et on l'envoi
 	QByteArray *message=request.toXml();
@@ -288,7 +297,7 @@ ResponseEnum NetworkInterface::sendMediaRemoved(QString realPath)
 
 	Request request;
 	request.setType(REMOVE_FILE_INFO);
-	request.getParameters().insert("realPath",realPath.toAscii());
+	request.getParameters()->insert("realPath",realPath.toAscii());
 
 	//On rédige le message et on l'envoi
 	QByteArray *message=request.toXml();

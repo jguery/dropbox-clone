@@ -10,6 +10,7 @@
 class Dir;
 
 
+
 //Enumeration des différents états de detection d'un state
 //Creation, Suppression, et Mise à jour
 //Le default state sert juste à donner une valeur par défaut à la structure
@@ -62,7 +63,11 @@ protected:
 	QList<State> *detectionState;
 
         //Un mutex pour les threads synchronisés
-        QMutex mutex;
+	QMutex mutex;
+
+	//Pour réserver et libérer l'objet
+	void lock();
+	void unlock();
 
 public:
 	// la méthode virtuelle isDirectory pour savoir si c'est un repertoire ou un simple fichier
@@ -89,10 +94,6 @@ public:
 	void incRevision();
 	void decRevision();
 	void setReadOnly(bool readOnly);
-
-        //Pour réserver et libérer l'objet
-        void lock();
-        void unlock();
 
 	//Quelques méthodes statiques pour la gestion des fichiers et repertoires en général
 	static QString extractParentPath(QString path);

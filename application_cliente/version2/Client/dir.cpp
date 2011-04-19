@@ -47,11 +47,13 @@ Dir *Dir::loadDir(QDomNode noeud,Dir *parent)
 	if(localPath.endsWith("/")) localPath=localPath.left(localPath.length()-1);
 	if(realPath.endsWith("/")) realPath=realPath.left(realPath.length()-1);
 
-	//On récupère les attributs révision et readOnly du noeud xml.
+	//On récupère les attributs detectionState, révision et readOnly du noeud xml.
+	QString detectionStateString=noeud.toElement().attribute("detectionState","");
 	QString revisionString=noeud.toElement().attribute("revision","");
 	QString readOnlyString=noeud.toElement().attribute("readOnly","");
 
-	//On convertit ces attributs en int et bool
+	//On convertit ces attributs en list, int et bool
+	QStringList listDetectionState=detectionStateString.split("/");
 	int revision;bool readOnly;bool ok;
 	revision=revisionString.toInt(&ok); if(!ok) revision=0;
 	readOnly=readOnlyString=="true"?true:false;
@@ -59,6 +61,9 @@ Dir *Dir::loadDir(QDomNode noeud,Dir *parent)
 	//On stocke notre répertoire(ou dépot) dans un objet Dir qui contiendra
 	//tous les sous répertoires de ce répertoire, sotckés dans "subMedias"
 	Dir *dir=new Dir(localPath,realPath,parent,revision,readOnly);
+
+	for(int i=0;i<listDetectionState.size();i++)
+		dir->getDetectionState()->append(Media::stateFromString(listDetectionState.at(i)));
 
 	//On récupère les fils du noeud qui sont en fait les sous médias du "dir"
 	QDomNodeList list=noeud.childNodes();
@@ -137,6 +142,9 @@ void Dir::directoryChangedAction()
 {
 	//Si on ne doit pas détecter les changements, on annule tout
 	if(listen==false) return ;
+
+	//On bloque l'accès
+	this->lock();
 
 	bool isChanged=false; //contiendra true lorsqu'on aura détecter un changement
 
@@ -255,6 +263,9 @@ void Dir::directoryChangedAction()
 		}
 	}
 
+	//On relache l'accès
+	this->unlock();
+
 	//Si on a détecté un changement, on reprend le parcours
 	if(isChanged) directoryChangedAction();
 }
@@ -279,7 +290,12 @@ bool Dir::hasBeenRemoved()
 //Récupérer le nombre de sous médias
 int Dir::numberSubMedia()
 {
-	return subMedias->size();
+	//On bloque l'accès
+	this->lock();
+	int nb=subMedias->size();
+	//On relache l'accès
+	this->unlock();
+	return nb;
 }
 
 
@@ -287,8 +303,17 @@ int Dir::numberSubMedia()
 //Récupérer un sous média à l'indice i
 Media *Dir::getSubMedia(int i)
 {
-	if(i<0 || i>=subMedias->size()) return NULL;
-	return subMedias->at(i);
+	//On bloque l'accès
+	this->lock();
+	if(i<0 || i>=subMedias->size())
+	{
+		this->unlock();
+		return NULL;
+	}
+	Media *m=subMedias->at(i);
+	//On relache
+	this->unlock();
+	return m;
 }
 
 
@@ -300,7 +325,9 @@ File *Dir::addSubFile(QString localPath,QString realPath,int revision,bool readO
 {
 	File *f=File::createFile(localPath,realPath,this,revision,readOnly);
 	if(f==NULL) return NULL;
+	this->lock();
 	subMedias->append(f);
+	this->unlock();
 	return f;
 }
 
@@ -311,7 +338,9 @@ Dir *Dir::addSubDir(QString localPath,QString realPath,int revision,bool readOnl
 {
 	Dir *d=Dir::createDir(localPath,realPath,this,revision,readOnly);
 	if(d==NULL) return NULL;
+	this->lock();
 	subMedias->append(d);
+	this->unlock();
 	d->setListenning(listen);
 	return d;
 }
@@ -323,14 +352,20 @@ Dir *Dir::addSubDir(QString localPath,QString realPath,int revision,bool readOnl
 void Dir::delSubMedia(Media *m)
 {
 	if(m==NULL) return;
+	this->lock();
 	int i=subMedias->indexOf(m);
-	if(i<0) return;
+	if(i<0)
+	{
+		this->unlock();
+		return;
+	}
 	if(m->isDirectory())
 	{
 		Dir *d=(Dir*)m;
 		d->setListenning(false);
 	}
 	subMedias->remove(i);
+	this->unlock();
 }
 
 
@@ -340,6 +375,7 @@ void Dir::delSubMedia(Media *m)
 //Retourne le code xml du repertoire et de ses sous medias
 QDomElement Dir::toXml(QDomDocument *document)
 {
+	this->lock();
 	//On crèe le noeud xml avec le nom "dir"
 	QDomElement element=document->createElement("dir");
 
@@ -347,7 +383,11 @@ QDomElement Dir::toXml(QDomDocument *document)
 	element.setAttribute("localPath",localPath);
 	element.setAttribute("realPath",realPath);
 
-	//On écrit ses attributs revision et readOnly
+	//On écrit ses attributs detectionState, revision et readOnly
+	QStringList listDetectionState;
+	for(int i=0;i<this->detectionState->length();i++)
+		listDetectionState.append(Media::stateToString(this->detectionState->at(i)));
+	element.setAttribute("detectionState",listDetectionState.join("/"));
 	element.setAttribute("revision",QString::number(revision));
 	element.setAttribute("readOnly",readOnly?"true":"false");
 
@@ -357,7 +397,7 @@ QDomElement Dir::toXml(QDomDocument *document)
 		QDomElement e=subMedias->at(i)->toXml(document);
 		element.appendChild(e);
 	}
-
+	this->unlock();
 	//On retourne le noeud
 	return element;
 }
@@ -378,17 +418,21 @@ Media *Dir::findMediaByLocalPath(QString localPath)
 	if(localPath.endsWith("/")) localPath=localPath.left(localPath.length()-1);
 
 	//On teste si le localPath est égal au localPath de l'objet
-	  if(this->localPath==localPath)
-            return this;
+	if(this->localPath==localPath)
+		return this;
 
-	  //Sinon on recherche dans tous les sous médias
+	this->lock();
+	//Sinon on recherche dans tous les sous médias
 	for(int i=0;i<subMedias->size();i++)
 	{
 		Media *find=subMedias->at(i)->findMediaByLocalPath(localPath);
-                if(find!=NULL)
-                    return find;
+		if(find!=NULL)
+		{
+			this->unlock();
+			return find;
+		}
 	}
-
+	this->unlock();
 	//On a rien trouvé dans la recherche, on retourne NULL
 	return NULL;
 }
@@ -408,17 +452,21 @@ Media *Dir::findMediaByRealPath(QString realPath)
 	if(realPath.endsWith("/")) realPath=realPath.left(realPath.length()-1);
 
 	//On teste si le realPath est égal au realPath de l'objet
-        if(this->realPath==realPath)
-            return this;
+	if(this->realPath==realPath)
+		return this;
 
-	  //Sinon on recherche dans tous les sous médias
+	this->lock();
+	//Sinon on recherche dans tous les sous médias
 	for(int i=0;i<subMedias->size();i++)
 	{
 		Media *find=subMedias->at(i)->findMediaByRealPath(realPath);
-                if(find!=NULL)
-                    return find;
+		if(find!=NULL)
+		{
+			this->unlock();
+			return find;
+		}
 	}
-
+	this->unlock();
 	//On a rien trouvé dans la recherche, on retourne NULL
 	return NULL;
 }
@@ -437,6 +485,7 @@ void Dir::setListenning(bool listen)
 	this->listen=listen;
 	directoryChangedAction();
 
+	this->lock();
         //Change tous les signalListener de tous les répertoires contenus dans subMedias
 	for(int i=0;i<subMedias->size();i++)
 	{
@@ -445,6 +494,7 @@ void Dir::setListenning(bool listen)
 		if(d->getDetectionState()->contains(MediaIsRemoving)) continue;
 		d->setListenning(listen);
 	}
+	this->unlock();
 }
 
 
