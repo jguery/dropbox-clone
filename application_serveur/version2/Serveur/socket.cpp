@@ -62,13 +62,14 @@ bool Socket::setDescriptor(int socketDescriptor)
 	//on se connecte au serveur
 	startServerEncryption();
 
-	//On attends au plus 3secondes pour que la connexion s'établisse
-	bool result = waitForConnected(3000);
+	//On attends au plus 30secondes pour que la connexion s'établisse
+	bool result = waitForConnected();
+	if(!result) return result;
+
+	result=waitForEncrypted();
 
 	return result;
 }
-
-
 
 
 
@@ -77,47 +78,82 @@ bool Socket::setDescriptor(int socketDescriptor)
 //Se déconnecter
 bool Socket::disconnectClient()
 {
-	if(this->state()!=QAbstractSocket::ConnectedState) return true;
 	disconnectFromHost();
-	bool result = waitForDisconnected(3000);
+	bool result = waitForDisconnected();
 	return result;
 }
 
 
-//Le slot de reception de données
+
+
+
+//Ce slot privé est appellé automatiquement à chaque fois qu'un bout de paquet arrive
 void Socket::inputStream()
 {
 	QDataStream in(this);
 	in.setVersion(QDataStream::Qt_4_0);
+
+	//Si on a pas encore la taille du message
 	if(blockSize==0)
 	{
+		//On vérifie si le message contient assez de bits pour lire la taille
 		if (bytesAvailable() < (int)sizeof(quint64))
 			return;
+		//On lit la taille
 		in >> blockSize;
 	}
 
+	//On vérifie si le message a été completement recu
 	if (bytesAvailable() < blockSize)
 		return;
+
+	//On réinitialise la taille pour un autre futur message
 	blockSize=0;
+
+	//On lit le message recu
 	QByteArray *message=new QByteArray();
 	in >> (*message);
+
+	//On emet un signal pour donner le message recu
 	emit receiveMessage(message);
 }
 
 
-//Pour envoyer un message
+
+
+
+
+//Pour envoyer un message complet
 bool Socket::sendMessage(QByteArray *message)
 {
 	if(message==NULL) return false;
+
+	//On construit le message à envoyer (avec les entetes)
 	QByteArray block;
 	QDataStream out(&block, QIODevice::WriteOnly);
+
+	//Tous les messages envoyés ont la version Qt 4.0 (pour assurer les compatibilités)
 	out.setVersion(QDataStream::Qt_4_0);
+
+	//On laisse de la place au début pour écrire la taille du message
 	out << (quint64)0;
+
+	//On écrit le message
 	out << (*message);
+
+	//On se replace au début et on écrit la taille du message
 	out.device()->seek(0);
 	out << (quint64)(block.size() - sizeof(quint64));
-	write(block);
-	return waitForBytesWritten(3000);
+
+	//On envoi le message final et vérifie que l'envoi a bien commencé
+	if(write(block)==-1) return false;
+
+	//On attends indéfiniment pour l'envoi
+	bool result = waitForBytesWritten(-1);
+
+	//On supprime le message et on retourne le résultat de l'envoi
+	delete message;
+	return result;
 }
 
 

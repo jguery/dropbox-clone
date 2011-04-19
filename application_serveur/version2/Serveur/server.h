@@ -11,12 +11,11 @@
 
 class Server: public QTcpServer
 {
-
-Q_OBJECT
+	Q_OBJECT
 
 public:
-	//Le constructeur
-	Server(QStandardItemModel *model);
+	//Pour allouer l'objet
+	static Server *createServer(DatabaseManager *databaseManager,QStandardItemModel *model);
 
 	//Pour écouter sur un port
 	bool beginListenning(int port);
@@ -28,9 +27,15 @@ public:
 	void incomingConnection(int socketDescriptor);
 
 public slots:
-	void disconnectClient(ClientManager*);	//Lorsqu'un client se déconnecte, appelé pour l'enlever du QVector
+	void disconnectedClient(ClientManager *clientManager);
 
 private:
+	//Le constructeur
+	Server(DatabaseManager *databaseManager,QStandardItemModel *model);
+
+	//La bdd
+	DatabaseManager *databaseManager;
+
 	//La liste des clients
 	QVector<ClientManager*> *clients;
 	QStandardItemModel *model;

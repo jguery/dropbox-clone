@@ -21,8 +21,13 @@ Widget::Widget(): QWidget()
 	this->setLayout(layout);
 	addRowToTable("Démarage de l'application",model);
 
+	//On créé la bdd
+	DatabaseManager *db=DatabaseManager::createDatabaseManager("dropbox","user","mdp");
+	if(db) addRowToTable("La base de données a été créé",model,false);
+	else addRowToTable("Erreur à la création de la base de données",model,false);
+
 	//On créé l'interface réseau
-	this->server=new Server(model);
+	this->server=Server::createServer(db,model);
 	bool result=this->server->beginListenning(4321);
 	if(result) addRowToTable("Le serveur est démarré sur le port 4321",model,false);
 	else {addRowToTable("Echec de démarrage du serveur sur le port 4321",model,false);return;}
@@ -42,7 +47,7 @@ void Widget::addRowToTable(QString s,QStandardItemModel *model,bool changeColor)
 		g=(g==255)?0:((g==125)?255:125);
 	}
 	QList<QStandardItem*> list;
-	QStandardItem *i1=new QStandardItem(s);
+	QStandardItem *i1=new QStandardItem(trUtf8(s.toAscii()));
 	i1->setBackground(QBrush(QColor::fromRgb(r,g,b)));
 	QStandardItem *i2=new QStandardItem(QTime::currentTime().toString("hh:mm:ss"));
 	i2->setBackground(QBrush(QColor::fromRgb(r,g,b)));

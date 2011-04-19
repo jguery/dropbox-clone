@@ -4,7 +4,7 @@
 #
 #-------------------------------------------------
 
-QT       += core gui network
+QT       += core gui network xml sql
 
 TARGET = Serveur
 TEMPLATE = app
@@ -14,9 +14,17 @@ SOURCES += main.cpp\
         widget.cpp \
     socket.cpp \
     server.cpp \
-    clientmanager.cpp
+    clientmanager.cpp \
+    messages.cpp \
+    depot.cpp \
+    databasemanager.cpp \
+    svnmanager.cpp
 
 HEADERS  += widget.h \
     socket.h \
     server.h \
-    clientmanager.h
+    clientmanager.h \
+    messages.h \
+    depot.h \
+    databasemanager.h \
+    svnmanager.h

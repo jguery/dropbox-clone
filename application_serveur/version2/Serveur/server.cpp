@@ -1,19 +1,32 @@
 #include "server.h"
 
 
-//Le constructeur
-Server::Server(QStandardItemModel *model) : QTcpServer()
+
+
+Server *Server::createServer(DatabaseManager *databaseManager, QStandardItemModel *model)
 {
+	if(!databaseManager || !model) return NULL;
+	return new Server(databaseManager,model);
+}
+
+
+
+//Le constructeur
+Server::Server(DatabaseManager *databaseManager,QStandardItemModel *model): QTcpServer()
+{
+	this->databaseManager=databaseManager;
 	this->model=model;
 	clients=new QVector<ClientManager*>();
 }
+
+
 
 
 //Permet de démarrer le serveur et le mettre à l'écoute sur un port donné
 bool Server::beginListenning(int port)
 {
 	if(this->isListening()) return false;
-	if(clients!=NULL){
+	if(clients!=NULL) {
 		while(!clients->isEmpty()){
 			delete clients->at(0);
 			clients->remove(0);
@@ -26,10 +39,12 @@ bool Server::beginListenning(int port)
 }
 
 
+
+
 //Permet de stopper l'écoute du serveur
 bool Server::stopListenning()
 {
-	if(clients!=NULL){
+	if(clients!=NULL) {
 		while(!clients->isEmpty()){
 			delete clients->at(0);
 			clients->remove(0);
@@ -41,25 +56,33 @@ bool Server::stopListenning()
 }
 
 
+
+
+
+
 //Cette fonction est automatiquement appelée lorsqu'un client se connecte
 void Server::incomingConnection(int socketDescriptor)
 {
-	ClientManager *cm=ClientManager::createClientManager(socketDescriptor,clients,model);
+	ClientManager *cm=ClientManager::createClientManager(socketDescriptor,clients,databaseManager,model);
 	if(cm==NULL) return;
 	clients->append(cm);
-	QObject::connect(cm,SIGNAL(clientManagerStop(ClientManager*)),this,SLOT(disconnectClient(ClientManager*)));
+	QObject::connect(cm,SIGNAL(disconnectedClient(ClientManager*)),this,SLOT(disconnectedClient(ClientManager*)));
 }
 
 
-//Lorsqu'un client se déconnecte, appelé pour l'enlever du QVector
-void Server::disconnectClient(ClientManager *cl)
+
+
+//Slot lorsqu'un client se déconnecte
+//On l'envèle de la liste des clients connectés
+void Server::disconnectedClient(ClientManager *clientManager)
 {
-	if(cl==NULL)
-		return;
-
-	int index = clients->indexOf(cl);
-	if(index==-1)
-		return;
-
-	else clients->remove(index);
+	for(int i=0;i<clients->size();i++)
+	{
+		if(clients->at(i)==clientManager)
+		{
+			ClientManager *c=clients->at(i);
+			clients->remove(i);
+			delete c;
+		}
+	}
 }

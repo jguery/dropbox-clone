@@ -2,7 +2,10 @@
 #define CLIENTMANAGER_H
 
 #include <QStandardItemModel>
+#include <QtCore>
 #include "socket.h"
+#include "messages.h"
+#include "databasemanager.h"
 
 
 /*
@@ -10,21 +13,24 @@
  Il est chargé de communiquer avec le client.
 */
 
-class ClientManager: public QObject
+class ClientManager: public QThread
 {
 	Q_OBJECT
 
 public:
 	//Une méthode statique pour allocation
-	static ClientManager *createClientManager(int clientSocket,QVector<ClientManager*> *clients,QStandardItemModel *model);
+	static ClientManager *createClientManager(int clientSocket,QVector<ClientManager*> *clients,DatabaseManager *databaseManager,QStandardItemModel *model);
 
-signals:
-	//Emis pour dire qu'un client est parti, et donc qu'on arrete le client manager
-	void clientManagerStop(ClientManager*);
+	void run();
 
-public slots:
-	 //Le slot levé lorsqu'un message est recu
-	 void receiveMessageAction(QByteArray *message);
+	~ClientManager();
+
+private slots:
+	//Le slot levé lorsqu'un message est recu
+	void receiveMessageAction(QByteArray *message);
+
+	//Lorsqu'une requete est récue
+	void receivedRequest(Request *r);
 
         //Lorsqu'un client est déconnecté
         void clientDisconnected();
@@ -33,15 +39,21 @@ public slots:
         void erreursSsl(const QList<QSslError>&);
 
         void connexionEncrypted();
+signals:
+	void disconnectedClient(ClientManager *clientManager);
 
 private:
-	ClientManager(QVector<ClientManager*> *clients,QStandardItemModel *model);
+	ClientManager(QVector<ClientManager*> *clients,DatabaseManager *databaseManager,QStandardItemModel *model);
 
-	//La socket communiquant avec le client
+        //La socket communiquant avec le client
 	Socket *socket;
 
 	//La liste des autres clients
 	QVector<ClientManager*> *clients;
+
+	//La bdd
+	DatabaseManager *databaseManager;
+
 	QStandardItemModel *model;
 };
 
