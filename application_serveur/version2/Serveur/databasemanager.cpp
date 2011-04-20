@@ -19,9 +19,13 @@ DatabaseManager *DatabaseManager::createDatabaseManager(QString name, QString lo
 		!q.exec("drop table depot;") || !q.exec("create table depot(depotname varchar(50),inscriptiondate datetime);") ||
 		!q.exec("drop table utilisation;") || !q.exec("create table utilisation(login varchar(50),depotname varchar(50),access varchar(50),inscriptiondate datetime);"))
 		return NULL;
+		q.exec("insert into depot(depotname) values('projetdev');");
 		q.exec("insert into user(login,password) values('hky','hky');");
+		q.exec("insert into utilisation(login,depotname) values('hky','projetdev');");
 		q.exec("insert into user(login,password) values('jguery','jguery');");
+		q.exec("insert into utilisation(login,depotname) values('jguery','projetdev');");
 		q.exec("insert into user(login,password) values('ymahe','ymahe');");
+		q.exec("insert into utilisation(login,depotname) values('ymahe','projetdev');");
 		return new DatabaseManager(db);
 	}
 	delete db;

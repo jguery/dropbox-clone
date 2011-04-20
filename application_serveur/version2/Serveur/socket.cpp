@@ -97,7 +97,7 @@ void Socket::inputStream()
 	if(blockSize==0)
 	{
 		//On vérifie si le message contient assez de bits pour lire la taille
-		if (bytesAvailable() < (int)sizeof(quint64))
+		if (bytesAvailable() < (int)sizeof(qint64))
 			return;
 		//On lit la taille
 		in >> blockSize;
@@ -136,14 +136,14 @@ bool Socket::sendMessage(QByteArray *message)
 	out.setVersion(QDataStream::Qt_4_0);
 
 	//On laisse de la place au début pour écrire la taille du message
-	out << (quint64)0;
+	out << (qint64)0;
 
 	//On écrit le message
 	out << (*message);
 
 	//On se replace au début et on écrit la taille du message
 	out.device()->seek(0);
-	out << (quint64)(block.size() - sizeof(quint64));
+	out << (qint64)(block.size() - sizeof(qint64));
 
 	//On envoi le message final et vérifie que l'envoi a bien commencé
 	if(write(block)==-1) return false;

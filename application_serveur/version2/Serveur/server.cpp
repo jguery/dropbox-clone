@@ -3,18 +3,19 @@
 
 
 
-Server *Server::createServer(DatabaseManager *databaseManager, QStandardItemModel *model)
+Server *Server::createServer(DatabaseManager *databaseManager,FileManager *fileManager, QStandardItemModel *model)
 {
-	if(!databaseManager || !model) return NULL;
-	return new Server(databaseManager,model);
+	if(!databaseManager || !fileManager || !model) return NULL;
+	return new Server(databaseManager,fileManager,model);
 }
 
 
 
 //Le constructeur
-Server::Server(DatabaseManager *databaseManager,QStandardItemModel *model): QTcpServer()
+Server::Server(DatabaseManager *databaseManager,FileManager *fileManager,QStandardItemModel *model): QTcpServer()
 {
 	this->databaseManager=databaseManager;
+	this->fileManager=fileManager;
 	this->model=model;
 	clients=new QVector<ClientManager*>();
 }
@@ -63,11 +64,13 @@ bool Server::stopListenning()
 //Cette fonction est automatiquement appelée lorsqu'un client se connecte
 void Server::incomingConnection(int socketDescriptor)
 {
-	ClientManager *cm=ClientManager::createClientManager(socketDescriptor,clients,databaseManager,model);
+	ClientManager *cm=ClientManager::createClientManager(socketDescriptor,clients,databaseManager,fileManager,model);
 	if(cm==NULL) return;
 	clients->append(cm);
 	QObject::connect(cm,SIGNAL(disconnectedClient(ClientManager*)),this,SLOT(disconnectedClient(ClientManager*)));
 }
+
+
 
 
 

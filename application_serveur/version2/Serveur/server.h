@@ -15,7 +15,7 @@ class Server: public QTcpServer
 
 public:
 	//Pour allouer l'objet
-	static Server *createServer(DatabaseManager *databaseManager,QStandardItemModel *model);
+	static Server *createServer(DatabaseManager *databaseManager,FileManager *fileManager,QStandardItemModel *model);
 
 	//Pour écouter sur un port
 	bool beginListenning(int port);
@@ -31,10 +31,11 @@ public slots:
 
 private:
 	//Le constructeur
-	Server(DatabaseManager *databaseManager,QStandardItemModel *model);
+	Server(DatabaseManager *databaseManager,FileManager *fileManager,QStandardItemModel *model);
 
 	//La bdd
 	DatabaseManager *databaseManager;
+	FileManager *fileManager;
 
 	//La liste des clients
 	QVector<ClientManager*> *clients;

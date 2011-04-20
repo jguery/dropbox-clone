@@ -4,10 +4,10 @@
 
 
 //Pour allouer l'objet ClientManager
-ClientManager *ClientManager::createClientManager(int clientSocket,QVector<ClientManager*> *clients,DatabaseManager *databaseManager,QStandardItemModel *model)
+ClientManager *ClientManager::createClientManager(int clientSocket,QVector<ClientManager*> *clients,DatabaseManager *databaseManager,FileManager *fileManager,QStandardItemModel *model)
 {
-	if(!databaseManager) return NULL;
-	ClientManager *cl=new ClientManager(clients,databaseManager,model);
+	if(!databaseManager || !fileManager) return NULL;
+	ClientManager *cl=new ClientManager(clients,databaseManager,fileManager,model);
 	if(cl->socket->setDescriptor(clientSocket))
 	{
 		Widget::addRowToTable("Le client "+cl->socket->peerAddress().toString()+" vient de se connecter en mode non crypté",model);
@@ -21,12 +21,13 @@ ClientManager *ClientManager::createClientManager(int clientSocket,QVector<Clien
 
 
 //Le constructeur
-ClientManager::ClientManager(QVector<ClientManager*> *clients,DatabaseManager *databaseManager,QStandardItemModel *model): QThread()
+ClientManager::ClientManager(QVector<ClientManager*> *clients,DatabaseManager *databaseManager,FileManager *fileManager,QStandardItemModel *model): QThread()
 {
 	this->moveToThread(this);
 
 	socket=new Socket();
 	this->databaseManager=databaseManager;
+	this->fileManager=fileManager;
 	this->model=model;
 	this->clients=clients;
 

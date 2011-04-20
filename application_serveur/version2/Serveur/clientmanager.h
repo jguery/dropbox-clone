@@ -6,6 +6,7 @@
 #include "socket.h"
 #include "messages.h"
 #include "databasemanager.h"
+#include "filemanager.h"
 
 
 /*
@@ -19,7 +20,7 @@ class ClientManager: public QThread
 
 public:
 	//Une méthode statique pour allocation
-	static ClientManager *createClientManager(int clientSocket,QVector<ClientManager*> *clients,DatabaseManager *databaseManager,QStandardItemModel *model);
+	static ClientManager *createClientManager(int clientSocket,QVector<ClientManager*> *clients,DatabaseManager *databaseManager,FileManager *fileManager,QStandardItemModel *model);
 
 	void run();
 
@@ -43,7 +44,7 @@ signals:
 	void disconnectedClient(ClientManager *clientManager);
 
 private:
-	ClientManager(QVector<ClientManager*> *clients,DatabaseManager *databaseManager,QStandardItemModel *model);
+	ClientManager(QVector<ClientManager*> *clients,DatabaseManager *databaseManager,FileManager *fileManager,QStandardItemModel *model);
 
         //La socket communiquant avec le client
 	Socket *socket;
@@ -53,6 +54,7 @@ private:
 
 	//La bdd
 	DatabaseManager *databaseManager;
+	FileManager *fileManager;
 
 	QStandardItemModel *model;
 };

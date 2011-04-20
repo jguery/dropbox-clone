@@ -1,4 +1,6 @@
 #include "svnmanager.h"
+#include "depot.h"
+
 
 
 
@@ -37,6 +39,7 @@ bool SvnManager::checkoutDepot(QString localPath,QString depotName)
 	if(!dir.mkdir(depotName)) return false;
 	QString cmd=svnCommand+" checkout --username "+svnLogin+" --password "+svnPassword+" "+svnServerPath+depotName+" "+localPath+depotName;
 	int rep=QProcess::execute(cmd);
+	if(rep!=0) Depot::removeNonEmptyDirectory(localPath+depotName);
 	return (rep==0);
 }
 
@@ -92,8 +95,7 @@ int SvnManager::getRevision(QString depotPath)
 	if(p.exitCode()!=0) return -1;
 	QByteArray rep=p.readAll();
 	QRegExp rx("(\\d+)");
-	int index=0;
-	if(index=rx.indexIn(rep,0)==-1) return -1;
+	if(rx.indexIn(rep,0)==-1) return -1;
 	return rx.cap(1).toInt();
 }
 

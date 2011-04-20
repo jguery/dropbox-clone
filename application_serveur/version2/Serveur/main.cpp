@@ -5,12 +5,8 @@
 int main(int argc, char *argv[])
 {
 	QApplication a(argc, argv);
-	//Widget w;
-	//w.show();
-	//return a.exec();
-	SvnManager *s=SvnManager::createSvnManager("hky","hky","svn","svnadmin");
-	if(s) qDebug("yes");
-	else qDebug("no");
-	qDebug(QString::number(s->getRevision(Depot::GLOBAL_DEPOTS_PATH+"projetdev")).toAscii());
+	Widget w;
+	w.show();
+	return a.exec();
 	return 0;
 }

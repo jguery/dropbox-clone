@@ -37,7 +37,7 @@ private:
 	bool initialiseSSL();
 
 	//attribut privé pour stocker la taille du message qui est entrain d'etre recu par paquet
-	quint64 blockSize;
+	qint64 blockSize;
 };
 
 #endif // SOCKET_H

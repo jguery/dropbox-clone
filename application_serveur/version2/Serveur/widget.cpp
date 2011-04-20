@@ -24,10 +24,18 @@ Widget::Widget(): QWidget()
 	//On créé la bdd
 	DatabaseManager *db=DatabaseManager::createDatabaseManager("dropbox","user","mdp");
 	if(db) addRowToTable("La base de données a été créé",model,false);
-	else addRowToTable("Erreur à la création de la base de données",model,false);
+	else {addRowToTable("Erreur à la création de la base de données",model,false);return;}
+
+	//On créé le fileManager
+	SvnManager *svn=SvnManager::createSvnManager("hky","hky","svn","svnadmin");
+	FileManager *f=FileManager::createFileManager(svn);
+	if(f) addRowToTable("Le gestionnaire de fichiers a été créé",model,false);
+	else {addRowToTable("Erreur à la création du gestionnaire de fichiers",model,false);return;}
+	QList<SqlDepot*> depots=db->getDepots();
+	for(int i=0;i<depots.length();i++) f->addDepot(depots.at(i)->depotname);
 
 	//On créé l'interface réseau
-	this->server=Server::createServer(db,model);
+	this->server=Server::createServer(db,f,model);
 	bool result=this->server->beginListenning(4321);
 	if(result) addRowToTable("Le serveur est démarré sur le port 4321",model,false);
 	else {addRowToTable("Echec de démarrage du serveur sur le port 4321",model,false);return;}

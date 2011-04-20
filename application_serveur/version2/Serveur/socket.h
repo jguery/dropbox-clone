@@ -34,7 +34,7 @@ private slots:
 	void inputStream();
 
 private:
-	quint64 blockSize;
+	qint64 blockSize;
 };
 
 #endif // SOCKET_H
