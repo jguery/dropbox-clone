@@ -18,7 +18,8 @@ SOURCES += main.cpp\
     messages.cpp \
     depot.cpp \
     databasemanager.cpp \
-    svnmanager.cpp
+    svnmanager.cpp \
+    filemanager.cpp
 
 HEADERS  += widget.h \
     socket.h \
@@ -27,4 +28,5 @@ HEADERS  += widget.h \
     messages.h \
     depot.h \
     databasemanager.h \
-    svnmanager.h
+    svnmanager.h \
+    filemanager.h

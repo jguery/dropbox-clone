@@ -1,74 +1,128 @@
 #include "depot.h"
+QString Depot::GLOBAL_DEPOTS_PATH="/home/hky/test/server/";
 
 
-Depot *Depot::createDepot(QString globalTmpPath,QString depotName)
+
+
+Depot *Depot::createDepot(QString depotName,SvnManager *svnManager)
 {
-	if(globalTmpPath.isEmpty() || depotName.isEmpty())
+	if(!svnManager) return NULL;
+	QString globalTmpPath=Depot::GLOBAL_DEPOTS_PATH;
+	if(globalTmpPath.isEmpty() || !globalTmpPath.endsWith("/") || depotName.isEmpty())
 		return NULL;
-	if(!globalTmpPath.endsWith("/")) globalTmpPath=globalTmpPath+"/";
 	if(!depotName.endsWith("/")) depotName=depotName+"/";
 
-	QDir dir(globalTmpPath);
+	QDir dirP(globalTmpPath);
+	if(!dirP.exists()) return NULL;
+
+	QDir dir(globalTmpPath+depotName);
+	if(dir.exists()) return NULL;
+
+	if(!(svnManager->checkoutDepot(GLOBAL_DEPOTS_PATH,depotName))) return NULL;
+
 	if(!dir.exists()) return NULL;
 
-	return new Depot(globalTmpPath+depotName,depotName);
-}
-
-
-Depot::Depot(QString localPath, QString realPath)
-{
-	this->localPath=localPath;
-	this->realPath=realPath;
-	this->revision=0;
+	return new Depot(depotName,svnManager);
 }
 
 
 
-
-bool Depot::updateFileContent(QString fileRealPath,QByteArray content)
+Depot *Depot::loadDepot(QString depotName,SvnManager *svnManager)
 {
-	if(!fileRealPath.startsWith(realPath)) return false;
-	QString name=fileRealPath.right(fileRealPath.length()-realPath.length());
-	QString fileLocalPath=localPath+name;
+	if(!svnManager) return NULL;
+	QString globalTmpPath=Depot::GLOBAL_DEPOTS_PATH;
+	if(globalTmpPath.isEmpty() || !globalTmpPath.endsWith("/") || depotName.isEmpty())
+		return NULL;
+	if(!depotName.endsWith("/")) depotName=depotName+"/";
+
+	QDir dir(globalTmpPath+depotName);
+	if(!dir.exists()) return NULL;
+
+	if(!(svnManager->updateDepot(GLOBAL_DEPOTS_PATH+depotName))) return NULL;
+
+	return new Depot(depotName,svnManager);
+}
+
+
+
+
+
+
+
+Depot::Depot(QString depotName,SvnManager *svnManager)
+{
+	this->depotName=depotName;
+	this->svnManager=svnManager;
+	int r=svnManager->getRevision(GLOBAL_DEPOTS_PATH+depotName);
+	if(r<0) r=0;
+	revision=r;
+}
+
+
+
+
+
+
+QString Depot::getDepotName()
+{
+	return depotName;
+}
+
+
+
+
+bool Depot::updateFileContent(QString fileRealPath,QByteArray content,QString login,QString password)
+{
+	if(!fileRealPath.startsWith(depotName)) return false;
+	QString fileLocalPath=GLOBAL_DEPOTS_PATH+fileRealPath;
 	QFile file(fileLocalPath);
 	if(!file.open(QIODevice::WriteOnly))
 		return false;
 	file.write(content);
 	file.close();
-	revision++;
+	if(!(svnManager->commitDepot(GLOBAL_DEPOTS_PATH+depotName,login,password))) return false;
+	int r=svnManager->getRevision(GLOBAL_DEPOTS_PATH+depotName);
+	if(r<0) return false;
+	revision=r;
 	return true;
 }
 
 
 
-bool Depot::createDir(QString dirRealPath)
+
+bool Depot::createDir(QString dirRealPath,QString login,QString password)
 {
-	QString dirParentRealPath=extractParentPath(dirRealPath)+"/";
-	QString dirRealName=extractName(dirRealPath);
-	if(!dirParentRealPath.startsWith(this->realPath)) return false;
-	QString dirParentName=dirParentRealPath.right(dirParentRealPath.length()-realPath.length());
-	QString dirParentLocalPath=localPath+dirParentName;
-	QDir dir(dirParentLocalPath);
+	if(!dirRealPath.startsWith(depotName) || dirRealPath==depotName) return false;
+	QString dirLocalPath=GLOBAL_DEPOTS_PATH+dirRealPath;
+
+	QString dirParentPath=extractParentPath(dirLocalPath)+"/";
+	QString dirName=extractName(dirLocalPath);
+	QDir dir(dirParentPath);
 	if(!dir.exists()) return false;
-	if(!dir.mkdir(dirRealName)) return false;
-	revision++;
+	if(!dir.mkdir(dirName)) return false;
+	if(!(svnManager->addFileToDepot(GLOBAL_DEPOTS_PATH+depotName,dirLocalPath,login,password))) return false;
+	int r=svnManager->getRevision(GLOBAL_DEPOTS_PATH+depotName);
+	if(r<0) return false;
+	revision=r;
 	return true;
 }
 
 
-bool Depot::createFile(QString fileRealPath)
+
+
+
+bool Depot::createFile(QString fileRealPath,QString login,QString password)
 {
-	QString fileParentRealPath=extractParentPath(fileRealPath)+"/";
-	QString fileRealName=extractName(fileRealPath);
-	if(!fileParentRealPath.startsWith(this->realPath)) return false;
-	QString fileParentName=fileParentRealPath.right(fileParentRealPath.length()-realPath.length());
-	QString fileParentLocalPath=localPath+fileParentName;
-	QDir dir(fileParentLocalPath);
-	if(!dir.exists()) return false;
-	QFile file(fileParentLocalPath+fileRealName);
+	if(!fileRealPath.startsWith(depotName)) return false;
+	QString fileLocalPath=GLOBAL_DEPOTS_PATH+fileRealPath;
+
+	QFile file(fileLocalPath);
 	if(!file.open(QIODevice::WriteOnly)) return false;
 	file.close();
-	revision++;
+	if(!(svnManager->addFileToDepot(GLOBAL_DEPOTS_PATH+depotName,fileLocalPath,login,password))) return false;
+	int r=svnManager->getRevision(GLOBAL_DEPOTS_PATH+depotName);
+	if(r<0) return false;
+	revision=r;
 	return true;
 }
 
@@ -76,21 +130,29 @@ bool Depot::createFile(QString fileRealPath)
 
 
 
-bool Depot::deleteMedia(QString mediaRealPath)
+bool Depot::deleteMedia(QString mediaRealPath,QString login,QString password)
 {
-	if(!mediaRealPath.startsWith(this->realPath)) return false;
-	QDir dir(mediaRealPath);
+	if(!mediaRealPath.startsWith(depotName)) return false;
+	QString mediaLocalPath=GLOBAL_DEPOTS_PATH+mediaRealPath;
+
+	QDir dir(mediaLocalPath);
 	if(dir.exists())
 	{
-		if(!removeNonEmptyDirectory(mediaRealPath)) return false;
+		if(!removeNonEmptyDirectory(mediaLocalPath)) return false;
 	}
 	else
 	{
-		if(!QFile::remove(mediaRealPath)) return false;
+		if(!QFile::remove(mediaLocalPath)) return false;
 	}
-	revision++;
+	if(!(svnManager->removeFileToDepot(GLOBAL_DEPOTS_PATH+depotName,mediaLocalPath,login,password))) return false;
+	int r=svnManager->getRevision(GLOBAL_DEPOTS_PATH+depotName);
+	if(r<0) return false;
+	revision=r;
 	return true;
 }
+
+
+
 
 
 void Depot::lock()
