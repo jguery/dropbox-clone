@@ -380,10 +380,18 @@ void ConfigurationFile::removeMediaDetection()
 void ConfigurationFile::putMediaDetection(Media *m)
 {
 	detectMediaListMutex.lock();
+	for(int i=0;i<depots->length();i++)
+	{
+		if(!m->getLocalPath().startsWith(depots->at(i)->getLocalPath()+"/")) continue;
+		if(!depots->at(i)->isReadOnly()) break;
+		detectMediaListMutex.unlock();
+		return;
+	}
 	int index=0;
 	for(int i=0;i<detectMediaList->length();i++) if(detectMediaList->at(i)==m) index++;
 	detectMediaList->append(m);
 	Widget::addRowToTable(QString("Le ")+(m->isDirectory()?QString("repertoire"):QString("fichier"))+QString(" ")+m->getLocalPath()+QString(" est passé à l'état ")+Media::stateToString(m->getDetectionState()->at(index)),model,MSG_2);
+	emit saveRequest();
 	if(waitConditionDetect!=NULL) waitConditionDetect->wakeAll();
 	detectMediaListMutex.unlock();
 }
@@ -536,6 +544,7 @@ ConfigurationData::ConfigurationData(ConfigurationNetwork *configurationNetwork,
 	this->configurationNetwork=configurationNetwork;
 	this->configurationIdentification=configurationIdentification;
 	this->configurationFile=configurationFile;
+	QObject::connect(configurationFile,SIGNAL(saveRequest()),this,SLOT(save()));
 	this->savePath=savePath;
 }
 
@@ -599,6 +608,9 @@ bool ConfigurationData::save(QString savePath)
 	}
 	else this->savePath=savePath;
 
+	//On empeche un autre thread de faire un save en même temps
+	saveMutex.lock();
+
 	//Crée le document xml et tous ses élèments
 	QDomDocument document;
 	QDomElement element=document.createElement("ConfigurationData");
@@ -615,12 +627,17 @@ bool ConfigurationData::save(QString savePath)
 
 	QFile file(savePath);
 	if(!file.open(QIODevice::WriteOnly))
+	{
+		saveMutex.unlock();
 		return false;
+	}
 
 	//On écrit ce doc xml dans un nouveau fichier (écrasé s'il existe déjà)
 	file.write(document.toByteArray());
 
 	file.close();
+
+	saveMutex.unlock();
 
 	return true;
 }

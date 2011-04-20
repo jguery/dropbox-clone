@@ -44,7 +44,7 @@ class Media: public QObject
 
 // le constructeur et les attributs sont protected pour être accéssible depuis les classes filles
 protected:
-	Media(QString localPath,QString realPath,Dir *parent,int revision,bool readOnly);
+	Media(QString localPath,QString realPath,Dir *parent);
 
 	//Les attributs
 	QString localPath;
@@ -53,17 +53,11 @@ protected:
 	//Le parent du média
 	Dir *parent;
 
-	//Pour savoir si le media est en lecture seule
-	bool readOnly;
-
-	//Pour le numero de révision du média
-	int revision;
-
 	//Les détections qui sont en cours sur le media
 	QList<State> *detectionState;
 
         //Un mutex pour les threads synchronisés
-	QMutex mutex;
+	QMutex *mutex;
 
 	//Pour réserver et libérer l'objet
 	void lock();
@@ -82,18 +76,12 @@ public:
 	QString getLocalPath();
 	QString getRealPath();
 	Dir *getParent();
-	int getRevision();
-	bool isReadOnly();
 	QList<State> *getDetectionState();
 
 	//Les mutateurs
 	void setLocalPath(QString localPath);
 	void setRealPath(QString realPath);
-	void setRevision(int revision);
 	void setParent(Dir *parent);
-	void incRevision();
-	void decRevision();
-	void setReadOnly(bool readOnly);
 
 	//Quelques méthodes statiques pour la gestion des fichiers et repertoires en général
 	static QString extractParentPath(QString path);

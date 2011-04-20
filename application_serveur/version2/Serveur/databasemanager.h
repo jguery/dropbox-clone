@@ -22,7 +22,7 @@ typedef struct SqlUser
 	QString firstName;
 	QString lastName;
 	QDateTime inscriptionDate;
-	QList<SqlUtilisation> utilisations;
+	QList<SqlUtilisation*> *utilisations;
 } SqlUser;
 
 

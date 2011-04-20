@@ -21,14 +21,14 @@ class Dir: public Media
 
 public:
 	//Des fonctions statiques createDir et loadDir pour allouer un objet Dir
-	static Dir *createDir(QString localPath,QString realPath,Dir *parent,int revision,bool readOnly);
+	static Dir *createDir(QString localPath,QString realPath,Dir *parent);
 	static Dir *loadDir(QDomNode noeud,Dir *parent);
 
 	//Pour gérer la liste de ses sous médias
 	int numberSubMedia();
 	Media *getSubMedia(int i);
-	File *addSubFile(QString localPath,QString realPath,int revision,bool readOnly);
-	Dir *addSubDir(QString localPath,QString realPath,int revision,bool readOnly);
+	File *addSubFile(QString localPath,QString realPath);
+	Dir *addSubDir(QString localPath,QString realPath);
 	void delSubMedia(Media *m);
 
 	//implémentation des fonctions virtuelles de la classe Media dont elle hérite
@@ -36,7 +36,7 @@ public:
 	bool hasBeenRemoved();
 
 	//Retourne le code xml du repertoire
-	QDomElement toXml(QDomDocument *document);
+	virtual QDomElement toXml(QDomDocument *document);
 
 	//Des fonctions pour la recherche dans l'arborescence
 	Media *findMediaByLocalPath(QString localPath);
@@ -51,6 +51,8 @@ public:
 	//Destructeur
 	virtual ~Dir();
 
+	QList<Media *>* getOldDetections();
+
 private slots:
 	//Le slot qui sera appelé lorsque le repertoire a subit un changement
 	void directoryChangedAction();
@@ -60,7 +62,7 @@ signals:
 
 protected:
 	//Constructeur
-	Dir(QString localPath,QString realPath,Dir *parent,int revision,bool readOnly);
+	Dir(QString localPath,QString realPath,Dir *parent);
 
 	//La liste de ses sous médias
 	QVector<Media*> *subMedias;
@@ -70,6 +72,9 @@ protected:
 
 	//Le boolean, pour indiquer si le Dir doit détecter ou non les changement
 	bool listen;
+
+	//les anciennes détections qui n'avaient pas été traitées lors du dernier lancement
+	QList<Media*> *oldDetections;
 };
 
 #endif // DIR_H

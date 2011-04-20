@@ -403,7 +403,7 @@ void HddInterface::receivedCreatedRequest(QString realPath, bool isDirectory)
 		}
 
 		//Crée le répertoire dans l'arborescence de synchronisation du client
-		Dir *d=parent->addSubDir(parent->getLocalPath()+"/"+realName,parent->getRealPath()+"/"+realName,0,false);
+		Dir *d=parent->addSubDir(parent->getLocalPath()+"/"+realName,parent->getRealPath()+"/"+realName);
 		if(!d)
 		{
 			Widget::addRowToTable("L'allocation du repertoire dans l'arborescence a échoué",model,MSG_3);
@@ -431,7 +431,7 @@ void HddInterface::receivedCreatedRequest(QString realPath, bool isDirectory)
 		file.close();
 
 		//Crée le fichier à l'arbo de synchronisation
-		File *f=parent->addSubFile(parent->getLocalPath()+"/"+realName,parent->getRealPath()+"/"+realName,0,false);
+		File *f=parent->addSubFile(parent->getLocalPath()+"/"+realName,parent->getRealPath()+"/"+realName);
 		if(!f)
 		{
 			Widget::addRowToTable("L'allocation du fichier dans l'arborescence a échoué",model,MSG_3);

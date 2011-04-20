@@ -6,7 +6,7 @@
 //Les paramètres localPath et realPath ne doivent pas être vides
 //On retourne un repertoire vide, même si celui d'origine contient des fichiers
 
-Dir *Dir::createDir(QString localPath,QString realPath,Dir *parent,int revision,bool readOnly)
+Dir *Dir::createDir(QString localPath,QString realPath,Dir *parent)
 {
 	//Les paramètres localPath et realPath ne doivent pas être vides
 	if(localPath.isEmpty() || realPath.isEmpty()) return NULL;
@@ -20,7 +20,7 @@ Dir *Dir::createDir(QString localPath,QString realPath,Dir *parent,int revision,
 	if(!localDir.exists()) return NULL;
 
 	//On crèe l'element
-	Dir *dir=new Dir(localPath,realPath,parent,revision,readOnly);
+	Dir *dir=new Dir(localPath,realPath,parent);
 
 	//On fait alors l'allocation d'un objet Dir
 	return dir;
@@ -47,24 +47,20 @@ Dir *Dir::loadDir(QDomNode noeud,Dir *parent)
 	if(localPath.endsWith("/")) localPath=localPath.left(localPath.length()-1);
 	if(realPath.endsWith("/")) realPath=realPath.left(realPath.length()-1);
 
-	//On récupère les attributs detectionState, révision et readOnly du noeud xml.
+	//On récupère les attributs detectionState
 	QString detectionStateString=noeud.toElement().attribute("detectionState","");
-	QString revisionString=noeud.toElement().attribute("revision","");
-	QString readOnlyString=noeud.toElement().attribute("readOnly","");
-
-	//On convertit ces attributs en list, int et bool
 	QStringList listDetectionState=detectionStateString.split("/");
-	int revision;bool readOnly;bool ok;
-	revision=revisionString.toInt(&ok); if(!ok) revision=0;
-	readOnly=readOnlyString=="true"?true:false;
 
 	//On stocke notre répertoire(ou dépot) dans un objet Dir qui contiendra
 	//tous les sous répertoires de ce répertoire, sotckés dans "subMedias"
-	Dir *dir=new Dir(localPath,realPath,parent,revision,readOnly);
+	Dir *dir=new Dir(localPath,realPath,parent);
 
 	for(int i=0;i<listDetectionState.size();i++)
-		dir->getDetectionState()->append(Media::stateFromString(listDetectionState.at(i)));
-
+		if(listDetectionState.at(i)!=Media::stateToString(MediaDefaultState))
+		{
+			dir->getDetectionState()->append(Media::stateFromString(listDetectionState.at(i)));
+			dir->getParent()->getOldDetections()->append(dir);
+		}
 	//On récupère les fils du noeud qui sont en fait les sous médias du "dir"
 	QDomNodeList list=noeud.childNodes();
 
@@ -118,9 +114,10 @@ bool Dir::isDirectory()
 
 
 //Le constructeur fait les initialisations, puis alloue le watcher, et connecte son signal directoryChanged
-Dir::Dir(QString localPath,QString realPath,Dir *parent,int revision,bool readOnly): Media(localPath,realPath,parent,revision,readOnly)
+Dir::Dir(QString localPath,QString realPath,Dir *parent): Media(localPath,realPath,parent)
 {
 	this->subMedias=new QVector<Media*>();
+	this->oldDetections=new QList<Media*>();
 	watcher=new QFileSystemWatcher(this);
 
 	QDir dir(localPath);
@@ -146,6 +143,13 @@ void Dir::directoryChangedAction()
 	//On bloque l'accès
 	this->lock();
 
+	while(!oldDetections->isEmpty())
+	{
+		Media *m=oldDetections->first();
+		oldDetections->removeFirst();
+		emit detectChangement(m);
+	}
+
 	bool isChanged=false; //contiendra true lorsqu'on aura détecter un changement
 
 	QList<QString> contenu1;
@@ -166,10 +170,8 @@ void Dir::directoryChangedAction()
 				//Il est à l'état de suppression
 				f->getDetectionState()->append(MediaIsRemoving);
 
-				//Si le repertoire n'est pas en lecture seule, Et que le fichier n'est pas en lecture seule,
 				//alors on prévient le parent du repertoire
-				if(!f->isReadOnly() && !this->isReadOnly())
-					emit detectChangement(f);
+				emit detectChangement(f);
 
 				isChanged=true; //On a détecter un changement
 
@@ -184,9 +186,8 @@ void Dir::directoryChangedAction()
 				//Il est à l'état de modification
 				f->getDetectionState()->append(MediaIsUpdating);
 
-				//Si le fichier n'est pas en lecture seule, alors on previent le parent
-				if(!f->isReadOnly())
-					emit detectChangement(f);
+				//alors on previent le parent
+				emit detectChangement(f);
 
 				isChanged=true; //On a détecter un changement
 			}
@@ -203,10 +204,8 @@ void Dir::directoryChangedAction()
 				d->getDetectionState()->append(MediaIsRemoving);
 				d->setListenning(false);
 
-				//Si le parent n'est pas en lecture seule, Et que le repertoire n'est pas en lecture seule,
 				//alors on prévient le parent
-				if(!this->isReadOnly() && !d->isReadOnly())
-					emit detectChangement(d);   //signal pour prévenir le parent
+				emit detectChangement(d);   //signal pour prévenir le parent
 
 				isChanged=true; //On a détecter un changement
 
@@ -234,11 +233,11 @@ void Dir::directoryChangedAction()
 			//Un répertoire a été créé
 			//On l'ajoute à la synchronisation (avec Dir::createDir)
 			QDir d(p);
-			if(d.exists()) m=Dir::createDir(p,realPath+"/"+*i,this,0,this->isReadOnly());
+			if(d.exists()) m=Dir::createDir(p,realPath+"/"+*i,this);
 
 			//Sinon, c'est un fichier qui a été créé
 			//on l'ajoute aussi à la synchronisation
-			else m=File::createFile(p,realPath+"/"+*i,this,0,this->isReadOnly());
+			else m=File::createFile(p,realPath+"/"+*i,this);
 
 			if(m==NULL) continue; //Une erreur s'est produite
 
@@ -247,8 +246,7 @@ void Dir::directoryChangedAction()
 			m->getDetectionState()->append(MediaIsCreating);
 
 			//On informe le parent
-			if(!this->isReadOnly())
-				emit detectChangement(m);
+			emit detectChangement(m);
 
 			//On le met à l'écoute
 			if(m->isDirectory())
@@ -271,6 +269,14 @@ void Dir::directoryChangedAction()
 }
 
 
+
+
+//Pour récupérer la liste des anciennes détections faites depuis le dernier
+//lancement et qui n'ont pas été traitées
+QList<Media*> *Dir::getOldDetections()
+{
+	return oldDetections;
+}
 
 
 
@@ -321,9 +327,9 @@ Media *Dir::getSubMedia(int i)
 
 
 //Ajouter un sous fichier
-File *Dir::addSubFile(QString localPath,QString realPath,int revision,bool readOnly)
+File *Dir::addSubFile(QString localPath,QString realPath)
 {
-	File *f=File::createFile(localPath,realPath,this,revision,readOnly);
+	File *f=File::createFile(localPath,realPath,this);
 	if(f==NULL) return NULL;
 	this->lock();
 	subMedias->append(f);
@@ -334,9 +340,9 @@ File *Dir::addSubFile(QString localPath,QString realPath,int revision,bool readO
 
 
 //Ajouter un sous repertoire
-Dir *Dir::addSubDir(QString localPath,QString realPath,int revision,bool readOnly)
+Dir *Dir::addSubDir(QString localPath,QString realPath)
 {
-	Dir *d=Dir::createDir(localPath,realPath,this,revision,readOnly);
+	Dir *d=Dir::createDir(localPath,realPath,this);
 	if(d==NULL) return NULL;
 	this->lock();
 	subMedias->append(d);
@@ -386,10 +392,9 @@ QDomElement Dir::toXml(QDomDocument *document)
 	//On écrit ses attributs detectionState, revision et readOnly
 	QStringList listDetectionState;
 	for(int i=0;i<this->detectionState->length();i++)
-		listDetectionState.append(Media::stateToString(this->detectionState->at(i)));
+		if(this->detectionState->at(i)!=MediaDefaultState)
+			listDetectionState.append(Media::stateToString(this->detectionState->at(i)));
 	element.setAttribute("detectionState",listDetectionState.join("/"));
-	element.setAttribute("revision",QString::number(revision));
-	element.setAttribute("readOnly",readOnly?"true":"false");
 
 	//On parcours ses sous médias pour les ajouter commes des noeuds fils du noeud actuel
 	for(int i=0;i<subMedias->size();i++)
@@ -483,6 +488,7 @@ Media *Dir::findMediaByRealPath(QString realPath)
 void Dir::setListenning(bool listen)
 {
 	this->listen=listen;
+
 	directoryChangedAction();
 
 	this->lock();

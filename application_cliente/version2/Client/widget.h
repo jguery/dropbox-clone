@@ -20,11 +20,8 @@ class Widget : public QWidget
 	Q_OBJECT
 
 public:
-	//Constructeur à 3 paramètres : le localPath et le realPath du dépot sur lequel on veut travailler
-	Widget(QString localPath, QString realPath, QString configSavePath);
-
-	//Constructeur à 1 paramètre: le fichier de config du programme
-	Widget(QString configPath);
+	//Constructeur
+	Widget();
 
 	//Pour construire l'interface graphique
 	void buildInterface();
@@ -36,6 +33,12 @@ public slots:
 	//les slots des boutons:
 	void networkButtonSlot();
 	void detectionButtonSlot();
+	//Les slots des configs
+	void parcourirLoadConfigSlot();
+	void loadConfigSlot();
+	void parcourirCreateConfigSlot();
+	void createConfigSlot();
+	void parcourirSaveConfigSlot();
 
 private:
 	//la configuration
@@ -63,6 +66,11 @@ private:
 	QWidget *detectionOnglet;
 	QStandardItemModel *detectionModel;
 	QPushButton *detectionButton;
+
+	//Onglet des configurations
+	QWidget *configOnglet;
+	QLineEdit *loadConfigLineEdit, *serverAddressLineEdit, *serverPortLineEdit, *loginLineEdit, *passwordLineEdit, *depotLocalPathLineEdit, *depotRealNameLineEdit, *saveConfigLineEdit;
+	QPushButton *configButton;
 
 };
 

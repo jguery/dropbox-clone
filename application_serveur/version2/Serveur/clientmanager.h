@@ -9,6 +9,18 @@
 #include "filemanager.h"
 
 
+typedef enum ClientState {
+
+	CONNECTED,
+	IDENTIFIED,
+	OLDDETECTIONS,
+	NEWDETECTIONS,
+	SYNCHRONIZED
+
+} ClientState;
+
+
+
 /*
  Un objet de cette classe est alloué à chaque client qui se connecte.
  Il est chargé de communiquer avec le client.
@@ -56,6 +68,11 @@ private:
 	DatabaseManager *databaseManager;
 	FileManager *fileManager;
 
+	//L'état
+	ClientState state;
+	SqlUser *user;
+
+	//Le model
 	QStandardItemModel *model;
 };
 

@@ -4,13 +4,12 @@
 
 
 //le constructeur pour initialiser les attributs
-Media::Media(QString localPath,QString realPath,Dir *parent,int revision,bool readOnly): QObject((QObject*)parent)
+Media::Media(QString localPath,QString realPath,Dir *parent): QObject((QObject*)parent)
 {
 	this->localPath=localPath;
 	this->realPath=realPath;
 	this->parent=parent;
-	this->revision=revision;
-	this->readOnly=readOnly;
+	this->mutex=new QMutex(QMutex::Recursive);
 	this->detectionState=new QList<State>();
 }
 
@@ -60,6 +59,8 @@ void Media::setParent(Dir *parent)
 
 
 
+
+
 //l'accesseur d'accès à la liste des détections en cours de traitement
 QList<State> *Media::getDetectionState()
 {
@@ -70,58 +71,17 @@ QList<State> *Media::getDetectionState()
 
 
 
-
-//les accesseurs d'accès et de modifications à la révision
-
-int Media::getRevision()
-{
-	return revision;
-}
-
-void Media::setRevision(int revision)
-{
-	this->revision=revision;
-}
-
-void Media::incRevision()
-{
-	this->revision++;
-}
-
-void Media::decRevision()
-{
-	this->revision--;
-}
-
-
-
-
-
-//les accesseurs d'accès et de modifications au readOnly
-bool Media::isReadOnly()
-{
-	return readOnly;
-}
-
-void Media::setReadOnly(bool readOnly)
-{
-	this->readOnly=readOnly;
-}
-
-
-
-
 //Pour réserver l'objet
 void Media::lock()
 {
-    this->mutex.lock();
+    this->mutex->lock();
 }
 
 
 //Pour le libérer
 void Media::unlock()
 {
-    this->mutex.unlock();
+    this->mutex->unlock();
 }
 
 

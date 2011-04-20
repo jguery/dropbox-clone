@@ -30,6 +30,8 @@ ClientManager::ClientManager(QVector<ClientManager*> *clients,DatabaseManager *d
 	this->fileManager=fileManager;
 	this->model=model;
 	this->clients=clients;
+	this->state=CONNECTED;
+	this->user=NULL;
 
 	start();
 
@@ -93,11 +95,78 @@ void ClientManager::receiveMessageAction(QByteArray *message)
 }
 
 
+
+
+
 void ClientManager::receivedRequest(Request *r)
 {
-	if(r->getType()==CREATE_FILE_INFO || r->getType()==UPDATE_FILE_INFO || r->getType()==REMOVE_FILE_INFO)
+	if(r->getType()==IDENTIFICATION)
+	{
+		Widget::addRowToTable("Le client "+this->socket->peerAddress().toString()+" a envoyé un message d'identification.",model);
+		Response response;
+		QString pseudo=r->getParameters()->value("pseudo");
+		QString password=r->getParameters()->value("password");
+		bool rep=databaseManager->authentificateUser(pseudo,password);
+		if(rep)
+		{
+			response.setType(ACCEPT_IDENTIFICATION);
+			Widget::addRowToTable("Identification acceptée",model);
+			this->state=IDENTIFIED;
+			user=databaseManager->getUser(pseudo);
+		}
+		else
+		{
+			if(databaseManager->isUserExists(pseudo)) response.setType(REJECT_IDENTIFICATION_FOR_PASSWORD);
+			else response.setType(REJECT_IDENTIFICATION_FOR_PASSWORD);
+			Widget::addRowToTable("Identification refusée",model);
+		}
+		this->socket->sendMessage(response.toXml());
+	}
+	else if(r->getType()==CREATE_FILE_INFO || r->getType()==UPDATE_FILE_INFO || r->getType()==REMOVE_FILE_INFO)
 	{
 		Widget::addRowToTable("Le client "+this->socket->peerAddress().toString()+" a détecté un changement.",model);
+		if(state<IDENTIFIED)
+		{
+			Widget::addRowToTable("Le changement a été ignoré, une identification est requise.",model);
+			Response response;response.setType(REJECT_FILE_INFO_FOR_IDENTIFICATION);
+			this->socket->sendMessage(response.toXml());
+			return;
+		}
+		QString realPath=r->getParameters()->value("realPath","");
+		if(realPath.isEmpty())
+		{
+			Widget::addRowToTable("La requête contient des paramètres eronnés",model);
+			Response response;response.setType(REJECT_FILE_INFO_FOR_PARAMETERS);
+			this->socket->sendMessage(response.toXml());
+			return;
+		}
+		SqlUtilisation *u=NULL;
+		for(int i=0;i<user->utilisations->length();i++)
+		{
+			if(realPath.startsWith(user->utilisations->at(i)->depotname))
+				u=user->utilisations->at(i);
+		}
+		if(u==NULL)
+		{
+			Widget::addRowToTable("Le changement est ignoré pour manque de droits",model);
+			Response response;response.setType(REJECT_FILE_INFO_FOR_RIGHT);
+			this->socket->sendMessage(response.toXml());
+			return;
+		}
+		Depot *depot=this->fileManager->getDepot(u->depotname);
+		if(!depot)
+		{
+			this->fileManager->addDepot(u->depotname);
+			depot=this->fileManager->getDepot(u->depotname);
+		}
+		bool result=false;
+		if(r->getType()==CREATE_FILE_INFO)
+		{
+			if(r->getParameters()->value("isDirectory","")=="true")
+				result=depot->createDir(realPath,user->login,user->password);
+			else
+				result=depot->createDir(realPath,user->login,user->password);
+		}
 		for(int i=0;i<clients->size();i++)
 		{
 			if(clients->at(i)!=this) clients->at(i)->socket->sendMessage(r->toXml());
@@ -107,25 +176,6 @@ void ClientManager::receivedRequest(Request *r)
 		response.setType(ACCEPT_FILE_INFO);
 		if(this->socket->sendMessage(response.toXml()))
 			Widget::addRowToTable("L'accusé de reception a été envoyé",model,false);
-	}
-	else if(r->getType()==IDENTIFICATION)
-	{
-		Widget::addRowToTable("Le client "+this->socket->peerAddress().toString()+" a envoyé un message d'identification.",model);
-		Response response;
-		QString pseudo=r->getParameters()->value("pseudo");
-		QString password=r->getParameters()->value("password");
-		if((pseudo=="hky" && password=="hky") || (pseudo=="jguery" && password=="jguery") || (pseudo=="ymahe" && password=="ymahe"))
-		{
-			response.setType(ACCEPT_IDENTIFICATION);
-			Widget::addRowToTable("Identification acceptée",model);
-		}
-		else
-		{
-			response.setType(REJECT_IDENTIFICATION_FOR_PSEUDO);
-			Widget::addRowToTable("Identification refusée",model);
-		}
-		if(this->socket->sendMessage(response.toXml()))
-			Widget::addRowToTable("L'accusé de reception a été envoyé "+(*response.toXml()),model,false);
 	}
 }
 

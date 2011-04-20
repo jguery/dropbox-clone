@@ -157,6 +157,9 @@ private slots:
 	//Un slot pour stocker tous les changements détectés dans une liste
 	void putMediaDetection(Media *media);
 
+signals:
+	void saveRequest();
+
 private:
 	//le constructeur
 	ConfigurationFile(QList<Depot*> *depots,QStandardItemModel *model);
@@ -198,8 +201,10 @@ private:
  Cette classe regroupe toutes les configurations (network, identification et file)
 */
 
-class ConfigurationData
+class ConfigurationData: public QObject
 {
+	Q_OBJECT
+
 public:
 	//Des fonctions statiques pour créer l'objet
 	static ConfigurationData *createConfigurationData(ConfigurationNetwork *configurationNetwork,ConfigurationIdentification *configurationIdentification,ConfigurationFile *configurationFile,QString savePath="");
@@ -221,11 +226,13 @@ public:
 	QString getSavePath();
 	void setSavePath(QString savePath);
 
-	//Enregistre au format xml la configuration
-	bool save(QString savePath="");
-
 	//Destructeur
 	~ConfigurationData();
+
+public slots:
+
+	//Enregistre au format xml la configuration
+	bool save(QString savePath="");
 
 private:
 	//Constructeur
@@ -238,6 +245,9 @@ private:
 
 	//Le chemin du fichier ou doit être enregistrée la configuration
 	QString savePath;
+
+	//le mutex pour ne pas que deux threads essaient de faire un save en même temps
+	QMutex saveMutex;
 };
 
 #endif // CONFIGURATIONDATA_H

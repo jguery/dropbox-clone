@@ -184,6 +184,17 @@ SqlUser *DatabaseManager::getUser(QString login)
 	user->firstName=q.value(2).toString();
 	user->lastName=q.value(3).toString();
 	user->inscriptionDate=q.value(4).toDateTime();
+	user->utilisations=new QList<SqlUtilisation*>();
+
+	q.exec("select depotname,access,inscriptiondate from utilisation where login='"+login+"';");
+	while(q.next())
+	{
+		SqlUtilisation *u=new SqlUtilisation();
+		u->depotname=q.value(0).toString();
+		u->access=q.value(1).toString();
+		u->inscriptionDate=q.value(2).toDateTime();
+		user->utilisations->append(u);
+	}
 
 	mutex.unlock();
 	return user;

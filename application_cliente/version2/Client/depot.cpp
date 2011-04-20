@@ -34,7 +34,7 @@ Depot *Depot::createDepot(QString localPath,QString realPath,int revision,bool r
 Depot *Depot::loadDepot(QDomNode noeud)
 {
 	//On vérifie que le nom du noeud xml est bien "dir"
-	if(noeud.toElement().tagName()!="dir")
+	if(noeud.toElement().tagName()!="depot")
 		return NULL;
 
 	//On récupère le localPath et realPath du noeud xml et on vérifie qu'ils ne sont pas vides
@@ -47,7 +47,7 @@ Depot *Depot::loadDepot(QDomNode noeud)
 	if(localPath.endsWith("/")) localPath=localPath.left(localPath.length()-1);
 	if(realPath.endsWith("/")) realPath=realPath.left(realPath.length()-1);
 
-	//On récupère les attributs révision et readOnly du noeud xml.
+	//On récupère les attributs révision readOnly
 	QString revisionString=noeud.toElement().attribute("revision","");
 	QString readOnlyString=noeud.toElement().attribute("readOnly","");
 
@@ -106,9 +106,82 @@ Depot *Depot::loadDepot(QDomNode noeud)
 
 
 //Le constructeur fait les initialisations, puis alloue le watcher, et connecte son signal directoryChanged
-Depot::Depot(QString localPath,QString realPath,int revision,bool readOnly): Dir(localPath,realPath,NULL,revision,readOnly)
+Depot::Depot(QString localPath,QString realPath,int revision,bool readOnly): Dir(localPath,realPath,NULL)
 {
+	this->revision=revision;
+	this->readOnly=readOnly;
 }
+
+
+
+
+
+//les accesseurs d'accès et de modifications à la révision
+
+int Depot::getRevision()
+{
+	return revision;
+}
+
+void Depot::setRevision(int revision)
+{
+	this->revision=revision;
+}
+
+void Depot::incRevision()
+{
+	this->revision++;
+}
+
+void Depot::decRevision()
+{
+	this->revision--;
+}
+
+
+
+
+//les accesseurs d'accès et de modifications au readOnly
+bool Depot::isReadOnly()
+{
+	return readOnly;
+}
+
+void Depot::setReadOnly(bool readOnly)
+{
+	this->readOnly=readOnly;
+}
+
+
+
+
+
+//Retourne le code xml du repertoire et de ses sous medias
+QDomElement Depot::toXml(QDomDocument *document)
+{
+	this->lock();
+	//On crèe le noeud xml avec le nom "depot"
+	QDomElement element=document->createElement("depot");
+
+	//On écrit ses attributs localPath et realPath
+	element.setAttribute("localPath",localPath);
+	element.setAttribute("realPath",realPath);
+
+	//On écrit ses attributs revision et readOnly
+	element.setAttribute("revision",QString::number(this->revision));
+	element.setAttribute("readOnly",this->readOnly?"true":"false");
+
+	//On parcours ses sous médias pour les ajouter commes des noeuds fils du noeud actuel
+	for(int i=0;i<subMedias->size();i++)
+	{
+		QDomElement e=subMedias->at(i)->toXml(document);
+		element.appendChild(e);
+	}
+	this->unlock();
+	//On retourne le noeud
+	return element;
+}
+
 
 
 

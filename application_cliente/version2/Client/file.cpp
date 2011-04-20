@@ -6,7 +6,7 @@
 //Permet de créer un objet fichier en passant son localPath et son realPath
 //Le fichier doit exister sur le disque dur
 //On crée enfaite une synchronisation, pas un vrai fichier
-File *File::createFile(QString localPath,QString realPath,Dir *parent,int revision,bool readOnly)
+File *File::createFile(QString localPath,QString realPath,Dir *parent)
 {
 	if(localPath.isEmpty() || realPath.isEmpty())
 		return NULL;
@@ -19,7 +19,7 @@ File *File::createFile(QString localPath,QString realPath,Dir *parent,int revisi
 	QByteArray *hash=File::hashFile();
 
 	//On peut créer le fichier
-	return new File(localPath,realPath,parent,hash,revision,readOnly);
+	return new File(localPath,realPath,parent,hash);
 }
 
 
@@ -41,16 +41,9 @@ File *File::loadFile(QDomNode noeud,Dir *parent)
 	if(localPath.isEmpty() || realPath.isEmpty())
 		return NULL;
 
-	//On récupère les attributs detectionState, révision et readOnly du noeud xml.
+	//On récupère les attributs detectionState
 	QString detectionStateString=noeud.toElement().attribute("detectionState","");
-	QString revisionString=noeud.toElement().attribute("revision","");
-	QString readOnlyString=noeud.toElement().attribute("readOnly","");
-
-	//On convertit ces attributs en list, int et bool
 	QStringList listDetectionState=detectionStateString.split("/");
-	int revision;bool readOnly;bool ok;
-	revision=revisionString.toInt(&ok); if(!ok) revision=0;
-	readOnly=readOnlyString=="true"?true:false;
 
 	//Récupère le hash du fichier, contenu dans le xml
 	//C'est le premier et le seul fils du noeud représentant le fichier
@@ -65,9 +58,13 @@ File *File::loadFile(QDomNode noeud,Dir *parent)
 	}
 
 	//On peut maintenant créer l'objet
-	File *f=new File(localPath,realPath,parent,hash,revision,readOnly);
+	File *f=new File(localPath,realPath,parent,hash);
 	for(int i=0;i<listDetectionState.size();i++)
-		f->getDetectionState()->append(Media::stateFromString(listDetectionState.at(i)));
+		if(listDetectionState.at(i)!=Media::stateToString(MediaDefaultState))
+		{
+			f->getDetectionState()->append(Media::stateFromString(listDetectionState.at(i)));
+			f->getParent()->getOldDetections()->append(f);
+		}
 	return f;
 }
 
@@ -188,7 +185,7 @@ bool File::isDirectory()
 
 
 //Constructeur qui ne fait qu'initialiser
-File::File(QString localPath,QString realPath,Dir *parent,QByteArray *hash,int revision,bool readOnly): Media(localPath,realPath,parent,revision,readOnly)
+File::File(QString localPath,QString realPath,Dir *parent,QByteArray *hash): Media(localPath,realPath,parent)
 {
 	this->hash=hash;
 }
@@ -211,10 +208,9 @@ QDomElement File::toXml(QDomDocument *document)
 	//On écrit ses attributs detectionState, revision et readOnly
 	QStringList listDetectionState;
 	for(int i=0;i<this->detectionState->length();i++)
-		listDetectionState.append(Media::stateToString(this->detectionState->at(i)));
+		if(this->detectionState->at(i)!=MediaDefaultState)
+			listDetectionState.append(Media::stateToString(this->detectionState->at(i)));
 	element.setAttribute("detectionState",listDetectionState.join("/"));
-	element.setAttribute("revision",QString::number(revision));
-	element.setAttribute("readOnly",readOnly?"true":"false");
 
 	//On ajoute sa signature dans le noeud xml
 	element.appendChild(document->createTextNode(QString(*hash)));
