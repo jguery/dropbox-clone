@@ -56,10 +56,15 @@ public:
 	QList<QString> getPseudoAdmins();
 	QList<QString> getPseudoSuperAdmins();
 
+	~DatabaseManager();
+
 private:
 	DatabaseManager(QSqlDatabase *db);
 	QSqlDatabase *db;
 	QMutex mutex;
+
+	void lock();
+	void unlock();
 };
 
 

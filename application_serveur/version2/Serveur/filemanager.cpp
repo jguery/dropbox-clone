@@ -10,6 +10,7 @@ FileManager *FileManager::createFileManager(SvnManager *svnManager)
 
 
 
+
 FileManager::FileManager(SvnManager *svnManager)
 {
 	this->svnManager=svnManager;
@@ -21,17 +22,17 @@ FileManager::FileManager(SvnManager *svnManager)
 
 bool FileManager::addDepot(QString depotName)
 {
+	if(!depotName.endsWith("/")) depotName=depotName+"/";
 	if(getDepot(depotName)!=NULL) return true;
-	listDepotsMutex.lock();
+	mutex.lock();
 	Depot *d=Depot::loadDepot(depotName,this->svnManager);
-	if(!d) d=Depot::createDepot(depotName,this->svnManager);
 	if(!d)
 	{
-		listDepotsMutex.unlock();
+		mutex.unlock();
 		return false;
 	}
 	depots->append(d);
-	listDepotsMutex.unlock();
+	mutex.unlock();
 	return true;
 }
 
@@ -39,21 +40,25 @@ bool FileManager::addDepot(QString depotName)
 
 Depot *FileManager::getDepot(QString depotName)
 {
-	listDepotsMutex.lock();
+	if(!depotName.endsWith("/")) depotName=depotName+"/";
+	mutex.lock();
 	Depot *d=NULL;
 	for(int i=0;i<depots->length();i++)
 	{
 		if(depots->at(i)->getDepotName()==depotName) d=depots->at(i);
 	}
-	listDepotsMutex.unlock();
+	mutex.unlock();
 	return d;
 }
 
 
 
+
+
 bool FileManager::removeDepot(QString depotName)
 {
-	listDepotsMutex.lock();
+	if(!depotName.endsWith("/")) depotName=depotName+"/";
+	mutex.lock();
 	bool found=false;
 	for(int i=0;i<depots->length();i++)
 	{
@@ -67,7 +72,7 @@ bool FileManager::removeDepot(QString depotName)
 			found=true;
 		}
 	}
-	listDepotsMutex.unlock();
+	mutex.unlock();
 	return found;
 }
 

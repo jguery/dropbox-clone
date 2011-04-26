@@ -11,7 +11,7 @@
 /*
   Cette classe représente un repertoire sur le disque dur.
   Elle hérite de la classe Media. Un Dir possède une liste de Media qui
-  peuvent être eux aussi des Dir ou des File.
+  peuvent être eux aussi des Dirs ou des Files.
 */
 
 
@@ -29,7 +29,7 @@ public:
 	Media *getSubMedia(int i);
 	File *addSubFile(QString localPath,QString realPath);
 	Dir *addSubDir(QString localPath,QString realPath);
-	void delSubMedia(Media *m);
+	bool delSubMedia(Media *m);
 
 	//implémentation des fonctions virtuelles de la classe Media dont elle hérite
 	bool isDirectory();
@@ -58,6 +58,7 @@ private slots:
 	void directoryChangedAction();
 
 signals:
+	//Pour prévenir le parent d'une détection
 	void detectChangement(Media *m);
 
 protected:

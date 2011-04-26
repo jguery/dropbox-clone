@@ -28,26 +28,26 @@ public:
 	Media *findMediaByLocalPath(QString localPath);
 	Media *findMediaByRealPath(QString realPath);
 
-	//Une méthode statique pour hasher un fichier et récupérer sa signature.
-	//Si le chemin est vide, elle renvoie le hash d'une chaine vide.
-	static QByteArray *hashFile(QString path="");
-
 	//Des méthodes pour savoir si le fichier a été supprimé ou modifié
 	bool hasBeenRemoved();
 	bool hasBeenUpdated();
 
-	//Une méthode pour mettre à jour sa signature (par exemple après une modif)
-	void updateHash();
-
 	//méthodes pour récupérer et écrire le contenu du fichier
 	QByteArray getFileContent();
 	bool putFileContent(QByteArray content);
+
+	//Une méthode pour mettre à jour sa signature (par exemple après une modif)
+	void updateHash();
 
 	//Destructeur
 	virtual ~File();
 private:
 	//Un constructeur privé pour qu'on ne puisse pas créer des fichiers non valides. (passons plutôt par createFile ou loadFile)
 	File(QString localPath,QString realPath,Dir *parent,QByteArray *hash);
+
+	//Une méthode statique pour hasher un fichier et récupérer sa signature.
+	//Si le chemin est vide, elle renvoie le hash d'une chaine vide.
+	static QByteArray *hashFile(QString path="");
 
 	//Contient la signature (le hash) du fichier
 	QByteArray *hash;

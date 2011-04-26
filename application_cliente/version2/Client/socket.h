@@ -16,8 +16,9 @@ class Socket : public QSslSocket
 
 public:
 	//Constructeur et fonctions de connexion, déconnexions
-	Socket();
+	Socket(QObject *parent);
 
+	//Pour se connecter et se déconnecter
 	bool connectToServer(QString address,int port);
 	bool disconnectFromServer();
 

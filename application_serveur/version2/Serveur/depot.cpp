@@ -3,42 +3,23 @@ QString Depot::GLOBAL_DEPOTS_PATH="/home/hky/test/server/";
 
 
 
-
-Depot *Depot::createDepot(QString depotName,SvnManager *svnManager)
-{
-	if(!svnManager) return NULL;
-	QString globalTmpPath=Depot::GLOBAL_DEPOTS_PATH;
-	if(globalTmpPath.isEmpty() || !globalTmpPath.endsWith("/") || depotName.isEmpty())
-		return NULL;
-	if(!depotName.endsWith("/")) depotName=depotName+"/";
-
-	QDir dirP(globalTmpPath);
-	if(!dirP.exists()) return NULL;
-
-	QDir dir(globalTmpPath+depotName);
-	if(dir.exists()) return NULL;
-
-	if(!(svnManager->checkoutDepot(GLOBAL_DEPOTS_PATH,depotName))) return NULL;
-
-	if(!dir.exists()) return NULL;
-
-	return new Depot(depotName,svnManager);
-}
-
-
-
 Depot *Depot::loadDepot(QString depotName,SvnManager *svnManager)
 {
 	if(!svnManager) return NULL;
 	QString globalTmpPath=Depot::GLOBAL_DEPOTS_PATH;
-	if(globalTmpPath.isEmpty() || !globalTmpPath.endsWith("/") || depotName.isEmpty())
+	if(globalTmpPath.isEmpty() || depotName.isEmpty() || !globalTmpPath.endsWith("/"))
 		return NULL;
+
 	if(!depotName.endsWith("/")) depotName=depotName+"/";
 
 	QDir dir(globalTmpPath+depotName);
-	if(!dir.exists()) return NULL;
+	if(dir.exists()) Depot::removeNonEmptyDirectory(globalTmpPath+depotName);
 
-	if(!(svnManager->updateDepot(GLOBAL_DEPOTS_PATH+depotName))) return NULL;
+	QDir parent(globalTmpPath);
+	if(!parent.mkdir(depotName)) return NULL;
+
+	if(!(svnManager->checkoutDepot(globalTmpPath+depotName,depotName)))
+		return NULL;
 
 	return new Depot(depotName,svnManager);
 }
@@ -70,20 +51,40 @@ QString Depot::getDepotName()
 
 
 
+int Depot::getRevision()
+{
+	return revision;
+}
+
+
+
 
 bool Depot::updateFileContent(QString fileRealPath,QByteArray content,QString login,QString password)
 {
 	if(!fileRealPath.startsWith(depotName)) return false;
+	mutex.lock();
 	QString fileLocalPath=GLOBAL_DEPOTS_PATH+fileRealPath;
 	QFile file(fileLocalPath);
 	if(!file.open(QIODevice::WriteOnly))
+	{
+		mutex.unlock();
 		return false;
+	}
 	file.write(content);
 	file.close();
-	if(!(svnManager->commitDepot(GLOBAL_DEPOTS_PATH+depotName,login,password))) return false;
+	if(!(svnManager->commitDepot(GLOBAL_DEPOTS_PATH+depotName,login,password)))
+	{
+		mutex.unlock();
+		return false;
+	}
 	int r=svnManager->getRevision(GLOBAL_DEPOTS_PATH+depotName);
-	if(r<0) return false;
+	if(r<0)
+	{
+		mutex.unlock();
+		return false;
+	}
 	revision=r;
+	mutex.unlock();
 	return true;
 }
 
@@ -93,17 +94,30 @@ bool Depot::updateFileContent(QString fileRealPath,QByteArray content,QString lo
 bool Depot::createDir(QString dirRealPath,QString login,QString password)
 {
 	if(!dirRealPath.startsWith(depotName) || dirRealPath==depotName) return false;
-	QString dirLocalPath=GLOBAL_DEPOTS_PATH+dirRealPath;
+	mutex.lock();
 
+	QString dirLocalPath=GLOBAL_DEPOTS_PATH+dirRealPath;
 	QString dirParentPath=extractParentPath(dirLocalPath)+"/";
 	QString dirName=extractName(dirLocalPath);
 	QDir dir(dirParentPath);
-	if(!dir.exists()) return false;
-	if(!dir.mkdir(dirName)) return false;
-	if(!(svnManager->addFileToDepot(GLOBAL_DEPOTS_PATH+depotName,dirLocalPath,login,password))) return false;
+	if(!dir.exists() || !dir.mkdir(dirName))
+	{
+		mutex.unlock();
+		return false;
+	}
+	if(!(svnManager->addFileToDepot(GLOBAL_DEPOTS_PATH+depotName,dirLocalPath,login,password)))
+	{
+		mutex.unlock();
+		return false;
+	}
 	int r=svnManager->getRevision(GLOBAL_DEPOTS_PATH+depotName);
-	if(r<0) return false;
+	if(r<0)
+	{
+		mutex.unlock();
+		return false;
+	}
 	revision=r;
+	mutex.unlock();
 	return true;
 }
 
@@ -114,15 +128,30 @@ bool Depot::createDir(QString dirRealPath,QString login,QString password)
 bool Depot::createFile(QString fileRealPath,QString login,QString password)
 {
 	if(!fileRealPath.startsWith(depotName)) return false;
-	QString fileLocalPath=GLOBAL_DEPOTS_PATH+fileRealPath;
+	mutex.lock();
 
+	QString fileLocalPath=GLOBAL_DEPOTS_PATH+fileRealPath;
 	QFile file(fileLocalPath);
-	if(!file.open(QIODevice::WriteOnly)) return false;
+	if(!file.open(QIODevice::WriteOnly))
+	{
+		mutex.unlock();
+		return false;
+	}
+	file.write("");
 	file.close();
-	if(!(svnManager->addFileToDepot(GLOBAL_DEPOTS_PATH+depotName,fileLocalPath,login,password))) return false;
+	if(!(svnManager->addFileToDepot(GLOBAL_DEPOTS_PATH+depotName,fileLocalPath,login,password)))
+	{
+		mutex.unlock();
+		return false;
+	}
 	int r=svnManager->getRevision(GLOBAL_DEPOTS_PATH+depotName);
-	if(r<0) return false;
+	if(r<0)
+	{
+		mutex.unlock();
+		return false;
+	}
 	revision=r;
+	mutex.unlock();
 	return true;
 }
 
@@ -133,37 +162,58 @@ bool Depot::createFile(QString fileRealPath,QString login,QString password)
 bool Depot::deleteMedia(QString mediaRealPath,QString login,QString password)
 {
 	if(!mediaRealPath.startsWith(depotName)) return false;
-	QString mediaLocalPath=GLOBAL_DEPOTS_PATH+mediaRealPath;
+	mutex.lock();
 
+	QString mediaLocalPath=GLOBAL_DEPOTS_PATH+mediaRealPath;
 	QDir dir(mediaLocalPath);
 	if(dir.exists())
 	{
-		if(!removeNonEmptyDirectory(mediaLocalPath)) return false;
+		if(!removeNonEmptyDirectory(mediaLocalPath))
+		{
+			mutex.unlock();
+			return false;
+		}
 	}
 	else
 	{
-		if(!QFile::remove(mediaLocalPath)) return false;
+		if(!QFile::remove(mediaLocalPath))
+		{
+			mutex.unlock();
+			return false;
+		}
 	}
-	if(!(svnManager->removeFileToDepot(GLOBAL_DEPOTS_PATH+depotName,mediaLocalPath,login,password))) return false;
+	if(!(svnManager->removeFileToDepot(GLOBAL_DEPOTS_PATH+depotName,mediaLocalPath,login,password)))
+	{
+		mutex.unlock();
+		return false;
+	}
 	int r=svnManager->getRevision(GLOBAL_DEPOTS_PATH+depotName);
-	if(r<0) return false;
+	if(r<0)
+	{
+		mutex.unlock();
+		return false;
+	}
 	revision=r;
+	mutex.unlock();
 	return true;
 }
 
 
 
 
-
-void Depot::lock()
+bool Depot::isMediaExists(QString realPath)
 {
-	mutex.lock();
+	if(!realPath.startsWith(depotName)) return false;
+	QString localPath=GLOBAL_DEPOTS_PATH+realPath;
+	QDir dir(localPath);
+	if(dir.exists()) return true;
+	QFile file(localPath);
+	if(file.exists()) return true;
+	return false;
 }
 
-void Depot::unlock()
-{
-	mutex.unlock();
-}
+
+
 
 
 
@@ -206,8 +256,8 @@ bool Depot::removeNonEmptyDirectory(QString path)
 	QDir dir(path);
 
 	//Supprime tous les fichier contenus dans le dossier path
-	QFileInfoList fileList = dir.entryInfoList( QDir::Files | QDir::Hidden );
-	foreach(QFileInfo file, fileList) if(!dir.remove( file.absoluteFilePath())) return false;
+	QFileInfoList fileList = dir.entryInfoList( QDir::Files | QDir::Hidden | QDir::NoDotAndDotDot );
+	foreach(QFileInfo file, fileList) dir.remove( file.absoluteFilePath());
 
 	//Supprime tous les dossiers contenus dans le dossier path
 	QFileInfoList dirList = dir.entryInfoList( QDir::AllDirs | QDir::Hidden | QDir::NoDotAndDotDot );
@@ -219,5 +269,18 @@ bool Depot::removeNonEmptyDirectory(QString path)
 }
 
 
+
+QList<Request*> Depot::getUpgradingRequest(int revision)
+{
+	return svnManager->getRequestDiff(GLOBAL_DEPOTS_PATH+depotName,revision,this->revision);
+}
+
+
+
+Depot::~Depot()
+{
+	mutex.lock();
+	mutex.unlock();
+}
 
 

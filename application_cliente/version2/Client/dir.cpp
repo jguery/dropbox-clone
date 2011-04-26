@@ -49,18 +49,21 @@ Dir *Dir::loadDir(QDomNode noeud,Dir *parent)
 
 	//On récupère les attributs detectionState
 	QString detectionStateString=noeud.toElement().attribute("detectionState","");
-	QStringList listDetectionState=detectionStateString.split("/");
+	QStringList listDetectionState=detectionStateString.split(",");
 
-	//On stocke notre répertoire(ou dépot) dans un objet Dir qui contiendra
+	//On stocke notre répertoire dans un objet Dir qui contiendra
 	//tous les sous répertoires de ce répertoire, sotckés dans "subMedias"
 	Dir *dir=new Dir(localPath,realPath,parent);
 
+	//On ajoute des états de détection
 	for(int i=0;i<listDetectionState.size();i++)
+	{
 		if(listDetectionState.at(i)!=Media::stateToString(MediaDefaultState))
 		{
 			dir->getDetectionState()->append(Media::stateFromString(listDetectionState.at(i)));
 			dir->getParent()->getOldDetections()->append(dir);
 		}
+	}
 	//On récupère les fils du noeud qui sont en fait les sous médias du "dir"
 	QDomNodeList list=noeud.childNodes();
 
@@ -143,21 +146,18 @@ void Dir::directoryChangedAction()
 	//On bloque l'accès
 	this->lock();
 
-	while(!oldDetections->isEmpty())
-	{
-		Media *m=oldDetections->first();
-		oldDetections->removeFirst();
-		emit detectChangement(m);
-	}
-
 	bool isChanged=false; //contiendra true lorsqu'on aura détecter un changement
 
-	QList<QString> contenu1;
+	QList<QString> contenu1; // contiendra la liste des chemins de subMedias
 
 	//On parcourt tous les subMedias pour voir si la modification les concerne
 	for(int i=0;i<subMedias->size();i++)
 	{
 		Media *m=subMedias->at(i);
+
+		if(m==NULL) continue;
+
+		//Si le média est en cours de suppression, on ne le straite pas
 		if(m->getDetectionState()->contains(MediaIsRemoving)) continue;
 
 		if(!m->isDirectory())   //Si le Media est un fichier
@@ -167,10 +167,10 @@ void Dir::directoryChangedAction()
 			//Si le fichier a été supprimé
 			if(f->hasBeenRemoved())
 			{
-				//Il est à l'état de suppression
+				//On le met à l'état de suppression
 				f->getDetectionState()->append(MediaIsRemoving);
 
-				//alors on prévient le parent du repertoire
+				//On prévient le parent du repertoire
 				emit detectChangement(f);
 
 				isChanged=true; //On a détecter un changement
@@ -200,11 +200,13 @@ void Dir::directoryChangedAction()
 			//Le répertoire a été supprimé
 			if(d->hasBeenRemoved())
 			{
-				//Il est à l'état de suppression
+				//On le place à l'état de suppression
 				d->getDetectionState()->append(MediaIsRemoving);
+
+				//Il ne détecte plus rien
 				d->setListenning(false);
 
-				//alors on prévient le parent
+				//On prévient le parent
 				emit detectChangement(d);   //signal pour prévenir le parent
 
 				isChanged=true; //On a détecter un changement
@@ -218,31 +220,34 @@ void Dir::directoryChangedAction()
 
 	//On va parcourir les fichiers et rép contenus physiquement dans le dossier
 	//pour voir si la modification concerne la création d'un fichier ou d'un dossier
-	QDir dir(localPath);
+	QDir dir(this->getLocalPath());
+
+	//On récupère tous les fichiers
 	QList<QString> contenu2=dir.entryList(QDir::AllEntries | QDir::NoDotAndDotDot);
 	QList<QString>::iterator i;
 	for(i=contenu2.begin(); i!=contenu2.end(); i++)
 	{
-		QString p=localPath+"/"+*i; //Chemin d'un média dans notre répertoire
+		QString p=this->getLocalPath()+"/"+*i; //Chemin d'un média dans notre répertoire
 
 		//Si ce média c'est pas dans notre liste subMedias
 		if(!contenu1.contains(p))
 		{
 			Media *m;
 
-			//Un répertoire a été créé
-			//On l'ajoute à la synchronisation (avec Dir::createDir)
 			QDir d(p);
-			if(d.exists()) m=Dir::createDir(p,realPath+"/"+*i,this);
+
+			//Si c'est un répertoire, on crèe un objet Dir
+			if(d.exists()) m=Dir::createDir(p,this->getRealPath()+"/"+*i,this);
 
 			//Sinon, c'est un fichier qui a été créé
-			//on l'ajoute aussi à la synchronisation
-			else m=File::createFile(p,realPath+"/"+*i,this);
+			else m=File::createFile(p,this->getRealPath()+"/"+*i,this);
 
 			if(m==NULL) continue; //Une erreur s'est produite
 
 			//on ajoute le media à la liste des subMedias
 			subMedias->append(m);
+
+			//Il est à l'état de création
 			m->getDetectionState()->append(MediaIsCreating);
 
 			//On informe le parent
@@ -271,6 +276,7 @@ void Dir::directoryChangedAction()
 
 
 
+
 //Pour récupérer la liste des anciennes détections faites depuis le dernier
 //lancement et qui n'ont pas été traitées
 QList<Media*> *Dir::getOldDetections()
@@ -284,7 +290,7 @@ QList<Media*> *Dir::getOldDetections()
 //Détecte si le repertoire a été supprimé
 bool Dir::hasBeenRemoved()
 {
-	QDir dir(localPath);
+	QDir dir(this->getLocalPath());
         if(!dir.exists())
             return true;
 	return false;
@@ -299,6 +305,7 @@ int Dir::numberSubMedia()
 	//On bloque l'accès
 	this->lock();
 	int nb=subMedias->size();
+
 	//On relache l'accès
 	this->unlock();
 	return nb;
@@ -355,15 +362,15 @@ Dir *Dir::addSubDir(QString localPath,QString realPath)
 
 
 //Supprimer un sous média de la liste des sous médias, mais ne fait pas la désallocation
-void Dir::delSubMedia(Media *m)
+bool Dir::delSubMedia(Media *m)
 {
-	if(m==NULL) return;
+	if(m==NULL) return false;
 	this->lock();
 	int i=subMedias->indexOf(m);
 	if(i<0)
 	{
 		this->unlock();
-		return;
+		return false;
 	}
 	if(m->isDirectory())
 	{
@@ -372,6 +379,7 @@ void Dir::delSubMedia(Media *m)
 	}
 	subMedias->remove(i);
 	this->unlock();
+	return true;
 }
 
 
@@ -386,15 +394,17 @@ QDomElement Dir::toXml(QDomDocument *document)
 	QDomElement element=document->createElement("dir");
 
 	//On écrit ses attributs localPath et realPath
-	element.setAttribute("localPath",localPath);
-	element.setAttribute("realPath",realPath);
+	element.setAttribute("localPath",this->getLocalPath());
+	element.setAttribute("realPath",this->getRealPath());
 
 	//On écrit ses attributs detectionState, revision et readOnly
 	QStringList listDetectionState;
-	for(int i=0;i<this->detectionState->length();i++)
-		if(this->detectionState->at(i)!=MediaDefaultState)
-			listDetectionState.append(Media::stateToString(this->detectionState->at(i)));
-	element.setAttribute("detectionState",listDetectionState.join("/"));
+	for(int i=0;i<this->getDetectionState()->length();i++)
+	{
+		if(this->getDetectionState()->at(i)!=MediaDefaultState)
+		listDetectionState.append(Media::stateToString(this->getDetectionState()->at(i)));
+	}
+	element.setAttribute("detectionState",listDetectionState.join(","));
 
 	//On parcours ses sous médias pour les ajouter commes des noeuds fils du noeud actuel
 	for(int i=0;i<subMedias->size();i++)
@@ -423,7 +433,7 @@ Media *Dir::findMediaByLocalPath(QString localPath)
 	if(localPath.endsWith("/")) localPath=localPath.left(localPath.length()-1);
 
 	//On teste si le localPath est égal au localPath de l'objet
-	if(this->localPath==localPath)
+	if(this->getLocalPath()==localPath)
 		return this;
 
 	this->lock();
@@ -457,7 +467,7 @@ Media *Dir::findMediaByRealPath(QString realPath)
 	if(realPath.endsWith("/")) realPath=realPath.left(realPath.length()-1);
 
 	//On teste si le realPath est égal au realPath de l'objet
-	if(this->realPath==realPath)
+	if(this->getRealPath()==realPath)
 		return this;
 
 	this->lock();
@@ -488,6 +498,17 @@ Media *Dir::findMediaByRealPath(QString realPath)
 void Dir::setListenning(bool listen)
 {
 	this->listen=listen;
+
+	if(listen)
+	{
+		//S'il y a des anciennes détections, on les traite.
+		while(!oldDetections->isEmpty())
+		{
+			Media *m=oldDetections->first();
+			oldDetections->removeFirst();
+			emit detectChangement(m);
+		}
+	}
 
 	directoryChangedAction();
 

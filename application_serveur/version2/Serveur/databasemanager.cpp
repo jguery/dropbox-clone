@@ -13,19 +13,21 @@ DatabaseManager *DatabaseManager::createDatabaseManager(QString name, QString lo
 	if(db->open())
 	{
 		QSqlQuery q(*db);
-		if(!q.exec("drop table user;") || !q.exec("create table user (login varchar(50),password varchar(50),firstname varchar(50),lastname varchar(50),inscriptiondate datetime);") ||
-		!q.exec("drop table admin;") || !q.exec("create table admin(login varchar(50),depotname varchar(50),inscriptiondate datetime);") ||
-		!q.exec("drop table superadmin;") || !q.exec("create table superadmin(login varchar(50));") ||
-		!q.exec("drop table depot;") || !q.exec("create table depot(depotname varchar(50),inscriptiondate datetime);") ||
-		!q.exec("drop table utilisation;") || !q.exec("create table utilisation(login varchar(50),depotname varchar(50),access varchar(50),inscriptiondate datetime);"))
+		q.exec("drop table user;");q.exec("drop table admin;");
+		q.exec("drop table superadmin;");q.exec("drop table depot;");q.exec("drop table utilisation;");
+		if(!q.exec("create table user (login varchar(50),password varchar(50),firstname varchar(50),lastname varchar(50),inscriptiondate datetime);") ||
+		!q.exec("create table admin(login varchar(50),depotname varchar(50),inscriptiondate datetime);") ||
+		!q.exec("create table superadmin(login varchar(50));") ||
+		!q.exec("create table depot(depotname varchar(50),inscriptiondate datetime);") ||
+		!q.exec("create table utilisation(login varchar(50),depotname varchar(50),access varchar(50),inscriptiondate datetime);"))
 		return NULL;
-		q.exec("insert into depot(depotname) values('projetdev');");
-		q.exec("insert into user(login,password) values('hky','hky');");
-		q.exec("insert into utilisation(login,depotname) values('hky','projetdev');");
+		q.exec("insert into depot(depotname) values('test1');");
+		q.exec("insert into user(login,password,inscriptionDate) values('hky','hky','2010-10-10');");
+		q.exec("insert into utilisation(login,depotname) values('hky','test1');");
 		q.exec("insert into user(login,password) values('jguery','jguery');");
-		q.exec("insert into utilisation(login,depotname) values('jguery','projetdev');");
+		q.exec("insert into utilisation(login,depotname) values('jguery','test1');");
 		q.exec("insert into user(login,password) values('ymahe','ymahe');");
-		q.exec("insert into utilisation(login,depotname) values('ymahe','projetdev');");
+		q.exec("insert into utilisation(login,depotname) values('ymahe','test1');");
 		return new DatabaseManager(db);
 	}
 	delete db;
@@ -80,6 +82,7 @@ bool DatabaseManager::isUserExists(QString login)
 
 
 
+
 bool DatabaseManager::isDepotExists(QString depotname)
 {
 	mutex.lock();
@@ -93,6 +96,8 @@ bool DatabaseManager::isDepotExists(QString depotname)
 	mutex.unlock();
 	return false;
 }
+
+
 
 
 
@@ -127,6 +132,7 @@ bool DatabaseManager::userIsLinkDepot(QString login,QString depotname)
 	mutex.unlock();
 	return false;
 }
+
 
 
 
@@ -203,6 +209,7 @@ SqlUser *DatabaseManager::getUser(QString login)
 
 
 
+
 SqlDepot *DatabaseManager::getDepot(QString depotname)
 {
 	mutex.lock();
@@ -225,6 +232,7 @@ SqlDepot *DatabaseManager::getDepot(QString depotname)
 
 
 
+
 QList<SqlUser*> DatabaseManager::getUsers()
 {
 	mutex.lock();
@@ -239,11 +247,24 @@ QList<SqlUser*> DatabaseManager::getUsers()
 		user->firstName=q.value(2).toString();
 		user->lastName=q.value(3).toString();
 		user->inscriptionDate=q.value(4).toDateTime();
+		user->utilisations=new QList<SqlUtilisation*>();
+
+		QSqlQuery q2(*db);
+		q2.exec("select depotname,access,inscriptiondate from utilisation where login='"+user->login+"';");
+		while(q2.next())
+		{
+			SqlUtilisation *u=new SqlUtilisation();
+			u->depotname=q2.value(0).toString();
+			u->access=q2.value(1).toString();
+			u->inscriptionDate=q2.value(2).toDateTime();
+			user->utilisations->append(u);
+		}
 		users.append(user);
 	}
 	mutex.unlock();
 	return users;
 }
+
 
 
 
@@ -307,3 +328,13 @@ DatabaseManager::DatabaseManager(QSqlDatabase *db)
 {
 	this->db=db;
 }
+
+
+DatabaseManager::~DatabaseManager()
+{
+	mutex.lock();
+	mutex.unlock();
+	delete db;
+}
+
+

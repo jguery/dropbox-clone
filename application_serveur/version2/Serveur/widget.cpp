@@ -19,46 +19,48 @@ Widget::Widget(): QWidget()
 	QHBoxLayout *layout = new QHBoxLayout;
 	layout->addWidget(tableView);
 	this->setLayout(layout);
-	addRowToTable("Démarage de l'application",model);
+	addRowToTable("Démarage de l'application",model,MSG_1);
 
 	//On créé la bdd
-	DatabaseManager *db=DatabaseManager::createDatabaseManager("dropbox","user","mdp");
-	if(db) addRowToTable("La base de données a été créé",model,false);
-	else {addRowToTable("Erreur à la création de la base de données",model,false);return;}
+	DatabaseManager *db=DatabaseManager::createDatabaseManager("dropbox","hky","hky");
+	if(db) addRowToTable("La base de données a été chargée",model,MSG_1);
+	else {addRowToTable("Erreur au chargement de la base de données",model,MSG_1);return;}
 
 	//On créé le fileManager
-	SvnManager *svn=SvnManager::createSvnManager("hky","hky","svn","svnadmin");
+	SvnManager *svn=SvnManager::createSvnManager("svn://pchky.maisel.enst-bretagne.fr/","hky","hky","svn","svnadmin");
+	if(svn) addRowToTable("Le gestionnaire SVN a été créé",model,MSG_1);
+	else {addRowToTable("Erreur à la création du gestionnaire SVN",model,MSG_1);return;}
+
 	FileManager *f=FileManager::createFileManager(svn);
-	if(f) addRowToTable("Le gestionnaire de fichiers a été créé",model,false);
-	else {addRowToTable("Erreur à la création du gestionnaire de fichiers",model,false);return;}
+	if(f) addRowToTable("Le gestionnaire de fichiers a été créé",model,MSG_1);
+	else {addRowToTable("Erreur à la création du gestionnaire de fichiers",model,MSG_1);return;}
 	QList<SqlDepot*> depots=db->getDepots();
 	for(int i=0;i<depots.length();i++) f->addDepot(depots.at(i)->depotname);
 
 	//On créé l'interface réseau
 	this->server=Server::createServer(db,f,model);
 	bool result=this->server->beginListenning(4321);
-	if(result) addRowToTable("Le serveur est démarré sur le port 4321",model,false);
-	else {addRowToTable("Echec de démarrage du serveur sur le port 4321",model,false);return;}
+	if(result) addRowToTable("Le serveur est démarré sur le port 4321",model,MSG_1);
+	else {addRowToTable("Echec de démarrage du serveur sur le port 4321",model,MSG_1);return;}
 }
 
 
-//Juste une méthode statique qui écrit un évenement dans le model, et l'heure à laquelle il s'est réalisé
-void Widget::addRowToTable(QString s,QStandardItemModel *model,bool changeColor)
+
+
+
+//Juste une méthode statique qui écrit un évenement dans le model, et l'heure р laquelle il s'est réalisé
+void Widget::addRowToTable(QString s, QStandardItemModel *model, QColor color)
 {
-	static int r=255;
-	static int g=125;
-	static int b=0;
-	if(changeColor)
-	{
-		r=(r==255)?0:((r==125)?255:125);
-		b=(b==255)?0:((b==125)?255:125);
-		g=(g==255)?0:((g==125)?255:125);
-	}
+	//On récupère la liste des 2 colonnes de la lignes
 	QList<QStandardItem*> list;
 	QStandardItem *i1=new QStandardItem(trUtf8(s.toAscii()));
-	i1->setBackground(QBrush(QColor::fromRgb(r,g,b)));
+	i1->setBackground(QBrush(color));
 	QStandardItem *i2=new QStandardItem(QTime::currentTime().toString("hh:mm:ss"));
-	i2->setBackground(QBrush(QColor::fromRgb(r,g,b)));
+	i2->setBackground(QBrush(color));
 	list << i1 << i2;
+	//On ajoute la ligne
 	model->appendRow(list);
 }
+
+
+

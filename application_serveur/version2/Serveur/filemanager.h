@@ -19,7 +19,7 @@ private:
 
 	QList<Depot*> *depots;
 	SvnManager *svnManager;
-	QMutex listDepotsMutex;
+	QMutex mutex;
 };
 
 #endif // FILEMANAGER_H

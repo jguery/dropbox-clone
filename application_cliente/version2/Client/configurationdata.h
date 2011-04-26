@@ -1,10 +1,10 @@
 /*
 
- Ce fichier contient les déclarations de trois classes:
+ Ce fichier contient les déclarations de quatre classes:
  ConfigurationNetwork : Pour la gestion du réseau
  ConfigurationIdentification : Pour la configuration de l'identification
  ConfigurationFile: Pour la configuration des fichiers et repertoires synchronisés
- ConfigurationData: Pour regrouper toutes les configurations
+ ConfigurationData: Pour regrouper les autres 3 configurations précédantes
 
 */
 
@@ -140,24 +140,36 @@ public:
 	//Des fonctions pour rechercher dans l'arborescence des fichiers
 	Media *findMediaByLocalPath(QString localPath);
 	Media *findMediaByRealPath(QString realPath);
+
+	//Pour mettre les objets à l'écoute de détections
 	void setListenning(bool listen);
 	bool isListenning();
 
-	//Destructeur
-	~ConfigurationFile();
+	//Pour récupérer le dépot auquel appartient un média
+	Depot *getMediaDepot(Media *m);
+	Depot *getMediaDepot(QString realPath);
 
-	//Pour récupérer la détection à traiter
+	//Pour récupérer les révisions des dépots
+	QHash<QString,int> getDepotsRevisions();
+
+	//Pour récupérer la prochaine détection à traiter
 	Media *getMediaDetection();
+
+	//Pour supprimer une détection qui vient d'être traitée
 	void removeMediaDetection();
 
+	//Pour renseigner l'objet de reveil
 	void setWaitConditionDetection(QWaitCondition *waitConditionDetect);
 
+	//Destructeur
+	~ConfigurationFile();
 
 private slots:
 	//Un slot pour stocker tous les changements détectés dans une liste
 	void putMediaDetection(Media *media);
 
 signals:
+	//Pour demander un enregistrement du fichier de config
 	void saveRequest();
 
 private:
@@ -166,10 +178,14 @@ private:
 
 	//La liste des changements détectés en cours de communication au serveur
 	QList<Media*> *detectMediaList;
+
+	//Un mutex pour gérer les accès concurrents à la liste précédente
 	QMutex detectMediaListMutex;
 
+	//Pour reveiller le thread du hddInterface lorsqu'une détection est arrivée
 	QWaitCondition *waitConditionDetect;
 
+	//Les objets sont-ils à l'écoute?
 	bool isListen;
 
 	//La liste des dépots à surveiller
@@ -238,7 +254,7 @@ private:
 	//Constructeur
 	ConfigurationData(ConfigurationNetwork *configurationNetwork,ConfigurationIdentification *configurationIdentification,ConfigurationFile *configurationFile,QString filePath);
 
-	//Les configurations
+	//Les 3 configurations
 	ConfigurationNetwork *configurationNetwork;
 	ConfigurationFile *configurationFile;
 	ConfigurationIdentification *configurationIdentification;

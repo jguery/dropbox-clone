@@ -6,10 +6,15 @@
 #include "socket.h"
 #include "messages.h"
 
+
+
 /*
  Cette classe implémente l'interface de communication avec le serveur
  Toutes les requêtes passent par ici
 */
+
+
+
 
 class NetworkInterface: public QThread
 {
@@ -20,32 +25,41 @@ public:
 	//Une méthode statique pour créer l'objet
 	static NetworkInterface *createNetworkInterface(ConfigurationNetwork *configurationNetwork,ConfigurationIdentification *configurationIdentification, QStandardItemModel *model);
 
-	//Les fonction de connexion et déconnexion
-	bool connectToServer();
-	bool disconnectFromServer();
+	//Les requetes de connexion et déconnexion
+	void requestConnectToServer();
+	void requestDisconnectFromServer();
 
 	//Envoi de messages de divers types
-	ResponseEnum sendMediaCreated(QString realPath,bool isDirectory);
-	ResponseEnum sendMediaUpdated(QString realPath,QByteArray content);
-	ResponseEnum sendMediaRemoved(QString realPath);
-	ResponseEnum sendIdentification();
+	Response *sendMediaCreated(QString realPath,bool isDirectory, int revision);
+	Response *sendMediaUpdated(QString realPath,QByteArray content, int revision);
+	Response *sendMediaRemoved(QString realPath, int revision);
 
+	//Pour l'exécution du thread
 	void run();
 
-	//Gérer la liste des requetes recues
+	//Gérer la liste des requêtes récues
 	void putReceiveRequestList(Request *r);
 	Request *getReceiveRequestList();
+
+	//Pour renseigner l'objet de reveil du hddInteface à la réception d'une requete
 	void setWaitReceiveRequestList(QWaitCondition *waitReceiveRequestList);
 
 	//Pour savoir si on est connecté
 	bool checkIsConnected();
 
-	//Bloquer le thread appelant tant qu'on est pas connecté
-	void blockWhileDisconnected();
+	//Bloquer le thread appelant tant qu'on ne se connecte pas
+	bool blockWhileDisconnected();
+
+	//Pour envoyer le numéro de dépot
+	bool sendDepotRevision(QString realPath,int revision);
 signals:
 	void connected();
 	void disconnected();
 	void receiveErrorMessage(QString);
+
+	//Les signaux de requetes de connexion et déconnexion
+	void connectToServerRequested();
+	void disconnectFromServerRequested();
 
 private slots:
 	//Slots pour recevoir les évènement de la socket
@@ -56,6 +70,10 @@ private slots:
 	void erreursSsl(const QList<QSslError>&);
 	void receiveMessageAction(QByteArray *message);
 
+	//Les slots de connexion et déconnexion
+	void connectToServer();
+	void disconnectFromServer();
+
 private:
 	//Le constructeur
 	NetworkInterface(ConfigurationNetwork *configurationNetwork,ConfigurationIdentification *configurationIdentification, QStandardItemModel *model);
@@ -63,7 +81,6 @@ private:
 	//La socket qui servira à se connecter au serveur
 	Socket *socket;
 	bool isConnected;
-	bool isIdentified;
 
 	//Les configurations nécéssaires
 	ConfigurationNetwork *configurationNetwork;
@@ -74,6 +91,8 @@ private:
 
 	//La liste des requetes recus
 	QList<Request*> *receiveRequestList;
+
+	//Le mutex pour les accès concurents à la liste précédante
 	QMutex receiveRequestListMutex;
 
 	//La condition pour synchroniser les messages
@@ -83,10 +102,15 @@ private:
 	QMutex blockDisconnectedMutex;
 
 	//Pour les réponses aux requetes envoyées par le client
-	ResponseEnum response;
+	Response *response;
 
 	//Juste pour l'affichage
 	QStandardItemModel *model;
+
+	//Pour envoyer un message d'identification
+	//Ne peut se faire que depuis l'intérieur de la classe
+	bool sendIdentification();
+
 };
 
 

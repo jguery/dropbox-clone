@@ -115,9 +115,7 @@ Depot::Depot(QString localPath,QString realPath,int revision,bool readOnly): Dir
 
 
 
-
 //les accesseurs d'accès et de modifications à la révision
-
 int Depot::getRevision()
 {
 	return revision;
@@ -126,16 +124,6 @@ int Depot::getRevision()
 void Depot::setRevision(int revision)
 {
 	this->revision=revision;
-}
-
-void Depot::incRevision()
-{
-	this->revision++;
-}
-
-void Depot::decRevision()
-{
-	this->revision--;
 }
 
 
@@ -156,6 +144,8 @@ void Depot::setReadOnly(bool readOnly)
 
 
 
+
+
 //Retourne le code xml du repertoire et de ses sous medias
 QDomElement Depot::toXml(QDomDocument *document)
 {
@@ -164,8 +154,8 @@ QDomElement Depot::toXml(QDomDocument *document)
 	QDomElement element=document->createElement("depot");
 
 	//On écrit ses attributs localPath et realPath
-	element.setAttribute("localPath",localPath);
-	element.setAttribute("realPath",realPath);
+	element.setAttribute("localPath",this->getLocalPath());
+	element.setAttribute("realPath",this->getRealPath());
 
 	//On écrit ses attributs revision et readOnly
 	element.setAttribute("revision",QString::number(this->revision));

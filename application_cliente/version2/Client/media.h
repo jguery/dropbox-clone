@@ -11,7 +11,7 @@ class Dir;
 
 
 
-//Enumeration des différents états de detection d'un state
+//Enumeration des différents états de détection d'un state
 //Creation, Suppression, et Mise à jour
 //Le default state sert juste à donner une valeur par défaut à la structure
 enum State
@@ -40,13 +40,19 @@ NB: Un média est réprésenté par son localPath qui est son chemin sur le disq
 
 class Media: public QObject
 {
+
 	Q_OBJECT
 
-// le constructeur et les attributs sont protected pour être accéssible depuis les classes filles
 protected:
+	//Le constructeur
 	Media(QString localPath,QString realPath,Dir *parent);
 
-	//Les attributs
+	//Pour méthodes pour gérer les accès concurents à l'objet.
+	void lock();
+	void unlock();
+
+private:
+	//Les attributs de chemin
 	QString localPath;
 	QString realPath;
 
@@ -58,10 +64,6 @@ protected:
 
         //Un mutex pour les threads synchronisés
 	QMutex *mutex;
-
-	//Pour réserver et libérer l'objet
-	void lock();
-	void unlock();
 
 public:
 	// la méthode virtuelle isDirectory pour savoir si c'est un repertoire ou un simple fichier

@@ -43,6 +43,8 @@ private:
 	void receivedRequest(Request *r);
 	void detectedMedia(Media *m);
 
+	void sendDepotsRevisions();
+
 	//Les autres interfaces
 	ConfigurationData *configurationData;
 	NetworkInterface *networkInterface;

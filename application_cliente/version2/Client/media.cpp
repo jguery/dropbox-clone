@@ -9,7 +9,7 @@ Media::Media(QString localPath,QString realPath,Dir *parent): QObject((QObject*)
 	this->localPath=localPath;
 	this->realPath=realPath;
 	this->parent=parent;
-	this->mutex=new QMutex(QMutex::Recursive);
+	this->mutex=new QMutex(QMutex::Recursive); //Le mutex peut être verouiller récursivement
 	this->detectionState=new QList<State>();
 }
 
@@ -91,11 +91,10 @@ void Media::unlock()
 //le resultat est renvoyé sans le "/"
 QString Media::extractParentPath(QString path)
 {
-	QString path2=path;
-	if(path2.endsWith("/")) path2=path2.left(path2.length()-1);
+	if(path.endsWith("/")) path=path.left(path.length()-1);
 	QString parentPath;
-	if(path2.lastIndexOf("/")>=0)
-		parentPath=path2.left(path2.lastIndexOf("/"));
+	if(path.lastIndexOf("/")>=0)
+		parentPath=path.left(path.lastIndexOf("/"));
 	return parentPath;
 }
 

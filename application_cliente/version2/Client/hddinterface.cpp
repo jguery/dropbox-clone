@@ -19,6 +19,9 @@ HddInterface *HddInterface::createHddInterface(ConfigurationData *configurationD
 
 
 
+
+
+
 //Le constructeur
 HddInterface::HddInterface(ConfigurationData *configurationData,
 					NetworkInterface *networkInterface,
@@ -45,37 +48,37 @@ HddInterface::HddInterface(ConfigurationData *configurationData,
 
 
 
+
 void HddInterface::run()
 {
-	this->networkInterface->sendIdentification();
 	forever
 	{
 		mutexWaitCondition.lock();
 		waitCondition.wait(&mutexWaitCondition,5000);
 		mutexWaitCondition.unlock();
 
-		//On vérifie qu'on est toujours bien connecté
-		networkInterface->blockWhileDisconnected();
-
 		bool detect;
-		//y a t-il des medias détecté?
+		//y a t-il des medias détectés?
 		do
 		{
+			//On vérifie qu'on est toujours bien connecté
+			if(networkInterface->blockWhileDisconnected())
+				sendDepotsRevisions();
+
 			detect=false;
 			Media *m=configurationData->getConfigurationFile()->getMediaDetection();
 			if(m!=NULL)
 			{
 				this->detectedMedia(m);
 				detect=true;
-				continue;
 			}
+
 			//y a t-il des requetes recues?
 			Request *r=networkInterface->getReceiveRequestList();
 			if(r!=NULL)
 			{
 				this->receivedRequest(r);
 				detect=true;
-				continue;
 			}
 		}
 		while(detect);
@@ -90,11 +93,18 @@ void HddInterface::run()
 void HddInterface::detectedMedia(Media *m)
 {
 	State state=m->getDetectionState()->first();
-	Widget::addRowToTable(QString("Traitement du ")+QString(m->isDirectory()?"repertoire":"ficher")+QString(" qui est passé à l'état ")+Media::stateToString(m->getDetectionState()->first()),model,MSG_1);
+	Widget::addRowToTable(QString("Traitement du ")+QString(m->isDirectory()?"repertoire ":"ficher ")+m->getLocalPath()+QString(" qui est passé à l'état ")+Media::stateToString(m->getDetectionState()->first()),model,MSG_1);
 	if(state==MediaIsCreating) detectedCreatedMedia(m);
 	else if(state==MediaIsUpdating) detectedUpdatedMedia(m);
 	else if(state==MediaIsRemoving) detectedRemovedMedia(m);
+	else
+	{
+		qDebug("Warning 1 H.I.");
+	}
 }
+
+
+
 
 
 //Lorsqu'on recoit une requete
@@ -107,19 +117,63 @@ void HddInterface::receivedRequest(Request *r)
 		QString realPath=r->getParameters()->value("realPath","");
 		bool isDirectory=(r->getParameters()->value("isDirectory","")=="true")?true:false;
 		receivedCreatedRequest(realPath,isDirectory);
+		QString revision=r->getParameters()->value("revision","");
+		Depot *depot=configurationData->getConfigurationFile()->getMediaDepot(realPath);
+		if(!depot)
+		{
+			qDebug("Warning 40 H.I.");
+			return;
+		}
+		if(revision!="") depot->setRevision(revision.toInt());
 	}
 	else if(e==UPDATE_FILE_INFO)
 	{
 		QString realPath=r->getParameters()->value("realPath","");
 		QByteArray content=r->getParameters()->value("content","");
 		receivedUpdatedRequest(realPath,content);
+		QString revision=r->getParameters()->value("revision","");
+		Depot *depot=configurationData->getConfigurationFile()->getMediaDepot(realPath);
+		if(!depot)
+		{
+			qDebug("Warning 44 H.I.");
+			return;
+		}
+		if(revision!="") depot->setRevision(revision.toInt());
 	}
 	else if(e==REMOVE_FILE_INFO)
 	{
 		QString realPath=r->getParameters()->value("realPath","");
 		receivedRemovedRequest(realPath);
+		QString revision=r->getParameters()->value("revision","");
+		Depot *depot=configurationData->getConfigurationFile()->getMediaDepot(realPath);
+		if(!depot)
+		{
+			qDebug("Warning 48 H.I.");
+			return;
+		}
+		if(revision!="") depot->setRevision(revision.toInt());
+	}
+	else
+	{
+		qDebug("Warning 2 H.I.");
 	}
 }
+
+
+
+
+
+void HddInterface::sendDepotsRevisions()
+{
+	QHash<QString,int> hash=configurationData->getConfigurationFile()->getDepotsRevisions();
+	QHashIterator<QString,int> iterator(hash);
+	while(iterator.hasNext())
+	{
+		iterator.next();
+		networkInterface->sendDepotRevision(iterator.key(),iterator.value());
+	}
+}
+
 
 
 
@@ -131,41 +185,58 @@ int HddInterface::detectedCreatedMedia(Media *m)
 	//On récupère le realPath de l'objet
 	QString realPath=m->getRealPath();
 
+	//On récupère la révision du dépot
+	Depot *depot=configurationData->getConfigurationFile()->getMediaDepot(m);
+	if(!depot)
+	{
+		qDebug("Warning 2 H.I.");
+		return 1;
+	}
+
+	int revision=depot->getRevision();
+
 	Widget::addRowToTable("Envoi de la requête au serveur",model,MSG_1);
 	//On prévient l'interface réseau, en passant le realPath
-	ResponseEnum response=networkInterface->sendMediaCreated(realPath,m->isDirectory());
+	Response *resp=networkInterface->sendMediaCreated(realPath,m->isDirectory(),revision);
+	if(resp==NULL)
+	{
+		qDebug("Warning 3 H.I.");
+		return 1;
+	}
+
+	ResponseEnum response=resp->getType();
 
 	if(response==ACCEPT_FILE_INFO)
 	{
 		configurationData->getConfigurationFile()->removeMediaDetection();
+		QString revision=resp->getParameters()->value("revision","");
+		if(revision!="") depot->setRevision(revision.toInt());
 		Widget::addRowToTable("Le serveur a accepté le changement",model,MSG_2);
-	}
-	else if(response==REJECT_FILE_INFO_FOR_IDENTIFICATION)
-	{
-		Widget::addRowToTable("Le serveur requiert une identification",model,MSG_3);
 	}
 	else if(response==REJECT_FILE_INFO_FOR_PARAMETERS)
 	{
+		configurationData->getConfigurationFile()->removeMediaDetection();
+		QString revision=resp->getParameters()->value("revision","");
+		if(revision!="") depot->setRevision(revision.toInt());
 		Widget::addRowToTable("Le serveur a détecté une requete eronnée",model,MSG_3);
 	}
 	else if(response==REJECT_FILE_INFO_FOR_RIGHT)
 	{
 		configurationData->getConfigurationFile()->removeMediaDetection();
+		QString revision=resp->getParameters()->value("revision","");
+		if(revision!="") depot->setRevision(revision.toInt());
 		Widget::addRowToTable("Le serveur a signalé une insufisance de droits",model,MSG_3);
 	}
 	else if(response==REJECT_FILE_INFO_FOR_CONFLICT)
 	{
 		configurationData->getConfigurationFile()->removeMediaDetection();
+		QString revision=resp->getParameters()->value("revision","");
+		if(revision!="") depot->setRevision(revision.toInt());
 		Widget::addRowToTable("Le serveur a détecté un conflit",model,MSG_3);
 	}
 	else if(response==NOT_CONNECT)
 	{
 		Widget::addRowToTable("Echec d'envoi, vous n'etes pas connecté au serveur",model,MSG_3);
-	}
-	else if(response==NOT_IDENTIFICATE)
-	{
-		Widget::addRowToTable("Echec d'envoi, vous n'etes pas identifié",model,MSG_3);
-		this->networkInterface->sendIdentification();
 	}
 	else if(response==NOT_SEND)
 	{
@@ -178,6 +249,13 @@ int HddInterface::detectedCreatedMedia(Media *m)
 	else if(response==NOT_PARAMETERS)
 	{
 		Widget::addRowToTable("Le message à envoyer contient des parametres érronnés",model,MSG_3);
+	}
+	else if(response==REJECT_FILE_INFO_FOR_SVNERROR)
+	{
+		configurationData->getConfigurationFile()->removeMediaDetection();
+		QString revision=resp->getParameters()->value("revision","");
+		if(revision!="") depot->setRevision(revision.toInt());
+		Widget::addRowToTable("Erreur SVN sur le serveur",model,MSG_3);
 	}
 
 	//Sauve la nouvelle config des fichiers synchronisés
@@ -195,42 +273,59 @@ int HddInterface::detectedRemovedMedia(Media *m)
 	//On récupère le realPath et on prévient le networkInterface
 	QString realPath=m->getRealPath();
 
-	ResponseEnum response=networkInterface->sendMediaRemoved(realPath);
+	//On récupère la révision du dépot
+	Depot *depot=configurationData->getConfigurationFile()->getMediaDepot(m);
+	if(!depot)
+	{
+		qDebug("Warning 4 H.I.");
+		return 1;
+	}
+
+	int revision=depot->getRevision();
+
+	Response *resp=networkInterface->sendMediaRemoved(realPath,revision);
+	if(resp==NULL)
+	{
+		qDebug("Warning 6 H.I.");
+		return 1;
+	}
+
+	ResponseEnum response=resp->getType();
 
 	if(response==ACCEPT_FILE_INFO)
 	{
 		m->getParent()->delSubMedia(m);
 		configurationData->getConfigurationFile()->removeMediaDetection();
+		QString revision=resp->getParameters()->value("revision","");
+		if(revision!="") depot->setRevision(revision.toInt());
 		Widget::addRowToTable("Le serveur a accepté le changement",model,MSG_2);
-	}
-	else if(response==REJECT_FILE_INFO_FOR_IDENTIFICATION)
-	{
-		Widget::addRowToTable("Le serveur requiert une identification",model,MSG_3);
 	}
 	else if(response==REJECT_FILE_INFO_FOR_PARAMETERS)
 	{
+		configurationData->getConfigurationFile()->removeMediaDetection();
+		QString revision=resp->getParameters()->value("revision","");
+		if(revision!="") depot->setRevision(revision.toInt());
 		Widget::addRowToTable("Le serveur a détecté une requete eronnée",model,MSG_3);
 	}
 	else if(response==REJECT_FILE_INFO_FOR_RIGHT)
 	{
 		m->getParent()->delSubMedia(m);
 		configurationData->getConfigurationFile()->removeMediaDetection();
+		QString revision=resp->getParameters()->value("revision","");
+		if(revision!="") depot->setRevision(revision.toInt());
 		Widget::addRowToTable("Le serveur a signalé une insufisance de droits",model,MSG_3);
 	}
 	else if(response==REJECT_FILE_INFO_FOR_CONFLICT)
 	{
 		m->getParent()->delSubMedia(m);
 		configurationData->getConfigurationFile()->removeMediaDetection();
+		QString revision=resp->getParameters()->value("revision","");
+		if(revision!="") depot->setRevision(revision.toInt());
 		Widget::addRowToTable("Le serveur a détecté un conflit",model,MSG_3);
 	}
 	else if(response==NOT_CONNECT)
 	{
 		Widget::addRowToTable("Echec d'envoi, vous n'etes pas connecté au serveur",model,MSG_3);
-	}
-	else if(response==NOT_IDENTIFICATE)
-	{
-		Widget::addRowToTable("Echec d'envoi, vous n'etes pas identifié",model,MSG_3);
-		this->networkInterface->sendIdentification();
 	}
 	else if(response==NOT_SEND)
 	{
@@ -243,6 +338,13 @@ int HddInterface::detectedRemovedMedia(Media *m)
 	else if(response==NOT_PARAMETERS)
 	{
 		Widget::addRowToTable("Le message à envoyer contient des parametres érronnés",model,MSG_3);
+	}
+	else if(response==REJECT_FILE_INFO_FOR_SVNERROR)
+	{
+		configurationData->getConfigurationFile()->removeMediaDetection();
+		QString revision=resp->getParameters()->value("revision","");
+		if(revision!="") depot->setRevision(revision.toInt());
+		Widget::addRowToTable("Erreur SVN sur le serveur",model,MSG_3);
 	}
 
 	//Sauve la nouvelle config des fichiers synchronisés
@@ -251,52 +353,71 @@ int HddInterface::detectedRemovedMedia(Media *m)
 }
 
 
+
+
+
 //Lorsqu'un fichier est modifié
 int HddInterface::detectedUpdatedMedia(Media *m)
 {
 	if(m->isDirectory()) return 1;
 	File *f=(File*)m;
+
+	//On récupère le realPath
 	QString realPath=f->getRealPath();
 
-	QFile file(f->getLocalPath());      
-	file.open(QIODevice::ReadOnly);
-	QByteArray content=file.readAll();
-	file.close();
+	//On récupère la révision du dépot
+	Depot *depot=configurationData->getConfigurationFile()->getMediaDepot(m);
+	if(!depot)
+	{
+		qDebug("Warning 5 H.I.");
+		return 1;
+	}
+
+	int revision=depot->getRevision();
+
+	QByteArray content=f->getFileContent();
 
 	//Envoie le contenu de tout le fichier à l'interface réseau
-	ResponseEnum response=networkInterface->sendMediaUpdated(realPath,content);
+	Response *resp=networkInterface->sendMediaUpdated(realPath,content,revision);
+	if(resp==NULL)
+	{
+		qDebug("Warning 7 H.I.");
+		return 1;
+	}
+
+	ResponseEnum response=resp->getType();
 
 	if(response==ACCEPT_FILE_INFO)
 	{
 		configurationData->getConfigurationFile()->removeMediaDetection();
+		QString revision=resp->getParameters()->value("revision","");
+		if(revision!="") depot->setRevision(revision.toInt());
 		Widget::addRowToTable("Le serveur a accepté le changement",model,MSG_2);
-	}
-	else if(response==REJECT_FILE_INFO_FOR_IDENTIFICATION)
-	{
-		Widget::addRowToTable("Le serveur requiert une identification",model,MSG_3);
 	}
 	else if(response==REJECT_FILE_INFO_FOR_PARAMETERS)
 	{
+		configurationData->getConfigurationFile()->removeMediaDetection();
+		QString revision=resp->getParameters()->value("revision","");
+		if(revision!="") depot->setRevision(revision.toInt());
 		Widget::addRowToTable("Le serveur a détecté une requete eronnée",model,MSG_3);
 	}
 	else if(response==REJECT_FILE_INFO_FOR_RIGHT)
 	{
 		configurationData->getConfigurationFile()->removeMediaDetection();
+		QString revision=resp->getParameters()->value("revision","");
+		if(revision!="") depot->setRevision(revision.toInt());
 		Widget::addRowToTable("Le serveur a signalé une insufisance de droits",model,MSG_3);
 	}
 	else if(response==REJECT_FILE_INFO_FOR_CONFLICT)
 	{
 		configurationData->getConfigurationFile()->removeMediaDetection();
+		QString revision=resp->getParameters()->value("revision","");
+		if(revision!="") depot->setRevision(revision.toInt());
 		Widget::addRowToTable("Le serveur a détecté un conflit",model,MSG_3);
 	}
 	else if(response==NOT_CONNECT)
 	{
 		Widget::addRowToTable("Echec d'envoi, vous n'etes pas connecté au serveur",model,MSG_3);
-	}
-	else if(response==NOT_IDENTIFICATE)
-	{
-		Widget::addRowToTable("Echec d'envoi, vous n'etes pas identifié",model,MSG_3);
-		this->networkInterface->sendIdentification();
 	}
 	else if(response==NOT_SEND)
 	{
@@ -310,10 +431,20 @@ int HddInterface::detectedUpdatedMedia(Media *m)
 	{
 		Widget::addRowToTable("Le message à envoyer contient des parametres érronnés",model,MSG_3);
 	}
+	else if(response==REJECT_FILE_INFO_FOR_SVNERROR)
+	{
+		configurationData->getConfigurationFile()->removeMediaDetection();
+		QString revision=resp->getParameters()->value("revision","");
+		if(revision!="") depot->setRevision(revision.toInt());
+		Widget::addRowToTable("Erreur SVN sur le serveur",model,MSG_3);
+	}
 
 	configurationData->save();
 	return 0;
 }
+
+
+
 
 
 
@@ -326,41 +457,24 @@ void HddInterface::receivedUpdatedRequest(QString realPath, QByteArray content)
 	if(m==NULL)
 	{
 		Widget::addRowToTable("Le media est introuvable",model,MSG_3);
+		qDebug("Warning 20 H.I.");
 		return;
 	}
 	if(m->isDirectory())
 	{
 		Widget::addRowToTable("Le media est un repertoire",model,MSG_3);
+		qDebug("Warning 21 H.I.");
 		return ;
 	}
 	File *f=(File*)m;
 
-	//On récupère le dossier parent du fichier updated
-	Dir *parent=f->getParent();
-	if(!parent)
-	{
-		Widget::addRowToTable("Le media n'a pas de parent",model,MSG_3);
-		return ;
-	}
-
-	//Met l'écoute de ce dossier à NULL, pour qu'aucun signal de modification
-	//de dossier ne soit envoyé alors que nous contrôlons cette modification
-	parent->setListenning(false);
-
 	//Écrit le nouveau fichier
-	QFile file(f->getLocalPath());
-	if(!file.open(QIODevice::WriteOnly))
+	if(!f->putFileContent(content))
 	{
-		parent->setListenning(true);
 		Widget::addRowToTable("Impossible d'ouvrir le media en écriture",model,MSG_3);
+		qDebug("Warning 23 H.I.");
 		return;
 	}
-	file.write(content);
-	file.close();
-	f->updateHash();     //Met à jour la signature du fichier
-
-	//Remet le dossier sur écoute
-	parent->setListenning(true);
 
 	Widget::addRowToTable("Le media "+f->getLocalPath()+" a bien été modifié en local",model,MSG_2);
 
@@ -379,11 +493,13 @@ void HddInterface::receivedCreatedRequest(QString realPath, bool isDirectory)
 	if(mParent==NULL)
 	{
 		Widget::addRowToTable("Le repertoire parent du media est introuvable",model,MSG_3);
+		qDebug("Warning 24 H.I.");
 		return;
 	}
 	if(!mParent->isDirectory())
 	{
 		Widget::addRowToTable("Le parent du media n'est pas un repertoire",model,MSG_3);
+		qDebug("Warning 25 H.I.");
 		return;
 	}
 	Dir *parent=(Dir*)mParent;
@@ -399,6 +515,7 @@ void HddInterface::receivedCreatedRequest(QString realPath, bool isDirectory)
 		if(!dir.mkdir(realName))        //On crée le répertoire créé chez un autre client
 		{
 			Widget::addRowToTable("Impossible de créer le repertoire "+realName+" dans "+parent->getLocalPath()+"/",model,MSG_3);
+			qDebug("Warning 26 H.I.");
 			return;
 		}
 
@@ -407,16 +524,14 @@ void HddInterface::receivedCreatedRequest(QString realPath, bool isDirectory)
 		if(!d)
 		{
 			Widget::addRowToTable("L'allocation du repertoire dans l'arborescence a échoué",model,MSG_3);
+			qDebug("Warning 27 H.I.");
 			return;
 		}
-
-		//Met le dossier créé sur écoute
-		d->setListenning(true);
 
 		Widget::addRowToTable("Message du serveur: le repertoire "+d->getLocalPath()+" a été créé",model,MSG_2);
 	}
 
-	else                //Le media créé est un fichier, il est vide (un autre message sera envoyé quand il sera plein)
+	else        //Le media créé est un fichier, il est vide (un autre message sera envoyé quand il sera plein)
 	{
 		QFile file(parent->getLocalPath()+"/"+realName);
 
@@ -424,6 +539,7 @@ void HddInterface::receivedCreatedRequest(QString realPath, bool isDirectory)
 		if(!file.open(QIODevice::WriteOnly))
 		{
 			Widget::addRowToTable("Impossible de créer le fichier "+realName+" dans "+parent->getLocalPath()+"/",model,MSG_3);
+			qDebug("Warning 28 H.I.");
 			return;
 		}
 
@@ -435,6 +551,7 @@ void HddInterface::receivedCreatedRequest(QString realPath, bool isDirectory)
 		if(!f)
 		{
 			Widget::addRowToTable("L'allocation du fichier dans l'arborescence a échoué",model,MSG_3);
+			qDebug("Warning 29 H.I.");
 			return;
 		}
 
@@ -449,6 +566,9 @@ void HddInterface::receivedCreatedRequest(QString realPath, bool isDirectory)
 
 
 
+
+
+
 void HddInterface::receivedRemovedRequest(QString realPath)
 {
 	Widget::addRowToTable("La requete signale que le media de realPath "+realPath+" est à l'état MediaIsRemoving",model,MSG_2);
@@ -456,6 +576,7 @@ void HddInterface::receivedRemovedRequest(QString realPath)
 	if(m==NULL)
 	{
 		Widget::addRowToTable("Le media est introuvable",model,MSG_3);
+		qDebug("Warning 30 H.I.");
 		return;
 	}
 
@@ -464,6 +585,7 @@ void HddInterface::receivedRemovedRequest(QString realPath)
 	if(!parent)
 	{
 		Widget::addRowToTable("Le repertoire parent du media est introuvable",model,MSG_3);
+		qDebug("Warning 31 H.I.");
 		return;
 	}
 

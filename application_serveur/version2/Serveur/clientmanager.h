@@ -13,7 +13,6 @@ typedef enum ClientState {
 
 	CONNECTED,
 	IDENTIFIED,
-	OLDDETECTIONS,
 	NEWDETECTIONS,
 	SYNCHRONIZED
 
@@ -52,6 +51,8 @@ private slots:
         void erreursSsl(const QList<QSslError>&);
 
         void connexionEncrypted();
+
+	void sendNewDetection();
 signals:
 	void disconnectedClient(ClientManager *clientManager);
 
@@ -74,6 +75,13 @@ private:
 
 	//Le model
 	QStandardItemModel *model;
+
+	//Pour mettre à jour les clients qui ne sont pas à la bonne révision
+	QList<Request*> upgrading;
+	QTimer timerOldDetection;
+
+	void receiveInConnectedState(Request *r);
+	void receiveInIdentifiedState(Request *r);
 };
 
 #endif // CLIENTMANAGER_H

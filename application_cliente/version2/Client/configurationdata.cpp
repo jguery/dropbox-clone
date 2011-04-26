@@ -1,15 +1,18 @@
 #include "configurationdata.h"
 #include "widget.h"
 
+
+
 /*
 
- Ce fichier contient les implémentations de trois classes:
+ Ce fichier contient les implémentations de quatre classes:
  ConfigurationNetwork : Pour la gestion du réseau
  ConfigurationIdentification : Pour la configuration de l'identification
  ConfigurationFile: Pour la configuration des fichiers et repertoires synchronisés
  ConfigurationData: Pour regrouper toutes les configurations
 
 */
+
 
 
 
@@ -44,14 +47,15 @@ ConfigurationNetwork *ConfigurationNetwork::loadConfigurationNetwork(QDomNode no
 
 	//On convertit le port en format int
 	bool ok=false;int p=port.toInt(&ok);
-	if(!ok)
-		return NULL;
+	if(!ok) return NULL;
 
 	//On crèe l'objet et on le retourne
 	ConfigurationNetwork *configurationNetwork =
 				ConfigurationNetwork::createConfigurationNetwork(address,p);
 	return configurationNetwork;
 }
+
+
 
 
 //Constructeur
@@ -62,8 +66,8 @@ ConfigurationNetwork::ConfigurationNetwork(QString address, int port)
 }
 
 
-//Les accesseurs et mutateurs de l'attribut address
 
+//Les accesseurs et mutateurs de l'attribut address
 QString ConfigurationNetwork::getAddress()
 {
 	return address;
@@ -79,8 +83,9 @@ void ConfigurationNetwork::setAddress(QString address)
 	this->address=address;
 }
 
-//les accesseurs et mutateurs de l'attribut port
 
+
+//les accesseurs et mutateurs de l'attribut port
 int ConfigurationNetwork::getPort()
 {
 	return port;
@@ -90,6 +95,7 @@ void ConfigurationNetwork::setPort(int port)
 {
 	this->port=port;
 }
+
 
 
 //Retourne le code xml correspondant à l'objet
@@ -144,7 +150,7 @@ ConfigurationIdentification *ConfigurationIdentification::loadConfigurationIdent
 
 	//On crèe l'objet et on le retourne
 	ConfigurationIdentification *configurationIdentification=
-	ConfigurationIdentification::createConfigurationIdentification(pseudo,password);
+					ConfigurationIdentification::createConfigurationIdentification(pseudo,password);
 	return configurationIdentification;
 }
 
@@ -157,8 +163,9 @@ ConfigurationIdentification::ConfigurationIdentification(QString pseudo,QString 
 	this->password=password;
 }
 
-//Les accesseurs et mutateurs de l'attribut pseudo
 
+
+//Les accesseurs et mutateurs de l'attribut pseudo
 QString ConfigurationIdentification::getPseudo()
 {
 	return pseudo;
@@ -169,8 +176,9 @@ void ConfigurationIdentification::setPseudo(QString pseudo)
 	this->pseudo=pseudo;
 }
 
-//les accesseurs et mutateurs de l'attribut password
 
+
+//les accesseurs et mutateurs de l'attribut password
 QString ConfigurationIdentification::getPassword()
 {
 	return password;
@@ -220,6 +228,8 @@ ConfigurationFile *ConfigurationFile::createConfigurationFile(QList<Depot*> *dep
 
 
 
+
+
 //Pour charger la configuration des répertoires et fichiers depuis un noeud xml
 //Typiquement, appelé dés le lancement du client, en chargant la config
 //préalablement enregistrée dans un config.xml, grâce à ConfigurationData::save
@@ -228,7 +238,7 @@ ConfigurationFile *ConfigurationFile::loadConfigurationFile(QDomNode noeud,QStan
 	//On alloue la liste des dépots dans laquelle seront chargées les dépots lues
 	QList<Depot*> *depots=new QList<Depot*>();
 
-	//On vérifie que le nom du noeud est bien ConfigurationData
+	//On vérifie que le nom du noeud est bien ConfigurationFile
 	QDomElement element=noeud.toElement();
 	if(element.tagName()!="ConfigurationFile")
 	{
@@ -237,13 +247,13 @@ ConfigurationFile *ConfigurationFile::loadConfigurationFile(QDomNode noeud,QStan
 	}
 
 	//Parcours l'ensemble des éléments fils de l'élement "COnfigurationFile"
-	//Ce sont donc des fichiers et des dossiers (toute l'arborescence  à synchroniser enfaite)
+	//Ce sont donc des dépots qui contiennent des fichiers et des dossiers (toute l'arborescence à synchroniser enfaite)
 	QDomNodeList list=noeud.childNodes();
 	for(unsigned int i=0;i<list.length();i++)
 	{
 		QDomNode n=list.at(i);
 
-		//On charge le noeud avec la méthode statique loadDir
+		//On charge le noeud avec la méthode statique loadDepot
 		Depot *d=Depot::loadDepot(n);
 		if(d==NULL)
 		{
@@ -262,14 +272,19 @@ ConfigurationFile *ConfigurationFile::loadConfigurationFile(QDomNode noeud,QStan
 
 
 
+
+
 //Constructeur
 ConfigurationFile::ConfigurationFile(QList<Depot*> *depots,QStandardItemModel *model) : QObject()
 {
+	//On fait les initialisations
 	this->depots=depots;
 	this->detectMediaList=new QList<Media*>();
 	this->waitConditionDetect=NULL;
 	this->isListen=false;
 	this->model=model;
+
+	//On connecte les détections des dépots à la méthode putMediaDetection
 	for(int i=0;i<depots->length();i++)
 	{
 		QObject::connect(depots->at(i),SIGNAL(detectChangement(Media*)),this,SLOT(putMediaDetection(Media*)),Qt::QueuedConnection);
@@ -280,10 +295,13 @@ ConfigurationFile::ConfigurationFile(QList<Depot*> *depots,QStandardItemModel *m
 
 
 
+
+//Pour savoir si les objet sont à l'écoute
 bool ConfigurationFile::isListenning()
 {
 	return isListen;
 }
+
 
 
 
@@ -304,6 +322,7 @@ QDomElement ConfigurationFile::toXml(QDomDocument *document)
 	//On retourne le noeud
 	return element;
 }
+
 
 
 
@@ -344,16 +363,57 @@ Media *ConfigurationFile::findMediaByRealPath(QString realPath)
 
 
 
+
+//Pour récupérer le dépot auquel appartient un media
+Depot *ConfigurationFile::getMediaDepot(Media *m)
+{
+	return getMediaDepot(m->getRealPath());
+}
+
+
+
+//Pour récupérer le dépot auquel appartient un media
+Depot *ConfigurationFile::getMediaDepot(QString realPath)
+{
+	for(int i=0;i<depots->length();i++)
+	{
+		if(realPath.startsWith(depots->at(i)->getRealPath()+"/"))
+			return depots->at(i);
+	}
+	return NULL;
+}
+
+
+
+//Pour récupérer les révisions des dépots
+QHash<QString,int> ConfigurationFile::getDepotsRevisions()
+{
+	QHash<QString,int> hash;
+	for(int i=0;i<depots->length();i++)
+		hash.insert(depots->at(i)->getRealPath(),depots->at(i)->getRevision());
+	return hash;
+}
+
+
+
+
 //Pour récupérer la prochaine détection à traiter
 Media *ConfigurationFile::getMediaDetection()
 {
+	//On verrouille d'abord l'accès aux autres threads
 	detectMediaListMutex.lock();
+
+	//On récupère le premier media de la liste (s'il existe)
 	Media *m=NULL;
 	if(detectMediaList->size()>0)
 	{
 		m=detectMediaList->first();
 	}
+
+	//On déverrouille
 	detectMediaListMutex.unlock();
+
+	//On retourne l'objet
 	return m;
 }
 
@@ -363,13 +423,19 @@ Media *ConfigurationFile::getMediaDetection()
 //Pour supprimer une détection qui a été traitée
 void ConfigurationFile::removeMediaDetection()
 {
+	//On verrouille l'objet
 	detectMediaListMutex.lock();
+
+	//On supprime le premier media de la file
 	if(detectMediaList->size()>0)
 	{
 		Media *m=detectMediaList->first();
+		//On enlève son etat de détection correspondant
 		m->getDetectionState()->removeFirst();
 		detectMediaList->removeFirst();
 	}
+
+	//On déverouille l'objet
 	detectMediaListMutex.unlock();
 }
 
@@ -379,26 +445,37 @@ void ConfigurationFile::removeMediaDetection()
 //Le slot qui répond aux détections de changements
 void ConfigurationFile::putMediaDetection(Media *m)
 {
+	//On vérrouille les autres accès
 	detectMediaListMutex.lock();
-	for(int i=0;i<depots->length();i++)
-	{
-		if(!m->getLocalPath().startsWith(depots->at(i)->getLocalPath()+"/")) continue;
-		if(!depots->at(i)->isReadOnly()) break;
-		detectMediaListMutex.unlock();
-		return;
-	}
+
+	//On recherche le dépot auquel appartient le media m
+	Depot *d=this->getMediaDepot(m);
+
+	//Si le dépot est en lecture seule, on laisse tomber
+	if(!d || d->isReadOnly()) return ;
+
 	int index=0;
+	//On recherche le rang du media
 	for(int i=0;i<detectMediaList->length();i++) if(detectMediaList->at(i)==m) index++;
 	detectMediaList->append(m);
+
+	//On affiche la détection dans le model
 	Widget::addRowToTable(QString("Le ")+(m->isDirectory()?QString("repertoire"):QString("fichier"))+QString(" ")+m->getLocalPath()+QString(" est passé à l'état ")+Media::stateToString(m->getDetectionState()->at(index)),model,MSG_2);
+
+	//On demande un enregistrement de la config
 	emit saveRequest();
+
+	//On reveille le thread de hddInterface
 	if(waitConditionDetect!=NULL) waitConditionDetect->wakeAll();
+
+	//on déverrouille les accès
 	detectMediaListMutex.unlock();
 }
 
 
 
 
+//Pour renseigner l'objet de reveil du thread de hddInterface
 void ConfigurationFile::setWaitConditionDetection(QWaitCondition *waitConditionDetect)
 {
 	this->waitConditionDetect=waitConditionDetect;
@@ -411,6 +488,8 @@ void ConfigurationFile::setWaitConditionDetection(QWaitCondition *waitConditionD
 void ConfigurationFile::setListenning(bool listen)
 {
 	QList<Depot*>::iterator i;
+
+	//On l'affiche dans le model
 	if(listen)
 		Widget::addRowToTable("Le module de détection est mis à l'écoute de changements",model,MSG_2);
 	else
@@ -421,8 +500,12 @@ void ConfigurationFile::setListenning(bool listen)
 	{
 		(*i)->setListenning(listen);
 	}
+
+	//on met à jour l'attribut
 	this->isListen=listen;
 }
+
+
 
 
 
@@ -441,6 +524,10 @@ ConfigurationFile::~ConfigurationFile()
 	//On la supprime
 	delete depots;
 }
+
+
+
+
 
 
 

@@ -43,7 +43,7 @@ File *File::loadFile(QDomNode noeud,Dir *parent)
 
 	//On récupère les attributs detectionState
 	QString detectionStateString=noeud.toElement().attribute("detectionState","");
-	QStringList listDetectionState=detectionStateString.split("/");
+	QStringList listDetectionState=detectionStateString.split(",");
 
 	//Récupère le hash du fichier, contenu dans le xml
 	//C'est le premier et le seul fils du noeud représentant le fichier
@@ -59,12 +59,16 @@ File *File::loadFile(QDomNode noeud,Dir *parent)
 
 	//On peut maintenant créer l'objet
 	File *f=new File(localPath,realPath,parent,hash);
+
+	//On ajoute les états qui ont étés chargés depuis le noeud xml
 	for(int i=0;i<listDetectionState.size();i++)
+	{
 		if(listDetectionState.at(i)!=Media::stateToString(MediaDefaultState))
 		{
 			f->getDetectionState()->append(Media::stateFromString(listDetectionState.at(i)));
 			f->getParent()->getOldDetections()->append(f);
 		}
+	}
 	return f;
 }
 
@@ -93,7 +97,7 @@ QByteArray *File::hashFile(QString path)
 		f.close();
 	}
 
-	//On déclare le hasher en MD5 (autres alternatives MD4 ou SHA1
+	//On déclare le hasher en Sha1 (autres alternatives MD4 ou MD5
 	QCryptographicHash hasher(QCryptographicHash::Sha1);
 	hasher.addData(content);  //On met les données à hasher
 
@@ -110,7 +114,7 @@ QByteArray *File::hashFile(QString path)
 //Détecte si oui ou non le fichier a été supprimé
 bool File::hasBeenRemoved()
 {
-	QFile file(localPath);
+	QFile file(this->getLocalPath());
 	if(!file.exists()) return true; //S'il n'existe pas, c'est qu'il a été supprimé
 	return false;
 }
@@ -123,16 +127,14 @@ bool File::hasBeenRemoved()
 //Pour cela, on compare les signatures actuelle et dans le xml
 bool File::hasBeenUpdated()
 {
-	this->lock();
-	QByteArray *h=File::hashFile(localPath);
+	QByteArray *h=File::hashFile(this->getLocalPath());
+	if(h==NULL) return false;
 	if(*h!=*hash)
 	{
 		delete h;
-		this->unlock();
 		return true;
 	}
 	delete h;
-	this->unlock();
 	return false;
 }
 
@@ -143,7 +145,7 @@ QByteArray File::getFileContent()
 {
 	QByteArray content;
 	//on ouvre le fichier en lecture
-	QFile f(localPath);
+	QFile f(this->getLocalPath());
 	if(!f.open(QIODevice::ReadOnly))
 		return content;
 	content=f.readAll(); //On récupère le contenu du fichier
@@ -156,17 +158,20 @@ QByteArray File::getFileContent()
 //Pour écrire le contenu du fichier
 bool File::putFileContent(QByteArray content)
 {
-	//on ouvre le fichier en écriture
+	this->lock();
 	this->getParent()->setListenning(false);
-	QFile f(localPath);
+	QFile f(this->getLocalPath());
+	//on ouvre le fichier en écriture
 	if(!f.open(QIODevice::WriteOnly))
 	{
+		this->unlock();
 		this->getParent()->setListenning(true);
 		return false;
 	}
 	f.write(content);
 	f.close();
 	updateHash();
+	this->unlock();
 	this->getParent()->setListenning(false);
 	return true;
 }
@@ -202,15 +207,17 @@ QDomElement File::toXml(QDomDocument *document)
 	QDomElement element=document->createElement("file");
 
 	//On initialise ses attributs localPath et realPath
-	element.setAttribute("localPath",localPath);
-	element.setAttribute("realPath",realPath);
+	element.setAttribute("localPath",this->getLocalPath());
+	element.setAttribute("realPath",this->getRealPath());
 
 	//On écrit ses attributs detectionState, revision et readOnly
 	QStringList listDetectionState;
-	for(int i=0;i<this->detectionState->length();i++)
-		if(this->detectionState->at(i)!=MediaDefaultState)
-			listDetectionState.append(Media::stateToString(this->detectionState->at(i)));
-	element.setAttribute("detectionState",listDetectionState.join("/"));
+	for(int i=0;i<this->getDetectionState()->length();i++)
+	{
+		if(this->getDetectionState()->at(i)!=MediaDefaultState)
+		listDetectionState.append(Media::stateToString(this->getDetectionState()->at(i)));
+	}
+	element.setAttribute("detectionState",listDetectionState.join(","));
 
 	//On ajoute sa signature dans le noeud xml
 	element.appendChild(document->createTextNode(QString(*hash)));
@@ -228,9 +235,8 @@ QDomElement File::toXml(QDomDocument *document)
 //Sinon retourne NULL
 Media *File::findMediaByLocalPath(QString localPath)
 {
-        if(this->localPath==localPath)
-            return this;
-
+	if(this->getLocalPath()==localPath)
+		return this;
 	return NULL;
 }
 
@@ -242,8 +248,8 @@ Media *File::findMediaByLocalPath(QString localPath)
 //Sinon retourne NULL
 Media *File::findMediaByRealPath(QString realPath)
 {
-        if(this->realPath==realPath)
-            return this;
+	if(this->getRealPath()==realPath)
+		return this;
 	return NULL;
 }
 
@@ -257,9 +263,9 @@ void File::updateHash()
 	this->lock();
 	//On supprime l'ancien hash
 	delete this->hash;
-
 	//On récalcule le nouveau hash
-	this->hash=hashFile(localPath);
+	this->hash=hashFile(this->getLocalPath());
+	if(this->hash==NULL) this->hash=new QByteArray();
 	this->unlock();
 }
 
@@ -273,3 +279,4 @@ File::~File()
 {
 	delete hash;
 }
+

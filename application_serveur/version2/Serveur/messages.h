@@ -28,8 +28,9 @@ enum RequestEnum
 	CREATE_FILE_INFO,
 	UPDATE_FILE_INFO,
 	REMOVE_FILE_INFO,
+	REVISION_FILE_INFO,
 
-	IDENTIFICATION,
+	IDENTIFICATION
 };
 
 /*
@@ -63,9 +64,9 @@ enum ResponseEnum
 	//Pour l'envoi de fichiers
 	ACCEPT_FILE_INFO,
 	REJECT_FILE_INFO_FOR_PARAMETERS,
-	REJECT_FILE_INFO_FOR_IDENTIFICATION,
 	REJECT_FILE_INFO_FOR_RIGHT,
 	REJECT_FILE_INFO_FOR_CONFLICT,
+	REJECT_FILE_INFO_FOR_SVNERROR,
 
 	//Les identifications
 	ACCEPT_IDENTIFICATION,
@@ -75,11 +76,13 @@ enum ResponseEnum
 
 	//Les erreurs de connexions
 	NOT_CONNECT,
-	NOT_IDENTIFICATE,
 	NOT_PARAMETERS,
 	NOT_TIMEOUT,
 	NOT_SEND
 };
+
+
+
 
 /*
  Classe simple implémentant une réponse.
@@ -90,10 +93,12 @@ public:
 	Response();
 	void setType(ResponseEnum type);
 	ResponseEnum getType();
+	QHash<QString,QByteArray> *getParameters();
 	QByteArray *toXml();
 	bool isRequest();
 private:
 	ResponseEnum type;
+	QHash<QString,QByteArray> *parameters;
 };
 
 
@@ -117,19 +122,22 @@ class Messages
 
 private:
 	//Requete pour avertir de la modification du contenu d'un fichier
-	static QByteArray *createMediaUpdatedMessage(QString realPath, QByteArray content);
+	static QByteArray *createMediaUpdatedMessage(QString realPath, QByteArray content, QString revision);
 
 	//Avertir de la création d'un nouveau média
-	static QByteArray *createMediaCreatedMessage(QString realPath, bool isDirectory);
+	static QByteArray *createMediaCreatedMessage(QString realPath, bool isDirectory, QString revision);
 
 	//Avertir de la suppression d'un média
-	static QByteArray *createMediaRemovedMessage(QString realPath);
+	static QByteArray *createMediaRemovedMessage(QString realPath, QString revision);
+
+	//Pour envoyer un numero de révision
+	static QByteArray *createDepotRevisionMessage(QString realPath,QString revision);
 
 	//Pour s'identifier
 	static QByteArray *createIdentificationMessage(QString pseudo,QString password);
 
 	//Pour répondre
-	static QByteArray *createResponseMessage(ResponseEnum type);
+	static QByteArray *createResponseMessage(ResponseEnum type, QString revision);
 
 public:
 	//Pour lire et comprendre un message récu.

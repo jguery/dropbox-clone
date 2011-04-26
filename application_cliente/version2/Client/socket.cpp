@@ -8,8 +8,9 @@
 
 
 //Le constructeur
-Socket::Socket() : QSslSocket()
+Socket::Socket(QObject *parent) : QSslSocket(parent)
 {
+	//On initialise la taille à 0 (aucun message n'est en cours de réception)
 	blockSize=0;
 
 	//On connecte le signal de paquets arrivés au slot inputStream
@@ -43,6 +44,7 @@ bool Socket::connectToServer(QString address,int port)
 		qDebug("La clé privée du client est nulle");
 		return false;
 	}
+
 	file.close();
 	setPrivateKey(key);
 
@@ -55,9 +57,6 @@ bool Socket::connectToServer(QString address,int port)
 		qDebug("Impossible de charger le certificat du CA.");
 		return false;
 	}
-
-	//on supprime la vérification du serveur
-	//setPeerVerifyMode(QSslSocket::VerifyNone);
 
 	//on se connecte au serveur
 	connectToHostEncrypted(address, port);
@@ -132,6 +131,8 @@ void Socket::inputStream()
 }
 
 
+
+
 //Pour envoyer un message complet
 bool Socket::sendMessage(QByteArray *message)
 {
@@ -157,12 +158,13 @@ bool Socket::sendMessage(QByteArray *message)
 	//On envoi le message final et vérifie que l'envoi a bien commencé
 	if(write(block)==-1) return false;
 
-	//On attends indéfiniment pour l'envoi
-	bool result = waitForBytesWritten(-1);
+	//On attends maxi 30s pour l'envoi
+	bool result = waitForBytesWritten();
 
 	//On supprime le message et on retourne le résultat de l'envoi
 	delete message;
 	return result;
 }
+
 
 

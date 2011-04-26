@@ -27,13 +27,15 @@ void Widget::networkButtonSlot()
 	if(networkInterface==NULL) return;
 	if(this->networkInterface->checkIsConnected())
 	{
-		bool b=this->networkInterface->disconnectFromServer();
-		if(b) this->networkButton->setText(trUtf8("Se connecter au serveur"));
+		//bool b=this->networkInterface->disconnectFromServer();
+		//if(b) this->networkButton->setText(trUtf8("Se connecter au serveur"));
+		networkInterface->requestDisconnectFromServer();
 	}
 	else
 	{
-		bool b=this->networkInterface->connectToServer();
-		if(b) this->networkButton->setText(trUtf8("Se déconnecter du serveur"));
+		//bool b=this->networkInterface->connectToServer();
+		//if(b) this->networkButton->setText(trUtf8("Se déconnecter du serveur"));
+		networkInterface->requestConnectToServer();
 	}
 }
 
@@ -244,7 +246,7 @@ void Widget::buildInterface()
 	networkView->setColumnWidth(0,650);
 	QObject::connect(networkModel,SIGNAL(rowsInserted(QModelIndex,int,int)),networkView,SLOT(scrollToBottom()));
 	layout1->addWidget(networkView);
-	networkButton=new QPushButton(trUtf8("Se connecter au serveur"));
+	networkButton=new QPushButton(trUtf8("Se connecter/déconnecter au serveur"));
 	QObject::connect(networkButton,SIGNAL(clicked()),this,SLOT(networkButtonSlot()));
 	layout1->addWidget(networkButton);
 	networkOnglet->setLayout(layout1);

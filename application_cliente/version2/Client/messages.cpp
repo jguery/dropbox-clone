@@ -19,18 +19,27 @@ QByteArray *Request::toXml()
 	{
 		QString realPath=parameters->value("realPath","");
 		bool isDirectory=(parameters->value("isDirectory","")=="true")?true:false;
-		return Messages::createMediaCreatedMessage(realPath,isDirectory);
+		QString revision=parameters->value("revision","");
+		return Messages::createMediaCreatedMessage(realPath,isDirectory,revision);
 	}
 	if(type==UPDATE_FILE_INFO)
 	{
 		QString realPath=parameters->value("realPath","");
 		QByteArray content=parameters->value("content","");
-		return Messages::createMediaUpdatedMessage(realPath,content);
+		QString revision=parameters->value("revision","");
+		return Messages::createMediaUpdatedMessage(realPath,content,revision);
 	}
 	if(type==REMOVE_FILE_INFO)
 	{
 		QString realPath=parameters->value("realPath","");
-		return Messages::createMediaRemovedMessage(realPath);
+		QString revision=parameters->value("revision","");
+		return Messages::createMediaRemovedMessage(realPath,revision);
+	}
+	if(type==REVISION_FILE_INFO)
+	{
+		QString realPath=parameters->value("realPath","");
+		QString revision=parameters->value("revision","");
+		return Messages::createDepotRevisionMessage(realPath,revision);
 	}
 	if(type==IDENTIFICATION)
 	{
@@ -47,14 +56,16 @@ QByteArray *Request::toXml()
 //                 IMPLEMENTATIONS DE LA CLASSE RESPONSE
 //****************************************************************
 
-Response::Response(): Message() {}
+Response::Response(): Message() {this->parameters=new QHash<QString,QByteArray>();}
+QHash<QString,QByteArray> *Response::getParameters() {return parameters;}
 ResponseEnum Response::getType() {return type;}
 void Response::setType(ResponseEnum type) {this->type=type;}
 bool Response::isRequest() {return false;}
 
 QByteArray *Response::toXml()
 {
-	return Messages::createResponseMessage(type);
+	QString revision=parameters->value("revision","");
+	return Messages::createResponseMessage(type,revision);
 }
 
 
@@ -71,7 +82,7 @@ QByteArray *Response::toXml()
 
 
 //Requete pour avertir de la modification du contenu d'un fichier
-QByteArray *Messages::createMediaUpdatedMessage(QString realPath, QByteArray content)
+QByteArray *Messages::createMediaUpdatedMessage(QString realPath, QByteArray content, QString revision)
 {
 	QDomDocument document;
 
@@ -81,6 +92,7 @@ QByteArray *Messages::createMediaUpdatedMessage(QString realPath, QByteArray con
 
 	//On écrit le realPath et le contenu du fichier au format base64 (nécéssaire pour les fichiers binaires)
 	element.setAttribute("realPath",realPath);
+	element.setAttribute("revision",revision);
 	element.appendChild(document.createTextNode(content.toBase64()));
 	document.appendChild(element);
 
@@ -91,16 +103,17 @@ QByteArray *Messages::createMediaUpdatedMessage(QString realPath, QByteArray con
 
 
 //Avertir de la création d'un nouveau Media
-QByteArray *Messages::createMediaCreatedMessage(QString realPath, bool isDirectory)
+QByteArray *Messages::createMediaCreatedMessage(QString realPath, bool isDirectory, QString revision)
 {
 	QDomDocument document;
 
-	//On crèe un noeud avec le nom FileContent et le type CREATED
+	//On crèe un noeud avec le nom FileInfo et le type CREATED
 	QDomElement element=document.createElement("FileInfo");
 	element.setAttribute("type","CREATED");
 
 	//On écrit le realPath
 	element.setAttribute("realPath",realPath);
+	element.setAttribute("revision",revision);
 	element.setAttribute("isDirectory",isDirectory?"true":"false");
 	document.appendChild(element);
 
@@ -110,22 +123,48 @@ QByteArray *Messages::createMediaCreatedMessage(QString realPath, bool isDirecto
 
 
 
+
+
 //Avertir de la suppresion d'un média
-QByteArray *Messages::createMediaRemovedMessage(QString realPath)
+QByteArray *Messages::createMediaRemovedMessage(QString realPath, QString revision)
 {
 	QDomDocument document;
 
-	//On crèe un noeud avec le nom FileContent et le type REMOVED
+	//On crèe un noeud avec le nom FileInfo et le type REMOVED
 	QDomElement element=document.createElement("FileInfo");
 	element.setAttribute("type","REMOVED");
 
 	//On écrit le realPath
 	element.setAttribute("realPath",realPath);
+	element.setAttribute("revision",revision);
 	document.appendChild(element);
 
 	//On retourne le message dans un QByteArray
 	return new QByteArray(document.toByteArray());
 }
+
+
+
+
+//Pour envoyer un numéro de révision
+QByteArray *Messages::createDepotRevisionMessage(QString realPath,QString revision)
+{
+	QDomDocument document;
+
+	//On crèe un noeud avec le nom FileInfo et le type REVISION_FILE_INFO
+	QDomElement element=document.createElement("FileInfo");
+	element.setAttribute("type","REVISION_FILE_INFO");
+
+	//On écrit le realPath et la révision
+	element.setAttribute("realPath",realPath);
+	element.setAttribute("revision",revision);
+	document.appendChild(element);
+
+	//On retourne le message dans un QByteArray
+	return new QByteArray(document.toByteArray());
+}
+
+
 
 
 
@@ -150,8 +189,10 @@ QByteArray *Messages::createIdentificationMessage(QString pseudo, QString passwo
 
 
 
+
+
 //Pour répondre
-QByteArray *Messages::createResponseMessage(ResponseEnum type)
+QByteArray *Messages::createResponseMessage(ResponseEnum type, QString revision)
 {
 	QDomDocument document;
 
@@ -160,6 +201,7 @@ QByteArray *Messages::createResponseMessage(ResponseEnum type)
 
 	//On écrit le code de réponse
 	element.setAttribute("code",QString::number((int)type));
+	element.setAttribute("revision",revision);
 	document.appendChild(element);
 
 	//On retourne le message dans un QByteArray
@@ -194,8 +236,9 @@ Message *Messages::parseMessage(QByteArray *message)
 			{
 				request->setType(UPDATE_FILE_INFO);
 
-				//On récupère le realPath
+				//On récupère le realPath et la revision
 				QString realPath=list.at(i).toElement().attribute("realPath","");
+				QString revision=list.at(i).toElement().attribute("revision","");
 
 				//On récupère le contenu du fichier
 				QByteArray fileContent;
@@ -208,6 +251,7 @@ Message *Messages::parseMessage(QByteArray *message)
 
 				//On écrit un message à retourner
 				request->getParameters()->insert("realPath",realPath.toAscii());
+				request->getParameters()->insert("revision",revision.toAscii());
 				request->getParameters()->insert("content",fileContent);
 				return request;
 			}
@@ -217,26 +261,45 @@ Message *Messages::parseMessage(QByteArray *message)
 			{
 				request->setType(CREATE_FILE_INFO);
 
-				//On récupère le realPath et isDirectory
+				//On récupère le realPath, la révision et isDirectory
 				QString realPath=list.at(i).toElement().attribute("realPath","");
+				QString revision=list.at(i).toElement().attribute("revision","");
 				QString isDirectory=list.at(i).toElement().attribute("isDirectory");
 
 				//On écrit un message à retourner
 				request->getParameters()->insert("realPath",realPath.toAscii());
 				request->getParameters()->insert("isDirectory",isDirectory.toAscii());
+				request->getParameters()->insert("revision",revision.toAscii());
 				return request;
 			}
 
 			//Sinon si c'est une requete de suppression de fichier ou repertoire
 			else if(type=="REMOVED")
 			{
-				request->setType(CREATE_FILE_INFO);
+				request->setType(REMOVE_FILE_INFO);
 
-				//On récupère le realPath
+				//On récupère le realPath et la revision
 				QString realPath=list.at(i).toElement().attribute("realPath","");
+				QString revision=list.at(i).toElement().attribute("revision","");
 
 				//On écrit un message à retourner
 				request->getParameters()->insert("realPath",realPath.toAscii());
+				request->getParameters()->insert("revision",revision.toAscii());
+				return request;
+			}
+
+			//Sinon si c'est une requete de revision de dépot
+			else if(type=="REVISION_FILE_INFO")
+			{
+				request->setType(REVISION_FILE_INFO);
+
+				//On récupère le realPath et la revision
+				QString realPath=list.at(i).toElement().attribute("realPath","");
+				QString revision=list.at(i).toElement().attribute("revision","");
+
+				//On écrit un message à retourner
+				request->getParameters()->insert("realPath",realPath.toAscii());
+				request->getParameters()->insert("revision",revision.toAscii());
 				return request;
 			}
 			return NULL;
@@ -258,6 +321,7 @@ Message *Messages::parseMessage(QByteArray *message)
 			return request;
 		}
 
+		//Si c'est une réponse
 		if(list.at(i).toElement().tagName()=="RESPONSE")
 		{
 			Response *response=new Response();
@@ -265,8 +329,10 @@ Message *Messages::parseMessage(QByteArray *message)
 			//On récupère le code
 			QString codeString=list.at(i).toElement().attribute("code","");
 			int code=codeString.toInt();
+			QString revision=list.at(i).toElement().attribute("revision","");
 
 			response->setType((ResponseEnum)code);
+			response->getParameters()->insert("revision",revision.toAscii());
 			return response;
 		}
 	}
