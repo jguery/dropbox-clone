@@ -57,10 +57,11 @@ signals:
 	void disconnectedClient(ClientManager *clientManager);
 
 private:
-	ClientManager(QVector<ClientManager*> *clients,DatabaseManager *databaseManager,FileManager *fileManager,QStandardItemModel *model);
+	ClientManager(int clientSocket,QVector<ClientManager*> *clients,DatabaseManager *databaseManager,FileManager *fileManager,QStandardItemModel *model);
 
         //La socket communiquant avec le client
 	Socket *socket;
+	int clientSocket;
 
 	//La liste des autres clients
 	QVector<ClientManager*> *clients;

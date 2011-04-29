@@ -108,6 +108,7 @@ void NetworkInterface::erreursSsl(const QList<QSslError> &errors)
 }
 
 
+#include<iostream>
 
 //La méthode run pour lancer le thread
 void NetworkInterface::run()
@@ -122,7 +123,7 @@ void NetworkInterface::run()
 
 	QObject::connect(socket,SIGNAL(encrypted()),this,SLOT(connexionEncrypted()),Qt::DirectConnection);
 	QObject::connect(socket,SIGNAL(sslErrors(QList<QSslError>)),this,SLOT(erreursSsl(QList<QSslError>)),Qt::DirectConnection);
-	QObject::connect(socket,SIGNAL(receiveMessage(QByteArray*)),this,SLOT(receiveMessageAction(QByteArray*)),Qt::DirectConnection);
+	QObject::connect(socket,SIGNAL(receiveMessage(QByteArray*)),this,SLOT(receiveMessageAction(QByteArray*)));
 
 	QObject::connect(this,SIGNAL(connectToServerRequested()),this,SLOT(connectToServer()));
 	QObject::connect(this,SIGNAL(disconnectFromServerRequested()),this,SLOT(disconnectFromServer()));
@@ -185,10 +186,10 @@ void NetworkInterface::connectToServer()
 	Widget::addRowToTable("Tentative de connexion au serveur",model,MSG_1);
 	//On tente une connexion
 	bool a=socket->connectToServer(configurationNetwork->getAddress(),configurationNetwork->getPort());
-	if(!a) Widget::addRowToTable("Echec: Connexion échouée",model,MSG_3);
+	if(!a) {Widget::addRowToTable("Echec: Connexion échouée",model,MSG_3);return;}
 
 	//On s'identifie
-	if(!this->sendIdentification()) this->disconnectFromServer();
+	if(!this->sendIdentification()) emit this->disconnectFromServerRequested();
 }
 
 
@@ -241,7 +242,7 @@ void NetworkInterface::receiveMessageAction(QByteArray *message)
 			return ;
 		}
 		//Si echec d'identification, on se déconnecte
-		if(r!=ACCEPT_IDENTIFICATION) this->disconnectFromServer();
+		if(r!=ACCEPT_IDENTIFICATION) emit this->disconnectFromServerRequested();
 		else
 		{
 			isConnected=true;

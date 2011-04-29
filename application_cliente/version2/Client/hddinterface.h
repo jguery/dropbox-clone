@@ -43,7 +43,7 @@ private:
 	void receivedRequest(Request *r);
 	void detectedMedia(Media *m);
 
-	void sendDepotsRevisions();
+	bool sendDepotsRevisions();
 
 	//Les autres interfaces
 	ConfigurationData *configurationData;

@@ -131,6 +131,13 @@ Dir::Dir(QString localPath,QString realPath,Dir *parent): Media(localPath,realPa
 	if(parent!=NULL) QObject::connect(this,SIGNAL(detectChangement(Media*)),parent,SIGNAL(detectChangement(Media*)),Qt::QueuedConnection);
 	QObject::connect(watcher,SIGNAL(directoryChanged(QString)),this,SLOT(directoryChangedAction()),Qt::QueuedConnection);
 
+	QObject::connect(this,SIGNAL(addSubDirRequested(QString,QString)),this,SLOT(addSubDir(QString,QString)),Qt::QueuedConnection);
+	QObject::connect(this,SIGNAL(addSubFileRequested(QString,QString)),this,SLOT(addSubFile(QString,QString)),Qt::QueuedConnection);
+	this->lastAddedDir=NULL;
+	this->lastAddedFile=NULL;
+	this->waitAddSubDirCondition=new QWaitCondition();
+	this->waitAddSubFileCondition=new QWaitCondition();
+
 	this->listen=false;
 }
 
@@ -334,28 +341,68 @@ Media *Dir::getSubMedia(int i)
 
 
 //Ajouter un sous fichier
-File *Dir::addSubFile(QString localPath,QString realPath)
+File *Dir::addSubFileRequest(QString localPath,QString realPath)
 {
-	File *f=File::createFile(localPath,realPath,this);
-	if(f==NULL) return NULL;
-	this->lock();
-	subMedias->append(f);
-	this->unlock();
+	QMutex mutex;
+	mutex.lock();
+	emit addSubFileRequested(localPath,realPath);
+	waitAddSubFileCondition->wait(&mutex,5000);
+	mutex.unlock();
+	File *f=this->lastAddedFile;
+	this->lastAddedFile=NULL;
 	return f;
 }
 
 
 
 //Ajouter un sous repertoire
-Dir *Dir::addSubDir(QString localPath,QString realPath)
+Dir *Dir::addSubDirRequest(QString localPath,QString realPath)
+{
+	QMutex mutex;
+	mutex.lock();
+	emit addSubDirRequested(localPath,realPath);
+	waitAddSubDirCondition->wait(&mutex,5000);
+	mutex.unlock();
+	Dir *d=this->lastAddedDir;
+	this->lastAddedDir=NULL;
+	return d;
+}
+
+
+
+
+
+//Ajouter un sous fichier
+void Dir::addSubFile(QString localPath,QString realPath)
+{
+	File *f=File::createFile(localPath,realPath,this);
+	if(f!=NULL)
+	{
+		//f->moveToThread(QApplication::instance()->thread());
+		this->lock();
+		subMedias->append(f);
+		this->unlock();
+	}
+	this->lastAddedFile=f;
+	this->waitAddSubFileCondition->wakeAll();
+}
+
+
+
+//Ajouter un sous repertoire
+void Dir::addSubDir(QString localPath,QString realPath)
 {
 	Dir *d=Dir::createDir(localPath,realPath,this);
-	if(d==NULL) return NULL;
-	this->lock();
-	subMedias->append(d);
-	this->unlock();
-	d->setListenning(listen);
-	return d;
+	if(d!=NULL)
+	{
+		//d->moveToThread(QApplication::instance()->thread());
+		this->lock();
+		subMedias->append(d);
+		this->unlock();
+		d->setListenning(listen);
+	}
+	this->lastAddedDir=d;
+	this->waitAddSubDirCondition->wakeAll();
 }
 
 

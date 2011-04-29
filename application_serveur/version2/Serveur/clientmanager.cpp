@@ -6,30 +6,20 @@
 //Pour allouer l'objet ClientManager
 ClientManager *ClientManager::createClientManager(int clientSocket,QVector<ClientManager*> *clients,DatabaseManager *databaseManager,FileManager *fileManager,QStandardItemModel *model)
 {
-	if(!databaseManager || !fileManager) return NULL;
-	ClientManager *cl=new ClientManager(clients,databaseManager,fileManager,model);
-	if(cl->socket->setDescriptor(clientSocket))
-	{
-		Widget::addRowToTable("Le client "+cl->socket->peerAddress().toString()+" vient de se connecter en mode non crypté",model,MSG_2);
-		return cl;
-	}
-	delete cl;
-	return NULL;
+	if(!databaseManager || !fileManager)
+		return NULL;
+	ClientManager *cl=new ClientManager(clientSocket,clients,databaseManager,fileManager,model);
+	return cl;
 }
 
 
 
 
 //Le constructeur
-ClientManager::ClientManager(QVector<ClientManager*> *clients,DatabaseManager *databaseManager,FileManager *fileManager,QStandardItemModel *model): QThread()
+ClientManager::ClientManager(int clientSocket,QVector<ClientManager*> *clients,DatabaseManager *databaseManager,FileManager *fileManager,QStandardItemModel *model): QThread()
 {
 	this->moveToThread(this);
-	socket=new Socket();
-
-	QObject::connect(socket, SIGNAL(receiveMessage(QByteArray*)), this, SLOT(receiveMessageAction(QByteArray*)));
-	QObject::connect(socket, SIGNAL(encrypted()), this, SLOT(connexionEncrypted()),Qt::DirectConnection);
-	QObject::connect(socket, SIGNAL(disconnected()), this, SLOT(clientDisconnected()),Qt::DirectConnection);
-	QObject::connect(socket, SIGNAL(sslErrors(QList<QSslError>)), this, SLOT(erreursSsl(QList<QSslError>)),Qt::DirectConnection);
+	this->clientSocket=clientSocket;
 
 	this->databaseManager=databaseManager;
 	this->fileManager=fileManager;
@@ -41,13 +31,28 @@ ClientManager::ClientManager(QVector<ClientManager*> *clients,DatabaseManager *d
 	this->timerOldDetection.setInterval(5000);
 	QObject::connect(&timerOldDetection,SIGNAL(timeout()),this,SLOT(sendNewDetection()));
 
-	start();
+	this->start();
 }
 
 
 
 void ClientManager::run()
 {
+	socket=new Socket();
+	QObject::connect(socket, SIGNAL(disconnected()), this, SLOT(clientDisconnected()),Qt::DirectConnection);
+	QObject::connect(socket, SIGNAL(receiveMessage(QByteArray*)), this, SLOT(receiveMessageAction(QByteArray*)));
+	QObject::connect(socket, SIGNAL(encrypted()), this, SLOT(connexionEncrypted()),Qt::DirectConnection);
+	QObject::connect(socket, SIGNAL(sslErrors(QList<QSslError>)), this, SLOT(erreursSsl(QList<QSslError>)),Qt::DirectConnection);
+	if(socket->setDescriptor(clientSocket))
+	{
+		Widget::addRowToTable("Initialisation d'une connexion avec le client "+socket->peerAddress().toString()+".",model,MSG_2);
+	}
+	else
+	{
+		Widget::addRowToTable("Impossible d'initialiser une connexion avec le client "+socket->peerAddress().toString(),model,MSG_2);
+		socket->disconnectClient();
+		return ;
+	}
 	exec();
 }
 
@@ -122,7 +127,13 @@ void ClientManager::receiveMessageAction(QByteArray *message)
 
 void ClientManager::receivedRequest(Request *r)
 {
-	if(r==NULL) return;
+	if(r==NULL)
+	{
+		Response response;
+		response.setType(REJECT_FILE_INFO_FOR_SVNERROR);
+		this->socket->sendMessage(response.toXml());
+		return ;
+	}
 	if(state==CONNECTED)
 	{
 		if(r->getType()==IDENTIFICATION)
@@ -148,15 +159,14 @@ void ClientManager::receivedRequest(Request *r)
 				Widget::addRowToTable("Identification refusée",model,MSG_3);
 				this->socket->sendMessage(response.toXml());
 			}
-			return;
 		}
 		else
 		{
 			Widget::addRowToTable("La requête a été ignorée, une identification est requise.",model,MSG_3);
 			Response response;response.setType(REJECT_FILE_INFO_FOR_RIGHT);
 			this->socket->sendMessage(response.toXml());
-			return;
 		}
+		return;
 	}
 	if(state==IDENTIFIED)
 	{
@@ -179,7 +189,7 @@ void ClientManager::receivedRequest(Request *r)
 			{
 				Widget::addRowToTable("Dépot introuvable",model,MSG_3);
 				Response response;response.setType(REJECT_FILE_INFO_FOR_RIGHT);
-				this->socket->sendMessage(response.toXml());
+				//this->socket->sendMessage(response.toXml());
 				return;
 			}
 			Depot *depot=this->fileManager->getDepot(u->depotname);
@@ -298,7 +308,7 @@ void ClientManager::receivedRequest(Request *r)
 				if(state==SYNCHRONIZED) response.getParameters()->insert("revision",QByteArray::number(svnRevision));
 			}
 		}
-		if(r->getType()==REMOVE_FILE_INFO)
+		else if(r->getType()==REMOVE_FILE_INFO)
 		{
 			if(!depot->isMediaExists(realPath))
 			{
@@ -308,7 +318,7 @@ void ClientManager::receivedRequest(Request *r)
 			}
 			else
 			{
-				bool result=result=depot->deleteMedia(realPath,user->login,user->password);
+				bool result=depot->deleteMedia(realPath,user->login,user->password);
 				if(result)
 				{
 					response.setType(ACCEPT_FILE_INFO);
@@ -344,7 +354,7 @@ void ClientManager::sendNewDetection()
 
 ClientManager::~ClientManager()
 {
-	socket->disconnectClient();
+	this->terminate();
 	delete this->socket;
 }
 

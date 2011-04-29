@@ -114,6 +114,9 @@ void Socket::inputStream()
 	QByteArray *message=new QByteArray();
 	in >> (*message);
 
+	qDebug("Recu=");
+	qDebug(*message);
+
 	//On emet un signal pour donner le message recu
 	emit receiveMessage(message);
 }
@@ -127,6 +130,9 @@ void Socket::inputStream()
 bool Socket::sendMessage(QByteArray *message)
 {
 	if(message==NULL) return false;
+
+	qDebug("Envoi=");
+	qDebug(*message);
 
 	//On construit le message à envoyer (avec les entetes)
 	QByteArray block;
@@ -150,6 +156,8 @@ bool Socket::sendMessage(QByteArray *message)
 
 	//On attends indéfiniment pour l'envoi
 	bool result = waitForBytesWritten(-1);
+
+	qDebug("---------------------");
 
 	//On supprime le message et on retourne le résultat de l'envoi
 	delete message;

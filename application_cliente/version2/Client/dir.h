@@ -5,6 +5,8 @@
 #include <QtCore/QFileSystemWatcher>
 #include <QtCore/QDir>
 #include <QtCore/QVector>
+#include <QWaitCondition>
+#include <QApplication>
 
 
 
@@ -27,8 +29,8 @@ public:
 	//Pour gérer la liste de ses sous médias
 	int numberSubMedia();
 	Media *getSubMedia(int i);
-	File *addSubFile(QString localPath,QString realPath);
-	Dir *addSubDir(QString localPath,QString realPath);
+	File *addSubFileRequest(QString localPath,QString realPath);
+	Dir *addSubDirRequest(QString localPath,QString realPath);
 	bool delSubMedia(Media *m);
 
 	//implémentation des fonctions virtuelles de la classe Media dont elle hérite
@@ -57,9 +59,15 @@ private slots:
 	//Le slot qui sera appelé lorsque le repertoire a subit un changement
 	void directoryChangedAction();
 
+	void addSubFile(QString localPath,QString realPath);
+	void addSubDir(QString localPath,QString realPath);
+
 signals:
 	//Pour prévenir le parent d'une détection
 	void detectChangement(Media *m);
+
+	void addSubFileRequested(QString,QString);
+	void addSubDirRequested(QString,QString);
 
 protected:
 	//Constructeur
@@ -76,6 +84,11 @@ protected:
 
 	//les anciennes détections qui n'avaient pas été traitées lors du dernier lancement
 	QList<Media*> *oldDetections;
+
+	QWaitCondition *waitAddSubFileCondition;
+	File *lastAddedFile;
+	QWaitCondition *waitAddSubDirCondition;
+	Dir *lastAddedDir;
 };
 
 #endif // DIR_H

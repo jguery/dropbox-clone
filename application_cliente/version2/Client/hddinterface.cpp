@@ -63,7 +63,7 @@ void HddInterface::run()
 		{
 			//On vérifie qu'on est toujours bien connecté
 			if(networkInterface->blockWhileDisconnected())
-				sendDepotsRevisions();
+				if(!sendDepotsRevisions()) continue;
 
 			detect=false;
 			Media *m=configurationData->getConfigurationFile()->getMediaDetection();
@@ -112,46 +112,25 @@ void HddInterface::receivedRequest(Request *r)
 {
 	Widget::addRowToTable("Traitement d'une requête reçu du serveur",model,MSG_1);
 	RequestEnum e=r->getType();
+	QString realPath=r->getParameters()->value("realPath","");
+	QString revision=r->getParameters()->value("revision","");
+	Depot *depot=configurationData->getConfigurationFile()->getMediaDepot(realPath);
 	if(e==CREATE_FILE_INFO)
 	{
-		QString realPath=r->getParameters()->value("realPath","");
 		bool isDirectory=(r->getParameters()->value("isDirectory","")=="true")?true:false;
 		receivedCreatedRequest(realPath,isDirectory);
-		QString revision=r->getParameters()->value("revision","");
-		Depot *depot=configurationData->getConfigurationFile()->getMediaDepot(realPath);
-		if(!depot)
-		{
-			qDebug("Warning 40 H.I.");
-			return;
-		}
-		if(revision!="") depot->setRevision(revision.toInt());
+		if(depot && revision!="") depot->setRevision(revision.toInt());
 	}
 	else if(e==UPDATE_FILE_INFO)
 	{
-		QString realPath=r->getParameters()->value("realPath","");
 		QByteArray content=r->getParameters()->value("content","");
 		receivedUpdatedRequest(realPath,content);
-		QString revision=r->getParameters()->value("revision","");
-		Depot *depot=configurationData->getConfigurationFile()->getMediaDepot(realPath);
-		if(!depot)
-		{
-			qDebug("Warning 44 H.I.");
-			return;
-		}
-		if(revision!="") depot->setRevision(revision.toInt());
+		if(depot && revision!="") depot->setRevision(revision.toInt());
 	}
 	else if(e==REMOVE_FILE_INFO)
 	{
-		QString realPath=r->getParameters()->value("realPath","");
 		receivedRemovedRequest(realPath);
-		QString revision=r->getParameters()->value("revision","");
-		Depot *depot=configurationData->getConfigurationFile()->getMediaDepot(realPath);
-		if(!depot)
-		{
-			qDebug("Warning 48 H.I.");
-			return;
-		}
-		if(revision!="") depot->setRevision(revision.toInt());
+		if(depot && revision!="") depot->setRevision(revision.toInt());
 	}
 	else
 	{
@@ -163,15 +142,17 @@ void HddInterface::receivedRequest(Request *r)
 
 
 
-void HddInterface::sendDepotsRevisions()
+bool HddInterface::sendDepotsRevisions()
 {
 	QHash<QString,int> hash=configurationData->getConfigurationFile()->getDepotsRevisions();
 	QHashIterator<QString,int> iterator(hash);
 	while(iterator.hasNext())
 	{
 		iterator.next();
-		networkInterface->sendDepotRevision(iterator.key(),iterator.value());
+		if(!networkInterface->sendDepotRevision(iterator.key(),iterator.value()))
+			return false;
 	}
+	return true;
 }
 
 
@@ -520,7 +501,7 @@ void HddInterface::receivedCreatedRequest(QString realPath, bool isDirectory)
 		}
 
 		//Crée le répertoire dans l'arborescence de synchronisation du client
-		Dir *d=parent->addSubDir(parent->getLocalPath()+"/"+realName,parent->getRealPath()+"/"+realName);
+		Dir *d=parent->addSubDirRequest(parent->getLocalPath()+"/"+realName,parent->getRealPath()+"/"+realName);
 		if(!d)
 		{
 			Widget::addRowToTable("L'allocation du repertoire dans l'arborescence a échoué",model,MSG_3);
@@ -547,7 +528,7 @@ void HddInterface::receivedCreatedRequest(QString realPath, bool isDirectory)
 		file.close();
 
 		//Crée le fichier à l'arbo de synchronisation
-		File *f=parent->addSubFile(parent->getLocalPath()+"/"+realName,parent->getRealPath()+"/"+realName);
+		File *f=parent->addSubFileRequest(parent->getLocalPath()+"/"+realName,parent->getRealPath()+"/"+realName);
 		if(!f)
 		{
 			Widget::addRowToTable("L'allocation du fichier dans l'arborescence a échoué",model,MSG_3);
