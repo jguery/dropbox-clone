@@ -6,9 +6,9 @@
 HddInterface *HddInterface::createHddInterface(ConfigurationData *configurationData, NetworkInterface *networkInterface,QStandardItemModel *model)
 {
 	//On vérifie qu'aucun des paramètres n'est NULL
-	if(configurationData==NULL || networkInterface==NULL)
+	if(configurationData==NULL || networkInterface==NULL || model==NULL)
 	{
-		if(model) Widget::addRowToTable("Erreur d'allocation du module de transferts",model,MSG_1);
+		if(model!=NULL) Widget::addRowToTable("Erreur d'allocation du module de transferts",model,MSG_1);
 		return NULL;
 	}
 
@@ -31,17 +31,20 @@ HddInterface::HddInterface(ConfigurationData *configurationData,
 	this->networkInterface=networkInterface;
 	this->configurationData=configurationData;
 	this->model=model;
+	this->canSend=false;
 
 	this->moveToThread(this);
-
-	//On démarre l'exécution
-	this->start();
 
 	//On demande au network de nous prevenir lorsqu'ils détectent une modif
 	this->networkInterface->setWaitReceiveRequestList(&waitCondition);
 
 	//On demande aux repertoires de nous prevenir lorsqu'ils détectent une modif
 	this->configurationData->getConfigurationFile()->setWaitConditionDetection(&waitCondition);
+
+	QObject::connect(networkInterface,SIGNAL(identified()),this,SLOT(startTransaction()));
+
+	//On démarre l'exécution
+	this->start();
 
 	Widget::addRowToTable("Le module de transferts a bien été alloué",model,MSG_1);
 }
@@ -54,7 +57,7 @@ void HddInterface::run()
 	forever
 	{
 		mutexWaitCondition.lock();
-		waitCondition.wait(&mutexWaitCondition,5000);
+		waitCondition.wait(&mutexWaitCondition,50);
 		mutexWaitCondition.unlock();
 
 		bool detect;
@@ -62,15 +65,22 @@ void HddInterface::run()
 		do
 		{
 			//On vérifie qu'on est toujours bien connecté
-			if(networkInterface->blockWhileDisconnected())
-				if(!sendDepotsRevisions()) continue;
+			detect=true;
+			if(!networkInterface->checkIsConnected())
+			{
+				exec();
+				continue;
+			}
 
 			detect=false;
-			Media *m=configurationData->getConfigurationFile()->getMediaDetection();
-			if(m!=NULL)
+			if(canSend)
 			{
-				this->detectedMedia(m);
-				detect=true;
+				Media *m=configurationData->getConfigurationFile()->getMediaDetection();
+				if(m!=NULL)
+				{
+					this->detectedMedia(m);
+					detect=true;
+				}
 			}
 
 			//y a t-il des requetes recues?
@@ -97,10 +107,7 @@ void HddInterface::detectedMedia(Media *m)
 	if(state==MediaIsCreating) detectedCreatedMedia(m);
 	else if(state==MediaIsUpdating) detectedUpdatedMedia(m);
 	else if(state==MediaIsRemoving) detectedRemovedMedia(m);
-	else
-	{
-		qDebug("Warning 1 H.I.");
-	}
+	else qDebug("Warning 1 H.I.");
 }
 
 
@@ -132,28 +139,42 @@ void HddInterface::receivedRequest(Request *r)
 		receivedRemovedRequest(realPath);
 		if(depot && revision!="") depot->setRevision(revision.toInt());
 	}
-	else
+	else if(e==END_OLD_DETECTIONS)
 	{
-		qDebug("Warning 2 H.I.");
+		canSend=true;
 	}
+	else qDebug("Warning 2 H.I.");
 }
 
 
 
 
 
-bool HddInterface::sendDepotsRevisions()
+void HddInterface::startTransaction()
 {
+	this->canSend=true;
+	int nbOldDetections=configurationData->getConfigurationFile()->getNumberMediaDetection();
 	QHash<QString,int> hash=configurationData->getConfigurationFile()->getDepotsRevisions();
 	QHashIterator<QString,int> iterator(hash);
 	while(iterator.hasNext())
 	{
 		iterator.next();
-		if(!networkInterface->sendDepotRevision(iterator.key(),iterator.value()))
-			return false;
+		Response *resp=networkInterface->sendDepotRevision(iterator.key(),iterator.value());
+		if(resp==NULL) qDebug("Warning 232 H.I.");
+		if(resp->getType()!=ACCEPT_FILE_INFO) qDebug("Warning 233 H.I.");
 	}
-	return true;
+	while(nbOldDetections>0)
+	{
+		Media *m=configurationData->getConfigurationFile()->getMediaDetection();
+		if(m==NULL) break;
+		this->detectedMedia(m);
+		nbOldDetections--;
+	}
+	networkInterface->sendEndOldDetections();
+	this->canSend=false;
+	this->exit();
 }
+
 
 
 
@@ -283,6 +304,7 @@ int HddInterface::detectedRemovedMedia(Media *m)
 	}
 	else if(response==REJECT_FILE_INFO_FOR_PARAMETERS)
 	{
+		m->getParent()->delSubMedia(m);
 		configurationData->getConfigurationFile()->removeMediaDetection();
 		QString revision=resp->getParameters()->value("revision","");
 		if(revision!="") depot->setRevision(revision.toInt());
@@ -322,6 +344,7 @@ int HddInterface::detectedRemovedMedia(Media *m)
 	}
 	else if(response==REJECT_FILE_INFO_FOR_SVNERROR)
 	{
+		m->getParent()->delSubMedia(m);
 		configurationData->getConfigurationFile()->removeMediaDetection();
 		QString revision=resp->getParameters()->value("revision","");
 		if(revision!="") depot->setRevision(revision.toInt());

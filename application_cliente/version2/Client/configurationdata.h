@@ -155,6 +155,9 @@ public:
 	//Pour récupérer la prochaine détection à traiter
 	Media *getMediaDetection();
 
+	//Le nombre de détections à traiter
+	int getNumberMediaDetection();
+
 	//Pour supprimer une détection qui vient d'être traitée
 	void removeMediaDetection();
 

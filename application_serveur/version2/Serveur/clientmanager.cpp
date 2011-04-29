@@ -27,9 +27,6 @@ ClientManager::ClientManager(int clientSocket,QVector<ClientManager*> *clients,D
 	this->clients=clients;
 	this->state=CONNECTED;
 	this->user=NULL;
-	this->timerOldDetection.setSingleShot(true);
-	this->timerOldDetection.setInterval(5000);
-	QObject::connect(&timerOldDetection,SIGNAL(timeout()),this,SLOT(sendNewDetection()));
 
 	this->start();
 }
@@ -134,6 +131,10 @@ void ClientManager::receivedRequest(Request *r)
 		this->socket->sendMessage(response.toXml());
 		return ;
 	}
+	if(state==SERVER_DETECTIONS)
+	{
+		qDebug("Warning 59 C.M.");
+	}
 	if(state==CONNECTED)
 	{
 		if(r->getType()==IDENTIFICATION)
@@ -147,10 +148,9 @@ void ClientManager::receivedRequest(Request *r)
 			{
 				response.setType(ACCEPT_IDENTIFICATION);
 				Widget::addRowToTable("Identification acceptée",model,MSG_3);
-				this->state=IDENTIFIED;
+				this->state=CLIENT_DETECTIONS;
 				this->user=databaseManager->getUser(pseudo);
 				this->socket->sendMessage(response.toXml());
-				this->timerOldDetection.start();
 			}
 			else
 			{
@@ -168,10 +168,8 @@ void ClientManager::receivedRequest(Request *r)
 		}
 		return;
 	}
-	if(state==IDENTIFIED)
+	if(state==CLIENT_DETECTIONS)
 	{
-		this->timerOldDetection.start();
-
 		if(r->getType()==REVISION_FILE_INFO)
 		{
 			Widget::addRowToTable("Le client "+this->socket->peerAddress().toString()+" a envoyé un message de révision de dépot.",model,MSG_3);
@@ -189,17 +187,28 @@ void ClientManager::receivedRequest(Request *r)
 			{
 				Widget::addRowToTable("Dépot introuvable",model,MSG_3);
 				Response response;response.setType(REJECT_FILE_INFO_FOR_RIGHT);
-				//this->socket->sendMessage(response.toXml());
+				this->socket->sendMessage(response.toXml());
 				return;
 			}
 			Depot *depot=this->fileManager->getDepot(u->depotname);
 			QList<Request*> list=depot->getUpgradingRequest(revision);
 			upgrading.append(list);
+			Response response;response.setType(ACCEPT_FILE_INFO);
+			this->socket->sendMessage(response.toXml());
 		}
-	}
-	if(state==NEWDETECTIONS)
-	{
-		qDebug("Warning 59 C.M.");
+
+		if(r->getType()==END_OLD_DETECTIONS)
+		{
+			this->state=SERVER_DETECTIONS;
+			for(int i=0;i<upgrading.size();i++)
+				this->socket->sendMessage(upgrading.at(i)->toXml());
+			Request request;
+			request.setType(END_OLD_DETECTIONS);
+			this->socket->sendMessage(request.toXml());
+			this->state=SYNCHRONIZED;
+			return;
+		}
+
 	}
 	if(r->getType()==CREATE_FILE_INFO || r->getType()==UPDATE_FILE_INFO || r->getType()==REMOVE_FILE_INFO)
 	{
@@ -243,7 +252,7 @@ void ClientManager::receivedRequest(Request *r)
 		{
 			qDebug("Warning 2 C.M.");
 			Response response;response.setType(REJECT_FILE_INFO_FOR_SVNERROR);
-			if(state==SYNCHRONIZED) response.getParameters()->insert("revision",QByteArray::number(svnRevision));
+			response.getParameters()->insert("revision",QByteArray::number(svnRevision));
 			this->socket->sendMessage(response.toXml());
 			return;
 		}
@@ -255,13 +264,13 @@ void ClientManager::receivedRequest(Request *r)
 			{
 				if(svnRevision==clientRevision)	qDebug("Warning 20 C.M.");
 				response.setType(REJECT_FILE_INFO_FOR_CONFLICT);
-				if(state==SYNCHRONIZED) response.getParameters()->insert("revision",QByteArray::number(svnRevision));
+				response.getParameters()->insert("revision",QByteArray::number(svnRevision));
 			}
 			else if(!(depot->isMediaExists(Depot::extractParentPath(realPath)+"/")))
 			{
 				if(svnRevision==clientRevision)	qDebug("Warning 21 C.M.");
 				response.setType(REJECT_FILE_INFO_FOR_CONFLICT);
-				if(state==SYNCHRONIZED) response.getParameters()->insert("revision",QByteArray::number(svnRevision));
+				response.getParameters()->insert("revision",QByteArray::number(svnRevision));
 			}
 			else
 			{
@@ -273,13 +282,13 @@ void ClientManager::receivedRequest(Request *r)
 				if(result)
 				{
 					response.setType(ACCEPT_FILE_INFO);
-					if(state==SYNCHRONIZED) response.getParameters()->insert("revision",QByteArray::number(svnRevision));
+					response.getParameters()->insert("revision",QByteArray::number(depot->getRevision()));
 				}
 				else
 				{
 					qDebug("Warning 23 C.M.");
 					response.setType(REJECT_FILE_INFO_FOR_SVNERROR);
-					if(state==SYNCHRONIZED) response.getParameters()->insert("revision",QByteArray::number(svnRevision));
+					response.getParameters()->insert("revision",QByteArray::number(svnRevision));
 				}
 			}
 		}
@@ -292,20 +301,20 @@ void ClientManager::receivedRequest(Request *r)
 				if(result)
 				{
 					response.setType(ACCEPT_FILE_INFO);
-					if(state==SYNCHRONIZED) response.getParameters()->insert("revision",QByteArray::number(svnRevision));
+					response.getParameters()->insert("revision",QByteArray::number(depot->getRevision()));
 				}
 				else
 				{
 					qDebug("Warning 25 C.M.");
 					response.setType(REJECT_FILE_INFO_FOR_SVNERROR);
-					if(state==SYNCHRONIZED) response.getParameters()->insert("revision",QByteArray::number(svnRevision));
+					response.getParameters()->insert("revision",QByteArray::number(svnRevision));
 				}
 			}
 			else
 			{
 				if(svnRevision==clientRevision)	qDebug("Warning 26 C.M.");
 				response.setType(REJECT_FILE_INFO_FOR_CONFLICT);
-				if(state==SYNCHRONIZED) response.getParameters()->insert("revision",QByteArray::number(svnRevision));
+				response.getParameters()->insert("revision",QByteArray::number(svnRevision));
 			}
 		}
 		else if(r->getType()==REMOVE_FILE_INFO)
@@ -314,7 +323,7 @@ void ClientManager::receivedRequest(Request *r)
 			{
 				if(svnRevision==clientRevision)	qDebug("Warning 27 C.M.");
 				response.setType(REJECT_FILE_INFO_FOR_CONFLICT);
-				if(state==SYNCHRONIZED) response.getParameters()->insert("revision",QByteArray::number(svnRevision));
+				response.getParameters()->insert("revision",QByteArray::number(svnRevision));
 			}
 			else
 			{
@@ -322,13 +331,13 @@ void ClientManager::receivedRequest(Request *r)
 				if(result)
 				{
 					response.setType(ACCEPT_FILE_INFO);
-					if(state==SYNCHRONIZED) response.getParameters()->insert("revision",QByteArray::number(svnRevision));
+					response.getParameters()->insert("revision",QByteArray::number(depot->getRevision()));
 				}
 				else
 				{
 					qDebug("Warning 23 C.M.");
 					response.setType(REJECT_FILE_INFO_FOR_SVNERROR);
-					if(state==SYNCHRONIZED) response.getParameters()->insert("revision",QByteArray::number(svnRevision));
+					response.getParameters()->insert("revision",QByteArray::number(svnRevision));
 				}
 			}
 		}
@@ -342,13 +351,7 @@ void ClientManager::receivedRequest(Request *r)
 
 
 
-void ClientManager::sendNewDetection()
-{
-	this->state=NEWDETECTIONS;
-	for(int i=0;i<upgrading.size();i++)
-		this->socket->sendMessage(upgrading.at(i)->toXml());
-	this->state=SYNCHRONIZED;
-}
+
 
 
 

@@ -35,6 +35,9 @@ public:
 	//Pour l'exécution du Thread
 	void run();
 
+public slots:
+	void startTransaction();
+
 private:
 	//Le constructeur
 	HddInterface(ConfigurationData *configurationData,NetworkInterface *networkInterface,QStandardItemModel *model);
@@ -55,6 +58,9 @@ private:
 
 	//Juste pour l'affichage
 	QStandardItemModel *model;
+
+	//pour savoir si le mode permet d'envoyer des requetes
+	bool canSend;
 };
 
 #endif // HDDINTERFACE_H

@@ -61,14 +61,10 @@ bool Socket::connectToServer(QString address,int port)
 	connectToHostEncrypted(address, port);
 
 	//On attends au plus 30 secondes pour que la connexion s'établisse
-	//////////////////////////////
-	//A revoir. en fait c'est appélé depuis l'interface (gui); peut etre qu'il ne faut donc pas bloquer la fonction
 	bool result = waitForConnected();
 
 	if(!result) return false;
 
-	//////////////////////////////
-	//A revoir. en fait c'est appélé depuis l'interface (gui); peut etre qu'il ne faut donc pas bloquer la fonction
 	result=waitForEncrypted();
 
 	//On retourne le résultat true/false
@@ -88,8 +84,6 @@ bool Socket::disconnectFromServer()
 	//On se déconnecte. Maximum 30 secondes pour la déconnexion
 	disconnectFromHost();
 
-	//////////////////////////////
-	//A revoir. en fait c'est appélé depuis l'interface (gui); peut etre qu'il ne faut donc pas bloquer la fonction
 	bool result = waitForDisconnected();
 
 	//On retourne le résultat true/false
@@ -140,9 +134,6 @@ bool Socket::sendMessage(QByteArray *message)
 {
 	if(message==NULL) return false;
 
-	qDebug("Envoi=");
-	qDebug(*message);
-
 	//On construit le message à envoyer (avec les entetes)
 	QByteArray block;
 	QDataStream out(&block, QIODevice::WriteOnly);
@@ -166,7 +157,9 @@ bool Socket::sendMessage(QByteArray *message)
 	//On attends maxi 30s pour l'envoi
 	bool result = waitForBytesWritten();
 
-	qDebug("---------------------");
+	qDebug("Envoi=");
+	qDebug(*message);
+
 	//On supprime le message et on retourne le résultat de l'envoi
 	delete message;
 	return result;

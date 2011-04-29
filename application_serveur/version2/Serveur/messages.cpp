@@ -41,6 +41,10 @@ QByteArray *Request::toXml()
 		QString revision=parameters->value("revision","");
 		return Messages::createDepotRevisionMessage(realPath,revision);
 	}
+	if(type==END_OLD_DETECTIONS)
+	{
+		return Messages::createEndOldDetections();
+	}
 	if(type==IDENTIFICATION)
 	{
 		QString pseudo=parameters->value("pseudo","");
@@ -209,6 +213,19 @@ QByteArray *Messages::createResponseMessage(ResponseEnum type, QString revision)
 }
 
 
+//Pour terminer un envoi d'anciennes détections
+QByteArray *Messages::createEndOldDetections()
+{
+	QDomDocument document;
+
+	//On crèe un noeud avec le nom END_OLD_DETECTIONS
+	QDomElement element=document.createElement("END_OLD_DETECTIONS");
+	document.appendChild(element);
+
+	//On retourne le message dans un QByteArray
+	return new QByteArray(document.toByteArray());
+}
+
 
 
 
@@ -303,6 +320,14 @@ Message *Messages::parseMessage(QByteArray *message)
 				return request;
 			}
 			return NULL;
+		}
+
+		//Si c'est un message de fin d'anciennes détections
+		if(list.at(i).toElement().tagName()=="END_OLD_DETECTIONS")
+		{
+			Request *request=new Request();
+			request->setType(END_OLD_DETECTIONS);
+			return request;
 		}
 
 		//Si c'est un message d'identification

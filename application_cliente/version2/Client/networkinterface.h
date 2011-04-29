@@ -33,6 +33,8 @@ public:
 	Response *sendMediaCreated(QString realPath,bool isDirectory, int revision);
 	Response *sendMediaUpdated(QString realPath,QByteArray content, int revision);
 	Response *sendMediaRemoved(QString realPath, int revision);
+	Response *sendDepotRevision(QString realPath,int revision);
+	bool sendEndOldDetections();
 
 	//Pour l'exécution du thread
 	void run();
@@ -50,10 +52,9 @@ public:
 	//Bloquer le thread appelant tant qu'on ne se connecte pas
 	bool blockWhileDisconnected();
 
-	//Pour envoyer le numéro de dépot
-	bool sendDepotRevision(QString realPath,int revision);
 signals:
 	void connected();
+	void identified();
 	void disconnected();
 	void receiveErrorMessage(QString);
 

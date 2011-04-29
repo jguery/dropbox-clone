@@ -419,6 +419,23 @@ Media *ConfigurationFile::getMediaDetection()
 
 
 
+//Pour récupérer le nombre de détections en attente de traitement
+int ConfigurationFile::getNumberMediaDetection()
+{
+	//On verrouille d'abord l'accès aux autres threads
+	detectMediaListMutex.lock();
+
+	int nb=detectMediaList->size();
+
+	//On déverrouille
+	detectMediaListMutex.unlock();
+
+	//On retourne le nombre
+	return nb;
+}
+
+
+
 
 //Pour supprimer une détection qui a été traitée
 void ConfigurationFile::removeMediaDetection()

@@ -30,6 +30,8 @@ enum RequestEnum
 	REMOVE_FILE_INFO,
 	REVISION_FILE_INFO,
 
+	END_OLD_DETECTIONS,
+
 	IDENTIFICATION
 };
 
@@ -138,6 +140,9 @@ private:
 
 	//Pour répondre
 	static QByteArray *createResponseMessage(ResponseEnum type, QString revision);
+
+	//Pour terminer un envoi d'anciennes détections
+	static QByteArray *createEndOldDetections();
 
 public:
 	//Pour lire et comprendre un message récu.

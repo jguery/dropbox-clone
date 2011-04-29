@@ -9,7 +9,7 @@
 NetworkInterface *NetworkInterface::createNetworkInterface(ConfigurationNetwork *configurationNetwork,ConfigurationIdentification *configurationIdentification, QStandardItemModel *model)
 {
 	//On teste la validité de la configuration
-	if(configurationNetwork==NULL || configurationIdentification==NULL)
+	if(configurationNetwork==NULL || configurationIdentification==NULL || model==NULL)
 	{
 		if(model!=NULL) Widget::addRowToTable("Echec lors de l'allocation du module d'interface réseau.",model,MSG_1);
 		return NULL;
@@ -47,68 +47,6 @@ NetworkInterface::NetworkInterface(ConfigurationNetwork *configurationNetwork, C
 
 
 
-//Slot appelé lorsque l'état de la socket a changé
-void NetworkInterface::stateChangedAction(QAbstractSocket::SocketState state)
-{
-	//Le nouvel état est dans state. Selon sa valeur, on rédige une description à afficher
-	QString description;
-	if(state==QAbstractSocket::UnconnectedState) description="L'application déconnectée du serveur";
-	else if(state==QAbstractSocket::HostLookupState) description="L'application recherche le serveur à l'adresse: "+configurationNetwork->getFullAddress();
-	else if(state==QAbstractSocket::ConnectingState) description="L'application tente de se connecter au serveur";
-	else if(state==QAbstractSocket::ConnectedState) description="L'application est connectée au serveur en mode non crypté";
-	else if(state==QAbstractSocket::ClosingState) description="L'application coupe sa connexion au serveur";
-	else description="La connexion réseau est à un état inconnu";
-
-	Widget::addRowToTable("socket::stateChanged: "+description,model,MSG_2);
-}
-
-
-
-
-
-//Slot appelé lorsque la socket est connectée
-void NetworkInterface::connectedToServer()
-{
-	Widget::addRowToTable("Connexion établie",model,MSG_2);
-}
-
-
-
-//Slot appelé lorsque la socket est déconnectée
-void NetworkInterface::disconnectedFromServer()
-{
-	this->isConnected=false;
-	blockDisconnectedMutex.lock();
-	response=new Response();
-	response->setType(NOT_CONNECT);
-	waitMessages.wakeAll();
-	Widget::addRowToTable("Connexion perdue",model,MSG_3);
-	emit disconnected();
-}
-
-
-
-//Recu quand la connexion a été correctement cryptée
-void NetworkInterface::connexionEncrypted()
-{
-	Widget::addRowToTable("Connexion avec le serveur correctement établie et cryptée",model,MSG_2);
-	emit connected();
-}
-
-
-
-
-//Erreurs SSL recues pendant la phase de handshake
-void NetworkInterface::erreursSsl(const QList<QSslError> &errors)
-{
-	foreach(const QSslError &error, errors)
-	{
-		Widget::addRowToTable("Erreur SSL ignorée: "+ error.errorString(), model,MSG_3);
-	}
-}
-
-
-#include<iostream>
 
 //La méthode run pour lancer le thread
 void NetworkInterface::run()
@@ -117,12 +55,12 @@ void NetworkInterface::run()
 	this->socket=new Socket(this);
 
 	//On établit les connexion des évenement de socket à la classe.
-	QObject::connect(socket,SIGNAL(stateChanged(QAbstractSocket::SocketState)),this,SLOT(stateChangedAction(QAbstractSocket::SocketState)),Qt::DirectConnection);
+	QObject::connect(socket,SIGNAL(stateChanged(QAbstractSocket::SocketState)),this,SLOT(stateChangedAction(QAbstractSocket::SocketState)));
 	QObject::connect(socket,SIGNAL(connected()),this,SLOT(connectedToServer()));
 	QObject::connect(socket,SIGNAL(disconnected()),this,SLOT(disconnectedFromServer()));
 
-	QObject::connect(socket,SIGNAL(encrypted()),this,SLOT(connexionEncrypted()),Qt::DirectConnection);
-	QObject::connect(socket,SIGNAL(sslErrors(QList<QSslError>)),this,SLOT(erreursSsl(QList<QSslError>)),Qt::DirectConnection);
+	QObject::connect(socket,SIGNAL(encrypted()),this,SLOT(connexionEncrypted()));
+	QObject::connect(socket,SIGNAL(sslErrors(QList<QSslError>)),this,SLOT(erreursSsl(QList<QSslError>)));
 	QObject::connect(socket,SIGNAL(receiveMessage(QByteArray*)),this,SLOT(receiveMessageAction(QByteArray*)));
 
 	QObject::connect(this,SIGNAL(connectToServerRequested()),this,SLOT(connectToServer()));
@@ -130,29 +68,6 @@ void NetworkInterface::run()
 
 	exec();
 }
-
-
-
-
-//Savoir si on est connecté au serveur
-bool NetworkInterface::checkIsConnected()
-{
-	return isConnected;
-}
-
-
-
-
-//Bloquer le thread appelant tant qu'on est pas connecté
-//Retourne true si la socket etait déconnectée
-bool NetworkInterface::blockWhileDisconnected()
-{
-	bool b=blockDisconnectedMutex.tryLock();
-	if(!b) blockDisconnectedMutex.lock();
-	blockDisconnectedMutex.unlock();
-	return !b;
-}
-
 
 
 
@@ -174,8 +89,6 @@ void NetworkInterface::requestDisconnectFromServer()
 
 
 //Pour se connecter au serveur
-//Cette fonction est bloquante pendant quelques secondes
-//elle doit être appelée par un thread externe (si gui revoir socket.connect)
 void NetworkInterface::connectToServer()
 {
 	if(isConnected)
@@ -194,7 +107,7 @@ void NetworkInterface::connectToServer()
 
 
 
-//Pour se déconnecter du servuer
+//Pour se déconnecter du serveur
 //Cette fonction est bloquante pendant quelques secondes
 //elle doit être appelée par un thread externe (si gui revoir socket.disconnect)
 void NetworkInterface::disconnectFromServer()
@@ -205,6 +118,84 @@ void NetworkInterface::disconnectFromServer()
 		return;
 	}
 	socket->disconnectFromServer();
+}
+
+
+
+
+//Slot appelé lorsque l'état de la socket a changé
+//Le nouvel état est dans state. Selon sa valeur, on rédige une description à afficher
+void NetworkInterface::stateChangedAction(QAbstractSocket::SocketState state)
+{
+	QString description;
+	if(state==QAbstractSocket::UnconnectedState) description="L'application déconnectée du serveur";
+	else if(state==QAbstractSocket::HostLookupState) description="L'application recherche le serveur à l'adresse: "+configurationNetwork->getFullAddress();
+	else if(state==QAbstractSocket::ConnectingState) description="L'application tente de se connecter au serveur";
+	else if(state==QAbstractSocket::ConnectedState) description="L'application est connectée au serveur en mode non crypté";
+	else if(state==QAbstractSocket::ClosingState) description="L'application coupe sa connexion au serveur";
+	else description="La connexion réseau est à un état inconnu";
+	Widget::addRowToTable("socket::stateChanged: "+description,model,MSG_2);
+}
+
+
+
+
+//Slot appelé lorsque la socket est connectée
+void NetworkInterface::connectedToServer()
+{
+	Widget::addRowToTable("Connexion établie",model,MSG_2);
+}
+
+
+//Recu quand la connexion a été correctement cryptée
+void NetworkInterface::connexionEncrypted()
+{
+	Widget::addRowToTable("Connexion avec le serveur correctement établie et cryptée",model,MSG_2);
+	emit connected();
+}
+
+
+//Erreurs SSL recues pendant la phase de handshake
+void NetworkInterface::erreursSsl(const QList<QSslError> &errors)
+{
+	foreach(const QSslError &error, errors)
+	{
+		Widget::addRowToTable("Erreur SSL ignorée: "+ error.errorString(), model,MSG_3);
+	}
+}
+
+
+//Slot appelé lorsque la socket est déconnectée
+void NetworkInterface::disconnectedFromServer()
+{
+	this->isConnected=false;
+	blockDisconnectedMutex.lock();
+	response=new Response();
+	response->setType(NOT_CONNECT);
+	waitMessages.wakeAll();
+	Widget::addRowToTable("Connexion perdue",model,MSG_3);
+	emit disconnected();
+}
+
+
+
+
+//Savoir si on est connecté au serveur
+bool NetworkInterface::checkIsConnected()
+{
+	return isConnected;
+}
+
+
+
+//Bloquer le thread appelant tant qu'on est pas connecté
+//Retourne true si la socket etait déconnectée
+bool NetworkInterface::blockWhileDisconnected()
+{
+	bool b=blockDisconnectedMutex.tryLock();
+	if(!b) blockDisconnectedMutex.lock();
+	blockDisconnectedMutex.unlock();
+	return !b;
 }
 
 
@@ -234,19 +225,17 @@ void NetworkInterface::receiveMessageAction(QByteArray *message)
 		ResponseEnum r=response->getType();
 		if(r==ACCEPT_IDENTIFICATION) Widget::addRowToTable("Identification acceptée",model,MSG_2);
 		else if(r==REJECT_IDENTIFICATION_FOR_PSEUDO) Widget::addRowToTable("Identification refusée pour pseudo, vous allez être déconnecté du serveur",model,MSG_2);
-		else if(r==REJECT_IDENTIFICATION_FOR_PASSWORD) Widget::addRowToTable("Identification refusée pour mdp, vous allez être déconnecté du serveur",model,MSG_2);
+		else if(r==REJECT_IDENTIFICATION_FOR_PASSWORD) Widget::addRowToTable("Identification refusée pour password, vous allez être déconnecté du serveur",model,MSG_2);
 		else if(r==REJECT_IDENTIFICATION_FOR_BLOCK) Widget::addRowToTable("Identification refusée pour block, vous allez être déconnecté du serveur",model,MSG_2);
-		else
-		{
-			qDebug("Warning 5 N.I.");
-			return ;
-		}
+		else  qDebug("Warning 5 N.I.");
+
 		//Si echec d'identification, on se déconnecte
 		if(r!=ACCEPT_IDENTIFICATION) emit this->disconnectFromServerRequested();
 		else
 		{
 			isConnected=true;
 			blockDisconnectedMutex.unlock();
+			emit identified();
 		}
 		return;
 	}
@@ -262,12 +251,10 @@ void NetworkInterface::receiveMessageAction(QByteArray *message)
 	else
 	{
 		Response *r=(Response*)m;
-		if(response!=NULL) delete response;
 		response=r;
 		waitMessages.wakeAll();
 		return;
 	}
-
 }
 
 
@@ -295,9 +282,43 @@ bool NetworkInterface::sendIdentification()
 
 
 
-//Pour envoyer le numéro de dépot
-bool NetworkInterface::sendDepotRevision(QString realPath,int revision)
+//Pour envoyer un message de fin d'anciennes détections
+bool NetworkInterface::sendEndOldDetections()
 {
+	Request request;
+	request.setType(END_OLD_DETECTIONS);
+
+	//On crèe le message d'identification
+	QByteArray *message=request.toXml();
+	bool r=socket->sendMessage(message);
+	return r;
+}
+
+
+
+
+
+//Pour envoyer le numéro de dépot
+Response *NetworkInterface::sendDepotRevision(QString realPath,int revision)
+{
+	//On vérifie que la socket est bien connectée et qu'on est identifié
+	if(!isConnected)
+	{
+		qDebug("Warning 226 N.I.");
+		response=new Response();
+		response->setType(NOT_CONNECT);
+		return response;
+	}
+
+	//On vérifie que le realPath n'est pas vide
+	if(realPath.isEmpty() || revision<0)
+	{
+		qDebug("Warning 117 N.I.");
+		response=new Response();
+		response->setType(NOT_PARAMETERS);
+		return response;
+	}
+
 	Request request;
 	request.setType(REVISION_FILE_INFO);
 	request.getParameters()->insert("realPath",realPath.toAscii());
@@ -306,8 +327,25 @@ bool NetworkInterface::sendDepotRevision(QString realPath,int revision)
 	//On crèe le message et on l'envoi
 	QByteArray *message=request.toXml();
 	bool r=socket->sendMessage(message);
-	return r;
+	if(!r)
+	{
+		qDebug("Warning 123 N.I.");
+		response=new Response();
+		response->setType(NOT_SEND);
+		return response;
+	}
+
+	QMutex mutex;
+	if(!waitMessages.wait(&mutex,20000))
+	{
+		qDebug("Warning 127 N.I.");
+		response=new Response();
+		response->setType(NOT_TIMEOUT);
+	}
+
+	return response;
 }
+
 
 
 
@@ -355,7 +393,6 @@ Response *NetworkInterface::sendMediaUpdated(QString realPath,QByteArray content
 		qDebug("Warning 17 N.I.");
 		response=new Response();
 		response->setType(NOT_TIMEOUT);
-		return response;
 	}
 
 	return response;
@@ -406,7 +443,6 @@ Response *NetworkInterface::sendMediaCreated(QString realPath, bool isDirectory,
 		qDebug("Warning 18 N.I.");
 		response=new Response();
 		response->setType(NOT_TIMEOUT);
-		return response;
 	}
 
 	return response;
@@ -460,11 +496,12 @@ Response *NetworkInterface::sendMediaRemoved(QString realPath, int revision)
 		qDebug("Warning 19 N.I.");
 		response=new Response();
 		response->setType(NOT_TIMEOUT);
-		return response;
 	}
 
 	return response;
 }
+
+
 
 
 
