@@ -65,6 +65,7 @@ private slots:
 signals:
 	//Pour prévenir le parent d'une détection
 	void detectChangement(Media *m);
+	void listenRequested();
 
 	void addSubFileRequested(QString,QString);
 	void addSubDirRequested(QString,QString);

@@ -155,14 +155,14 @@ bool Socket::sendMessage(QByteArray *message)
 	if(write(block)==-1) return false;
 
 	//On attends maxi 30s pour l'envoi
-	bool result = waitForBytesWritten();
+	waitForBytesWritten();
 
 	qDebug("Envoi=");
 	qDebug(*message);
 
 	//On supprime le message et on retourne le résultat de l'envoi
 	delete message;
-	return result;
+	return true;
 }
 
 

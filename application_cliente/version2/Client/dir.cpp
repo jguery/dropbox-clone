@@ -130,6 +130,7 @@ Dir::Dir(QString localPath,QString realPath,Dir *parent): Media(localPath,realPa
 	//On connecte son signal au slot
 	if(parent!=NULL) QObject::connect(this,SIGNAL(detectChangement(Media*)),parent,SIGNAL(detectChangement(Media*)),Qt::QueuedConnection);
 	QObject::connect(watcher,SIGNAL(directoryChanged(QString)),this,SLOT(directoryChangedAction()),Qt::QueuedConnection);
+	QObject::connect(this,SIGNAL(listenRequested()),this,SLOT(directoryChangedAction()),Qt::QueuedConnection);
 
 	QObject::connect(this,SIGNAL(addSubDirRequested(QString,QString)),this,SLOT(addSubDir(QString,QString)),Qt::QueuedConnection);
 	QObject::connect(this,SIGNAL(addSubFileRequested(QString,QString)),this,SLOT(addSubFile(QString,QString)),Qt::QueuedConnection);
@@ -557,7 +558,7 @@ void Dir::setListenning(bool listen)
 		}
 	}
 
-	directoryChangedAction();
+	emit listenRequested();
 
 	this->lock();
         //Change tous les signalListener de tous les répertoires contenus dans subMedias

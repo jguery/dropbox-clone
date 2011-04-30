@@ -75,6 +75,7 @@ bool SvnManager::commitDepot(QString depotPath,QString login,QString password)
 bool SvnManager::addFileToDepot(QString depotPath,QString filePath,QString login,QString password)
 {
 	depotPath=normalizePath(depotPath);
+	filePath=normalizePath(filePath);
 	login=normalizePath(login);
 	password=normalizePath(password);
 	QString cmd=svnCommand+" add "+filePath;
@@ -88,6 +89,7 @@ bool SvnManager::addFileToDepot(QString depotPath,QString filePath,QString login
 bool SvnManager::removeFileToDepot(QString depotPath,QString filePath,QString login,QString password)
 {
 	depotPath=normalizePath(depotPath);
+	filePath=normalizePath(filePath);
 	login=normalizePath(login);
 	password=normalizePath(password);
 	QString cmd=svnCommand+" rm "+filePath;
@@ -102,6 +104,11 @@ bool SvnManager::removeFileToDepot(QString depotPath,QString filePath,QString lo
 int SvnManager::getRevision(QString depotPath)
 {
 	depotPath=normalizePath(depotPath);
+	QString cmd1=svnCommand+" update "+depotPath;
+	QProcess p1;
+	p1.start(cmd1);
+	p1.waitForFinished();
+	if(p1.exitCode()!=0) return -1;
 	QString cmd=svnCommand+" log "+depotPath;
 	QProcess p;
 	p.start(cmd);

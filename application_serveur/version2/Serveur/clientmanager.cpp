@@ -33,6 +33,8 @@ ClientManager::ClientManager(int clientSocket,QVector<ClientManager*> *clients,D
 
 
 
+
+//La méthode run pour l'exécution du thread
 void ClientManager::run()
 {
 	socket=new Socket();
@@ -40,38 +42,52 @@ void ClientManager::run()
 	QObject::connect(socket, SIGNAL(receiveMessage(QByteArray*)), this, SLOT(receiveMessageAction(QByteArray*)));
 	QObject::connect(socket, SIGNAL(encrypted()), this, SLOT(connexionEncrypted()),Qt::DirectConnection);
 	QObject::connect(socket, SIGNAL(sslErrors(QList<QSslError>)), this, SLOT(erreursSsl(QList<QSslError>)),Qt::DirectConnection);
+	this->clientDescription=socket->peerAddress().toString();
+
 	if(socket->setDescriptor(clientSocket))
 	{
-		Widget::addRowToTable("Initialisation d'une connexion avec le client "+socket->peerAddress().toString()+".",model,MSG_2);
+		Widget::addRowToTable("Initialisation d'une connexion avec le client "+clientDescription+".",model,MSG_2);
 	}
 	else
 	{
-		Widget::addRowToTable("Impossible d'initialiser une connexion avec le client "+socket->peerAddress().toString(),model,MSG_2);
+		Widget::addRowToTable("Impossible d'initialiser une connexion avec le client "+clientDescription,model,MSG_2);
 		socket->disconnectClient();
 		return ;
 	}
+	QObject::connect(this,SIGNAL(sendDetectionRequested(QByteArray*)),this,SLOT(sendDetection(QByteArray*)));
 	exec();
 }
 
 
 
 
+void ClientManager::sendDetectionRequest(QByteArray *request)
+{
+	emit this->sendDetectionRequested(request);
+}
+
+
+
+void ClientManager::sendDetection(QByteArray *request)
+{
+	this->socket->sendMessage(request);
+}
+
 
 
 //Recu quand la connexion avec le client est crypté par SSL
 void ClientManager::connexionEncrypted()
 {
-	Widget::addRowToTable("Le client "+socket->peerAddress().toString()+" est maintenant connecté en mode crypté",model,MSG_2);
+	Widget::addRowToTable("Le client "+clientDescription+" est maintenant connecté en mode crypté",model,MSG_2);
 }
 
 
 
 
-//Slot appelé quand un client se déconnecte
+//Slot appelé quand le client se déconnecte
 void ClientManager::clientDisconnected()
 {
-	QSslSocket *client = qobject_cast<QSslSocket*>(sender());
-	Widget::addRowToTable("Le client "+ client->peerAddress().toString()+" s'est déconnecté.",model,MSG_2);
+	Widget::addRowToTable("Le client "+clientDescription+" s'est déconnecté.",model,MSG_2);
 	emit disconnectedClient(this);
 }
 
@@ -90,7 +106,6 @@ void ClientManager::erreursSsl(const QList<QSslError> &errors)
 
 
 //Cette fonction est automatiquement appelé lorsqu'un client envoi un message.
-//Pour l'instant on ne fait que renvoyer simplement le message à tous les autres clients
 void ClientManager::receiveMessageAction(QByteArray *message)
 {
 	//On récupère le message
@@ -100,7 +115,6 @@ void ClientManager::receiveMessageAction(QByteArray *message)
 	if(!m)
 	{
 		qDebug("Warning -1 C.M.");
-		socket->disconnectClient();
 		return;
 	}
 
@@ -121,13 +135,15 @@ void ClientManager::receiveMessageAction(QByteArray *message)
 
 
 
-
+//Lorsqu'une requete est récue du client. C'est la fonction principale
+// attention elle est longue :D
 void ClientManager::receivedRequest(Request *r)
 {
+	//Si la requete est inconnue, on envoi un message d'érreur
 	if(r==NULL)
 	{
 		Response response;
-		response.setType(REJECT_FILE_INFO_FOR_SVNERROR);
+		response.setType(REJECT_FILE_INFO_FOR_PARAMETERS);
 		this->socket->sendMessage(response.toXml());
 		return ;
 	}
@@ -135,11 +151,12 @@ void ClientManager::receivedRequest(Request *r)
 	{
 		qDebug("Warning 59 C.M.");
 	}
+	//Si on se trouve à l'état connecté
 	if(state==CONNECTED)
 	{
 		if(r->getType()==IDENTIFICATION)
 		{
-			Widget::addRowToTable("Le client "+this->socket->peerAddress().toString()+" a envoyé un message d'identification.",model,MSG_3);
+			Widget::addRowToTable("Le client "+clientDescription+" a envoyé un message d'identification.",model,MSG_3);
 			Response response;
 			QString pseudo=r->getParameters()->value("pseudo");
 			QString password=r->getParameters()->value("password");
@@ -148,6 +165,7 @@ void ClientManager::receivedRequest(Request *r)
 			{
 				response.setType(ACCEPT_IDENTIFICATION);
 				Widget::addRowToTable("Identification acceptée",model,MSG_3);
+				clientDescription=pseudo+":"+socket->peerAddress().toString();
 				this->state=CLIENT_DETECTIONS;
 				this->user=databaseManager->getUser(pseudo);
 				this->socket->sendMessage(response.toXml());
@@ -172,7 +190,7 @@ void ClientManager::receivedRequest(Request *r)
 	{
 		if(r->getType()==REVISION_FILE_INFO)
 		{
-			Widget::addRowToTable("Le client "+this->socket->peerAddress().toString()+" a envoyé un message de révision de dépot.",model,MSG_3);
+			Widget::addRowToTable("Le client "+clientDescription+" a envoyé un message de révision de dépot.",model,MSG_3);
 			QString realPath=r->getParameters()->value("realPath","");
 			QString revisionString=r->getParameters()->value("revision","");
 			int revision=revisionString.toInt();
@@ -212,7 +230,7 @@ void ClientManager::receivedRequest(Request *r)
 	}
 	if(r->getType()==CREATE_FILE_INFO || r->getType()==UPDATE_FILE_INFO || r->getType()==REMOVE_FILE_INFO)
 	{
-		Widget::addRowToTable("Le client "+this->socket->peerAddress().toString()+" a détecté un changement.",model,MSG_3);
+		Widget::addRowToTable("Le client "+clientDescription+" a détecté un changement.",model,MSG_3);
 		QString realPath=r->getParameters()->value("realPath","");
 		QString clientRevisionString=r->getParameters()->value("revision","");
 		int clientRevision=0;clientRevision=clientRevisionString.toInt();
@@ -341,10 +359,16 @@ void ClientManager::receivedRequest(Request *r)
 				}
 			}
 		}
-		/*for(int i=0;i<clients->size();i++)
+		if(response.getType()==ACCEPT_FILE_INFO)
 		{
-			if(clients->at(i)!=this) clients->at(i)->socket->sendMessage(r->toXml());
-		}*/
+			r->getParameters()->remove("revision");
+			r->getParameters()->insert("revision",QByteArray::number(depot->getRevision()));
+			for(int i=0;i<clients->size();i++)
+			{
+				if(clients->at(i)!=this)
+					clients->at(i)->sendDetectionRequest(new QByteArray(*(r->toXml())));
+			}
+		}
 		this->socket->sendMessage(response.toXml());
 	}
 }

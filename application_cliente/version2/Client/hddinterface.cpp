@@ -107,7 +107,11 @@ void HddInterface::detectedMedia(Media *m)
 	if(state==MediaIsCreating) detectedCreatedMedia(m);
 	else if(state==MediaIsUpdating) detectedUpdatedMedia(m);
 	else if(state==MediaIsRemoving) detectedRemovedMedia(m);
-	else qDebug("Warning 1 H.I.");
+	else
+	{
+		qDebug("Warning 1 H.I.");
+		configurationData->getConfigurationFile()->removeMediaDetection();
+	}
 }
 
 

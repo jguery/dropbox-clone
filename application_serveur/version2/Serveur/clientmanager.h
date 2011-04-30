@@ -33,9 +33,13 @@ public:
 	//Une méthode statique pour allocation
 	static ClientManager *createClientManager(int clientSocket,QVector<ClientManager*> *clients,DatabaseManager *databaseManager,FileManager *fileManager,QStandardItemModel *model);
 
+	//Pour l'exécution du thread
 	void run();
 
+	//Le destructeur
 	~ClientManager();
+
+	void sendDetectionRequest(QByteArray *request);
 
 private slots:
 	//Le slot levé lorsqu'un message est recu
@@ -50,12 +54,19 @@ private slots:
         //On recoit des erreurs lors de la connexion SSL
         void erreursSsl(const QList<QSslError>&);
 
+	//La connexion est cryptée
         void connexionEncrypted();
 
+	void sendDetection(QByteArray *request);
+
 signals:
+	//Pour avertir le serveur de la déconnexion du client
 	void disconnectedClient(ClientManager *clientManager);
 
+	void sendDetectionRequested(QByteArray *request);
+
 private:
+	//Constructeur
 	ClientManager(int clientSocket,QVector<ClientManager*> *clients,DatabaseManager *databaseManager,FileManager *fileManager,QStandardItemModel *model);
 
         //La socket communiquant avec le client
@@ -72,6 +83,7 @@ private:
 	//L'état
 	ClientState state;
 	SqlUser *user;
+	QString clientDescription;
 
 	//Le model
 	QStandardItemModel *model;

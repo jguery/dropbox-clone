@@ -12,6 +12,7 @@ Widget::Widget(): QWidget()
 {
 	//On initialise la fenetre
 	this->setWindowTitle("Logiciel client");
+	this->settings=new QSettings("AppClientProjetS2", "AppClientProjetS2");
 	buildInterface();
 	networkInterface=NULL;
 	configurationData=NULL;
@@ -95,6 +96,8 @@ void Widget::loadConfigSlot()
 	transfertModel->removeRows(0,transfertModel->rowCount());
 	detectionModel->removeRows(0,detectionModel->rowCount());
 
+	this->settings->setValue("loadConfigLineEdit",loadConfigLineEdit->text());
+
 	//On charge la configuration
 	this->configurationData=ConfigurationData::loadConfigurationData(loadConfigLineEdit->text(),detectionModel);
 	if(configurationData)  addRowToTable("La configuration a bien été chargée",detectionModel,MSG_1);
@@ -130,6 +133,16 @@ void Widget::createConfigSlot()
 	networkModel->removeRows(0,networkModel->rowCount());
 	transfertModel->removeRows(0,transfertModel->rowCount());
 	detectionModel->removeRows(0,detectionModel->rowCount());
+
+	settings->setValue("serverAddressLineEdit",serverAddressLineEdit->text());
+	settings->setValue("serverPortLineEdit",serverPortLineEdit->text());
+	settings->setValue("loginLineEdit",loginLineEdit->text());
+	settings->setValue("passwordLineEdit",passwordLineEdit->text());
+	settings->setValue("depotLocalPathLineEdit",depotLocalPathLineEdit->text());
+	settings->setValue("depotRealNameLineEdit",depotRealNameLineEdit->text());
+	settings->setValue("saveConfigLineEdit",saveConfigLineEdit->text());
+	settings->setValue("loadConfigLineEdit",saveConfigLineEdit->text());
+	loadConfigLineEdit->setText(saveConfigLineEdit->text());
 
 	//On créé la configuration réseau
 	ConfigurationNetwork *configurationNetwork=ConfigurationNetwork::createConfigurationNetwork(serverAddressLineEdit->text(),serverPortLineEdit->text().toInt());
@@ -184,7 +197,7 @@ void Widget::createConfigSlot()
 void Widget::buildInterface()
 {
 	//Une taille minimale de 840*480 est nécéssaire pour une vue agréable
-	setMinimumSize(840,480);
+	setMinimumSize(settings->value("window/width",840).toInt(),settings->value("window/height",480).toInt());
 
 	//L'entete des tableaux
 	QStringList list;
@@ -200,7 +213,7 @@ void Widget::buildInterface()
 
 	//Le premier groupbox sert à charger une configuration
 	QGroupBox *groupbox1 = new QGroupBox(trUtf8("Charger une configuration"), configOnglet);
-	loadConfigLineEdit=new QLineEdit("/home/hky/test/config1.xml");QPushButton *parcourirLoad=new QPushButton("Parcourir");
+	loadConfigLineEdit=new QLineEdit(settings->value("loadConfigLineEdit","/home/hky/test/config1.xml").toString());QPushButton *parcourirLoad=new QPushButton("Parcourir");
 	QObject::connect(parcourirLoad,SIGNAL(clicked()),this,SLOT(parcourirLoadConfigSlot()));
 	QHBoxLayout *l1=new QHBoxLayout();l1->addWidget(loadConfigLineEdit);l1->addWidget(parcourirLoad);
 	QPushButton *loadButton=new QPushButton(trUtf8("Charger une configuration"));
@@ -210,16 +223,16 @@ void Widget::buildInterface()
 	//Le deuxième groupbox sert à créer une configuration
 	QGroupBox *groupbox2 = new QGroupBox(trUtf8("Créer une configuration"), configOnglet);
 	QFormLayout *l3=new QFormLayout();
-	serverAddressLineEdit=new QLineEdit("127.0.0.1");l3->addRow(trUtf8("Adresse du serveur"),serverAddressLineEdit);
-	serverPortLineEdit=new QLineEdit("4321");l3->addRow(trUtf8("Port du serveur"),serverPortLineEdit);
-	loginLineEdit=new QLineEdit("hky");l3->addRow(trUtf8("Login d'identification"),loginLineEdit);
-	passwordLineEdit=new QLineEdit("hky");l3->addRow(trUtf8("Password d'identification"),passwordLineEdit);
-	depotLocalPathLineEdit=new QLineEdit("/home/hky/test/A");QPushButton *parcourirCreate=new QPushButton("Parcourir");
+	serverAddressLineEdit=new QLineEdit(settings->value("serverAddressLineEdit","127.0.0.1").toString());l3->addRow(trUtf8("Adresse du serveur"),serverAddressLineEdit);
+	serverPortLineEdit=new QLineEdit(settings->value("serverPortLineEdit","4321").toString());l3->addRow(trUtf8("Port du serveur"),serverPortLineEdit);
+	loginLineEdit=new QLineEdit(settings->value("loginLineEdit","hky").toString());l3->addRow(trUtf8("Login d'identification"),loginLineEdit);
+	passwordLineEdit=new QLineEdit(settings->value("passwordLineEdit","hky").toString());l3->addRow(trUtf8("Password d'identification"),passwordLineEdit);
+	depotLocalPathLineEdit=new QLineEdit(settings->value("depotLocalPathLineEdit","/home/hky/test/A").toString());QPushButton *parcourirCreate=new QPushButton("Parcourir");
 	QHBoxLayout *l4=new QHBoxLayout();l4->addWidget(depotLocalPathLineEdit);l4->addWidget(parcourirCreate);
 	QObject::connect(parcourirCreate,SIGNAL(clicked()),this,SLOT(parcourirCreateConfigSlot()));
 	l3->addRow(trUtf8("Chemin local du dépot"),l4);
-	depotRealNameLineEdit=new QLineEdit("projetdev/");l3->addRow(trUtf8("Nom svn du dépot"),depotRealNameLineEdit);
-	saveConfigLineEdit=new QLineEdit("/home/hky/test/config1.xml");QPushButton *parcourirSave=new QPushButton("Parcourir");
+	depotRealNameLineEdit=new QLineEdit(settings->value("depotRealNameLineEdit","projetdev/").toString());l3->addRow(trUtf8("Nom svn du dépot"),depotRealNameLineEdit);
+	saveConfigLineEdit=new QLineEdit(settings->value("saveConfigLineEdit","/home/hky/test/config1.xml").toString());QPushButton *parcourirSave=new QPushButton("Parcourir");
 	QHBoxLayout *l5=new QHBoxLayout();l5->addWidget(saveConfigLineEdit);l5->addWidget(parcourirSave);
 	QObject::connect(parcourirSave,SIGNAL(clicked()),this,SLOT(parcourirSaveConfigSlot()));
 	l3->addRow(trUtf8("Enregistrer la config sous..."),l5);

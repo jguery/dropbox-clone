@@ -154,14 +154,12 @@ bool Socket::sendMessage(QByteArray *message)
 	//On envoi le message final et vérifie que l'envoi a bien commencé
 	if(write(block)==-1) return false;
 
-	//On attends indéfiniment pour l'envoi
-	bool result = waitForBytesWritten(-1);
-
-	qDebug("---------------------");
+	//On attends pour l'envoi
+	waitForBytesWritten();
 
 	//On supprime le message et on retourne le résultat de l'envoi
 	delete message;
-	return result;
+	return true;
 }
 
 

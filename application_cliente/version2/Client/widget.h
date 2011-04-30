@@ -5,6 +5,7 @@
 #include "networkinterface.h"
 #include "hddinterface.h"
 #include <QtGui>
+#include <QSettings>
 
 /*
  Cette classe implémente une fenetre de test pour le client.
@@ -71,6 +72,9 @@ private:
 	QWidget *configOnglet;
 	QLineEdit *loadConfigLineEdit, *serverAddressLineEdit, *serverPortLineEdit, *loginLineEdit, *passwordLineEdit, *depotLocalPathLineEdit, *depotRealNameLineEdit, *saveConfigLineEdit;
 	QPushButton *configButton;
+
+	//Les reglages
+	QSettings *settings;
 
 };
 
