@@ -1,5 +1,5 @@
 #include "depot.h"
-QString Depot::GLOBAL_DEPOTS_PATH="/home/hky/test/server/";
+QString Depot::GLOBAL_DEPOTS_PATH="/homes/hky/test/server/";
 
 
 

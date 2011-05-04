@@ -8,6 +8,7 @@ QT       += core gui network xml sql
 
 TARGET = Serveur
 TEMPLATE = app
+CONFIG *= crypto
 
 
 SOURCES += main.cpp\
