@@ -97,7 +97,7 @@ QByteArray *File::hashFile(QString path)
 		f.close();
 	}
 
-	//On déclare le hasher en Sha1 (autres alternatives MD4 ou MD5
+        //On déclare le hasher en Sha1 (autres alternatives MD4 ou MD5)
 	QCryptographicHash hasher(QCryptographicHash::Sha1);
 	hasher.addData(content);  //On met les données à hasher
 
