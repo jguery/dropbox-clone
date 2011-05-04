@@ -58,7 +58,7 @@ Dir *Dir::loadDir(QDomNode noeud,Dir *parent)
 	//On ajoute des états de détection
 	for(int i=0;i<listDetectionState.size();i++)
 	{
-		if(listDetectionState.at(i)!=Media::stateToString(MediaDefaultState))
+		if(detectionStateString!="" && listDetectionState.at(i)!=Media::stateToString(MediaDefaultState))
 		{
 			dir->getDetectionState()->append(Media::stateFromString(listDetectionState.at(i)));
 			dir->getParent()->getOldDetections()->append(dir);
@@ -537,12 +537,17 @@ Media *Dir::findMediaByRealPath(QString realPath)
 
 
 
+//Pour savoir si le repertoire est à l'écoute de changements
+bool Dir::isListenning()
+{
+	return listen;
+}
 
 
 
 
 
-//Permet de donner l'objet à prevenir en cas de modif
+//Permet de mettre le repertoire à l'écoute de changements
 void Dir::setListenning(bool listen)
 {
 	this->listen=listen;
@@ -558,7 +563,8 @@ void Dir::setListenning(bool listen)
 		}
 	}
 
-	emit listenRequested();
+	//Si c'est une activation d'écoute, alors on demande une vérification
+	if(listen) emit listenRequested();
 
 	this->lock();
         //Change tous les signalListener de tous les répertoires contenus dans subMedias

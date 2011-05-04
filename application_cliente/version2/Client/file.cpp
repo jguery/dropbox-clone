@@ -63,7 +63,7 @@ File *File::loadFile(QDomNode noeud,Dir *parent)
 	//On ajoute les états qui ont étés chargés depuis le noeud xml
 	for(int i=0;i<listDetectionState.size();i++)
 	{
-		if(listDetectionState.at(i)!=Media::stateToString(MediaDefaultState))
+		if(detectionStateString!="" && listDetectionState.at(i)!=Media::stateToString(MediaDefaultState))
 		{
 			f->getDetectionState()->append(Media::stateFromString(listDetectionState.at(i)));
 			f->getParent()->getOldDetections()->append(f);
@@ -159,20 +159,24 @@ QByteArray File::getFileContent()
 bool File::putFileContent(QByteArray content)
 {
 	this->lock();
-	this->getParent()->setListenning(false);
+
+	//Récupère l'état d'écoute et stope l'écoute du dossier parent
+	bool listenState=getParent()->isListenning();
+	getParent()->setListenning(false);
+
 	QFile f(this->getLocalPath());
 	//on ouvre le fichier en écriture
 	if(!f.open(QIODevice::WriteOnly))
 	{
 		this->unlock();
-		this->getParent()->setListenning(true);
+		this->getParent()->setListenning(listenState);
 		return false;
 	}
 	f.write(content);
 	f.close();
 	updateHash();
 	this->unlock();
-	this->getParent()->setListenning(false);
+	this->getParent()->setListenning(listenState);
 	return true;
 }
 

@@ -512,7 +512,8 @@ void HddInterface::receivedCreatedRequest(QString realPath, bool isDirectory)
 	}
 	Dir *parent=(Dir*)mParent;
 
-	//Stope l'écoute du dossier parent
+	//Récupère l'état d'écoute et stope l'écoute du dossier parent
+	bool listenState=parent->isListenning();
 	parent->setListenning(false);
 
 	QString realName=Media::extractName(realPath);
@@ -567,7 +568,7 @@ void HddInterface::receivedCreatedRequest(QString realPath, bool isDirectory)
 	}
 
 	//On remet le dossier parent sur écoute
-	parent->setListenning(true);
+	parent->setListenning(listenState);
 
 	configurationData->save();
 }
@@ -597,7 +598,8 @@ void HddInterface::receivedRemovedRequest(QString realPath)
 		return;
 	}
 
-	//Met à off l'écoute de parent
+	//Récupère l'état d'écoute et stope l'écoute du dossier parent
+	bool listenState=parent->isListenning();
 	parent->setListenning(false);
 
 	parent->delSubMedia(m);
@@ -621,7 +623,7 @@ void HddInterface::receivedRemovedRequest(QString realPath)
 	}
 
 	//Remet l'écoute de parent à ON
-	parent->setListenning(true);
+	parent->setListenning(listenState);
 
 	configurationData->save();
 }

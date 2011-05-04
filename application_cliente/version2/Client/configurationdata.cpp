@@ -471,10 +471,34 @@ void ConfigurationFile::putMediaDetection(Media *m)
 	//Si le dépot est en lecture seule, on laisse tomber
 	if(!d || d->isReadOnly()) return ;
 
+	if(m->getDetectionState()->last()!=MediaIsCreating)
+	{
+		//On supprime les détections précédantes qui sont annulées par celle ci
+		//sauf la première qui est très probablement en cours de traitement par le thread HddInterface
+		int k=1;
+		for(int i=detectMediaList->length()-1;i>0;i--)
+		{
+			Media *m1=detectMediaList->at(i);
+			if(m1!=m) continue;
+			QList<State> *list=m->getDetectionState();
+			if(list==NULL) continue;
+			State state1=list->at(list->size()-k-1);
+			if(state1==MediaIsUpdating)
+			{
+				detectMediaList->removeAt(i);
+				list->removeAt(list->size()-k-1);
+			}
+			else k++;
+		}
+	}
+
+	//On ajoute le media
+	detectMediaList->append(m);
+
 	int index=0;
 	//On recherche le rang du media
-	for(int i=0;i<detectMediaList->length();i++) if(detectMediaList->at(i)==m) index++;
-	detectMediaList->append(m);
+	for(int i=0;i<detectMediaList->length();i++)
+		if(detectMediaList->at(i)==m) index++;
 
 	//On affiche la détection dans le model
 	Widget::addRowToTable(QString("Le ")+(m->isDirectory()?QString("repertoire"):QString("fichier"))+QString(" ")+m->getLocalPath()+QString(" est passé à l'état ")+Media::stateToString(m->getDetectionState()->at(index)),model,MSG_2);

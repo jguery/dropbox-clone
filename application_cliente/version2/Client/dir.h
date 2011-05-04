@@ -46,6 +46,7 @@ public:
 
 	//Demande à l'objet d'écouter les signaux
 	void setListenning(bool listen);
+	bool isListenning();
 
 	//Une methode statique qui sert à supprimer un repertoire non vide
 	static void removeNonEmptyDirectory(QString path);
