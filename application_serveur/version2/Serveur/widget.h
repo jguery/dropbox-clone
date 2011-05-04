@@ -22,11 +22,55 @@ public:
 	Widget();
 	//Une méthode statique pour écrire dans la qtableview
 	static void addRowToTable(QString sentence,QStandardItemModel *model, QColor color);
+
+public slots:
+	void showCreateConfig();
+	void showLoadConfig();
+	void validerCreateConfig();
+	void validerLoadConfig();
+
+
+	void parcourirFilesPath();
+	void ajouterDepot();
+	void enleverDepot();
+	void ajouterUser();
+	void enleverUser();
+
+
 private:
-	//Lee serveur
+
+	//quelques fonctions privées, pour la construction
+	void buildInterface();
+	void allocateModules();
+
+	//Le serveur
 	Server *server;
-	//Le modèle de la qtableview
+
+	//Les onglets
+	QTabWidget *onglets;
 	QStandardItemModel *model;
+
+	//La boite de dialogue de configuration
+	QDialog *createConfigDialog;
+	QDialog *loadConfigDialog;
+
+	QLineEdit *portLineEdit;
+	QLineEdit *filesPathLineEdit;
+
+	QLineEdit *svnAddressLineEdit;
+	QLineEdit *svnUserLineEdit;
+	QLineEdit *svnPasswordLineEdit;
+	QLineEdit *svnPortLineEdit;
+
+	QLineEdit *dbNameLineEdit;
+	QLineEdit *dbUserLineEdit;
+	QLineEdit *dbPasswordLineEdit;
+
+	QTableWidget *tableDepots;
+	QTableWidget *tableUsers;
+
+	//Les reglages
+	QSettings *settings;
 };
 
 #endif // WIDGET_H

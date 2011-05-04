@@ -33,6 +33,10 @@ public:
 	//Une méthode statique pour allocation
 	static ClientManager *createClientManager(int clientSocket,QVector<ClientManager*> *clients,DatabaseManager *databaseManager,FileManager *fileManager,QStandardItemModel *model);
 
+	QStandardItemModel *getModelClient();
+	SqlUser *getUser();
+	QString getUserLogin();
+
 	//Pour l'exécution du thread
 	void run();
 

@@ -2,11 +2,13 @@
 #include "depot.h"
 
 
+extern QString APPLICATION_NAME;
+
 
 
 SvnManager *SvnManager::createSvnManager(QString svnServerPath,QString svnLogin, QString svnPassword, QString svnCommand, QString svnAdminCommand)
 {
-	if(svnLogin.isEmpty() || svnPassword.isEmpty() || svnCommand.isEmpty() || svnAdminCommand.isEmpty())
+	if(svnServerPath.isEmpty() || svnCommand.isEmpty() || svnAdminCommand.isEmpty())
 		return NULL;
 	QProcess p;
 	p.start(svnCommand);
@@ -23,8 +25,12 @@ SvnManager *SvnManager::createSvnManager(QString svnServerPath,QString svnLogin,
 
 SvnManager::SvnManager(QString svnServerPath,QString svnLogin, QString svnPassword, QString svnCommand, QString svnAdminCommand)
 {
+	if(!svnServerPath.endsWith("/")) svnServerPath=svnServerPath+"/";
+	svnServerPath=normalizePath(svnServerPath);
 	svnLogin=normalizePath(svnLogin);
 	svnPassword=normalizePath(svnPassword);
+	svnCommand=normalizePath(svnCommand);
+	svnAdminCommand=normalizePath(svnAdminCommand);
 	this->svnServerPath=svnServerPath;
 	this->svnLogin=svnLogin;
 	this->svnPassword=svnPassword;
@@ -64,7 +70,7 @@ bool SvnManager::commitDepot(QString depotPath,QString login,QString password)
 	depotPath=normalizePath(depotPath);
 	login=normalizePath(login);
 	password=normalizePath(password);
-	QString cmd=svnCommand+" commit -m \"dropboxCommit\" --username "+login+" --password "+password+" "+depotPath;
+	QString cmd=svnCommand+" commit -m \""+APPLICATION_NAME+" commit\" --username "+login+" --password "+password+" "+depotPath;
 	int rep=QProcess::execute(cmd);
 	return (rep==0);
 }
@@ -74,10 +80,7 @@ bool SvnManager::commitDepot(QString depotPath,QString login,QString password)
 
 bool SvnManager::addFileToDepot(QString depotPath,QString filePath,QString login,QString password)
 {
-	depotPath=normalizePath(depotPath);
 	filePath=normalizePath(filePath);
-	login=normalizePath(login);
-	password=normalizePath(password);
 	QString cmd=svnCommand+" add "+filePath;
 	int rep=QProcess::execute(cmd);
 	if(rep!=0) return false;
@@ -88,10 +91,7 @@ bool SvnManager::addFileToDepot(QString depotPath,QString filePath,QString login
 
 bool SvnManager::removeFileToDepot(QString depotPath,QString filePath,QString login,QString password)
 {
-	depotPath=normalizePath(depotPath);
 	filePath=normalizePath(filePath);
-	login=normalizePath(login);
-	password=normalizePath(password);
 	QString cmd=svnCommand+" rm "+filePath;
 	int rep=QProcess::execute(cmd);
 	if(rep!=0) return false;
@@ -134,20 +134,17 @@ QList<Request*> SvnManager::getRequestDiff(QString depotPath,int clientRevision,
 	QString cmd=svnCommand+" diff --summarize --xml --depth infinity --no-diff-deleted ";
 	cmd+=" -r "+QString::number(clientRevision)+":"+QString::number(svnRevision);
 	cmd+=" "+depotPath;
+	QList<Request*> list;
 	QProcess p;
 	p.start(cmd);
 	p.waitForFinished();
-	if(p.exitCode()!=0) return QList<Request*>();
-	QByteArray response=p.readAll();
+	if(p.exitCode()!=0) return list;
 
+	QByteArray response=p.readAll();
 	QDomDocument document;
 	if(!document.setContent(response)) return QList<Request*>();
-
 	//On charge la liste des élèments fils du document
 	QDomNodeList noeuds=document.documentElement().childNodes();
-
-	QList<Request*> list;
-
 	depotPath=Depot::GLOBAL_DEPOTS_PATH;
 
 	for(int i=0;i<noeuds.length();i++)
@@ -216,7 +213,7 @@ QList<Request*> SvnManager::getRequestDiff(QString depotPath,int clientRevision,
 
 QString SvnManager::normalizePath(QString path)
 {
-	if(path.contains(" "))
+	if(path.contains(" ") || path.isEmpty())
 	{
 		if(!path.startsWith("\"") || !path.endsWith("\""))
 			path="\""+path+"\"";

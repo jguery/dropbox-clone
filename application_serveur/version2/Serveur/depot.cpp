@@ -1,5 +1,5 @@
 #include "depot.h"
-QString Depot::GLOBAL_DEPOTS_PATH="/homes/hky/test/server/";
+QString Depot::GLOBAL_DEPOTS_PATH="";
 
 
 
@@ -19,7 +19,10 @@ Depot *Depot::loadDepot(QString depotName,SvnManager *svnManager)
 	if(!parent.mkdir(depotName)) return NULL;
 
 	if(!(svnManager->checkoutDepot(globalTmpPath+depotName,depotName)))
+	{
+		Depot::removeNonEmptyDirectory(globalTmpPath+depotName);
 		return NULL;
+	}
 
 	return new Depot(depotName,svnManager);
 }
@@ -217,6 +220,25 @@ bool Depot::isMediaExists(QString realPath)
 
 
 
+QList<Request*> Depot::getUpgradingRequest(int revision)
+{
+	return svnManager->getRequestDiff(GLOBAL_DEPOTS_PATH+depotName,revision,this->revision);
+}
+
+
+
+Depot::~Depot()
+{
+	mutex.lock();
+	mutex.unlock();
+}
+
+
+
+
+
+
+
 
 //méthode statique qui extrait d'un chemin, son repertoire parent.
 //le resultat est renvoyé sans le "/"
@@ -267,20 +289,4 @@ bool Depot::removeNonEmptyDirectory(QString path)
 	if(!dir.rmdir(dir.absolutePath())) return false;
 	return true;
 }
-
-
-
-QList<Request*> Depot::getUpgradingRequest(int revision)
-{
-	return svnManager->getRequestDiff(GLOBAL_DEPOTS_PATH+depotName,revision,this->revision);
-}
-
-
-
-Depot::~Depot()
-{
-	mutex.lock();
-	mutex.unlock();
-}
-
 

@@ -2,9 +2,13 @@
 
 
 
-FileManager *FileManager::createFileManager(SvnManager *svnManager)
+FileManager *FileManager::createFileManager(QString filesPath,SvnManager *svnManager)
 {
-	if(!svnManager) return NULL;
+	if(filesPath.isEmpty() || !svnManager) return NULL;
+	QDir dir(filesPath);
+	if(!dir.exists()) return NULL;
+	if(!filesPath.endsWith("/")) filesPath=filesPath+"/";
+	Depot::GLOBAL_DEPOTS_PATH=filesPath;
 	return new FileManager(svnManager);
 }
 

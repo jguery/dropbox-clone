@@ -9,7 +9,7 @@
 class FileManager
 {
 public:
-	static FileManager *createFileManager(SvnManager *svnManager);
+	static FileManager *createFileManager(QString filesPath,SvnManager *svnManager);
 	bool addDepot(QString depotName);
 	Depot *getDepot(QString depotName);
 	bool removeDepot(QString depotName);

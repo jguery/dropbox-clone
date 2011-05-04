@@ -38,19 +38,19 @@ ClientManager::ClientManager(int clientSocket,QVector<ClientManager*> *clients,D
 void ClientManager::run()
 {
 	socket=new Socket();
-	QObject::connect(socket, SIGNAL(disconnected()), this, SLOT(clientDisconnected()),Qt::DirectConnection);
+	QObject::connect(socket, SIGNAL(disconnected()), this, SLOT(clientDisconnected()));
 	QObject::connect(socket, SIGNAL(receiveMessage(QByteArray*)), this, SLOT(receiveMessageAction(QByteArray*)));
-	QObject::connect(socket, SIGNAL(encrypted()), this, SLOT(connexionEncrypted()),Qt::DirectConnection);
-	QObject::connect(socket, SIGNAL(sslErrors(QList<QSslError>)), this, SLOT(erreursSsl(QList<QSslError>)),Qt::DirectConnection);
+	QObject::connect(socket, SIGNAL(encrypted()), this, SLOT(connexionEncrypted()));
+	QObject::connect(socket, SIGNAL(sslErrors(QList<QSslError>)), this, SLOT(erreursSsl(QList<QSslError>)));
 	this->clientDescription=socket->peerAddress().toString();
 
 	if(socket->setDescriptor(clientSocket))
 	{
-		Widget::addRowToTable("Initialisation d'une connexion avec le client "+clientDescription+".",model,MSG_2);
+		Widget::addRowToTable("Connexion initialisée avec descripteur de socket du client "+clientDescription+".",model,MSG_2);
 	}
 	else
 	{
-		Widget::addRowToTable("Impossible d'initialiser une connexion avec le client "+clientDescription,model,MSG_2);
+		Widget::addRowToTable("Impossible d'initialiser une connexion avec le descripteur de socket du client "+clientDescription,model,MSG_2);
 		socket->disconnectClient();
 		return ;
 	}
@@ -147,16 +147,12 @@ void ClientManager::receivedRequest(Request *r)
 		this->socket->sendMessage(response.toXml());
 		return ;
 	}
-	if(state==SERVER_DETECTIONS)
-	{
-		qDebug("Warning 59 C.M.");
-	}
 	//Si on se trouve à l'état connecté
 	if(state==CONNECTED)
 	{
 		if(r->getType()==IDENTIFICATION)
 		{
-			Widget::addRowToTable("Le client "+clientDescription+" a envoyé un message d'identification.",model,MSG_3);
+			Widget::addRowToTable("Le client "+clientDescription+" a envoyé un message d'identification.",model,MSG_2);
 			Response response;
 			QString pseudo=r->getParameters()->value("pseudo");
 			QString password=r->getParameters()->value("password");
@@ -190,7 +186,7 @@ void ClientManager::receivedRequest(Request *r)
 	{
 		if(r->getType()==REVISION_FILE_INFO)
 		{
-			Widget::addRowToTable("Le client "+clientDescription+" a envoyé un message de révision de dépot.",model,MSG_3);
+			Widget::addRowToTable("Le client "+clientDescription+" a envoyé un message de révision de dépot.",model,MSG_2);
 			QString realPath=r->getParameters()->value("realPath","");
 			QString revisionString=r->getParameters()->value("revision","");
 			int revision=revisionString.toInt();
@@ -213,9 +209,9 @@ void ClientManager::receivedRequest(Request *r)
 			upgrading.append(list);
 			Response response;response.setType(ACCEPT_FILE_INFO);
 			this->socket->sendMessage(response.toXml());
+			return;
 		}
-
-		if(r->getType()==END_OLD_DETECTIONS)
+		else if(r->getType()==END_OLD_DETECTIONS)
 		{
 			this->state=SERVER_DETECTIONS;
 			for(int i=0;i<upgrading.size();i++)
@@ -226,12 +222,18 @@ void ClientManager::receivedRequest(Request *r)
 			this->state=SYNCHRONIZED;
 			return;
 		}
-
+	}
+	if(state==SERVER_DETECTIONS)
+	{
+		Response response;response.setType(REJECT_FILE_INFO_FOR_RIGHT);
+		this->socket->sendMessage(response.toXml());
+		return;
 	}
 	if(r->getType()==CREATE_FILE_INFO || r->getType()==UPDATE_FILE_INFO || r->getType()==REMOVE_FILE_INFO)
 	{
-		Widget::addRowToTable("Le client "+clientDescription+" a détecté un changement.",model,MSG_3);
 		QString realPath=r->getParameters()->value("realPath","");
+		QString description=(r->getType()==CREATE_FILE_INFO)?"créé":((r->getType()==UPDATE_FILE_INFO)?"modifié":"supprimé");
+		Widget::addRowToTable("Le client "+clientDescription+" a détecté que le média "+realPath+" a été "+description,model,MSG_2);
 		QString clientRevisionString=r->getParameters()->value("revision","");
 		int clientRevision=0;clientRevision=clientRevisionString.toInt();
 
@@ -259,7 +261,7 @@ void ClientManager::receivedRequest(Request *r)
 		Depot *depot=this->fileManager->getDepot(u->depotname);
 		if(!depot)
 		{
-			qDebug("Warning 1 C.M.");
+			Widget::addRowToTable("Le dépot SVN du média n'est pas chargé.",model,MSG_3);
 			Response response;response.setType(REJECT_FILE_INFO_FOR_SVNERROR);
 			this->socket->sendMessage(response.toXml());
 			return;
@@ -268,7 +270,7 @@ void ClientManager::receivedRequest(Request *r)
 
 		if(clientRevision>svnRevision)
 		{
-			qDebug("Warning 2 C.M.");
+			Widget::addRowToTable("La révision du dépot SVN du client est supérieure à celle du serveur.",model,MSG_3);
 			Response response;response.setType(REJECT_FILE_INFO_FOR_SVNERROR);
 			response.getParameters()->insert("revision",QByteArray::number(svnRevision));
 			this->socket->sendMessage(response.toXml());
@@ -281,12 +283,14 @@ void ClientManager::receivedRequest(Request *r)
 			if(depot->isMediaExists(realPath))
 			{
 				if(svnRevision==clientRevision)	qDebug("Warning 20 C.M.");
+				Widget::addRowToTable("Un conflit SVN a été détecté: Le media à créér existe déjà.",model,MSG_3);
 				response.setType(REJECT_FILE_INFO_FOR_CONFLICT);
 				response.getParameters()->insert("revision",QByteArray::number(svnRevision));
 			}
 			else if(!(depot->isMediaExists(Depot::extractParentPath(realPath)+"/")))
 			{
 				if(svnRevision==clientRevision)	qDebug("Warning 21 C.M.");
+				Widget::addRowToTable("Un conflit SVN a été détecté: Le parent du média à créer n'existe pas.",model,MSG_3);
 				response.setType(REJECT_FILE_INFO_FOR_CONFLICT);
 				response.getParameters()->insert("revision",QByteArray::number(svnRevision));
 			}
@@ -299,12 +303,14 @@ void ClientManager::receivedRequest(Request *r)
 					result=depot->createFile(realPath,user->login,user->password);
 				if(result)
 				{
+					Widget::addRowToTable("La requete a été acceptée et committée sur le SVN.",model,MSG_3);
 					response.setType(ACCEPT_FILE_INFO);
 					response.getParameters()->insert("revision",QByteArray::number(depot->getRevision()));
 				}
 				else
 				{
 					qDebug("Warning 23 C.M.");
+					Widget::addRowToTable("Une erreur s'est produite lors du commit. La requete a été rejettée.",model,MSG_3);
 					response.setType(REJECT_FILE_INFO_FOR_SVNERROR);
 					response.getParameters()->insert("revision",QByteArray::number(svnRevision));
 				}
@@ -318,12 +324,14 @@ void ClientManager::receivedRequest(Request *r)
 				bool result=depot->updateFileContent(realPath,content,user->login,user->password);
 				if(result)
 				{
+					Widget::addRowToTable("La requete a été acceptée et committée sur le SVN.",model,MSG_3);
 					response.setType(ACCEPT_FILE_INFO);
 					response.getParameters()->insert("revision",QByteArray::number(depot->getRevision()));
 				}
 				else
 				{
 					qDebug("Warning 25 C.M.");
+					Widget::addRowToTable("Une erreur s'est produite lors du commit. La requete a été rejettée.",model,MSG_3);
 					response.setType(REJECT_FILE_INFO_FOR_SVNERROR);
 					response.getParameters()->insert("revision",QByteArray::number(svnRevision));
 				}
@@ -331,6 +339,7 @@ void ClientManager::receivedRequest(Request *r)
 			else
 			{
 				if(svnRevision==clientRevision)	qDebug("Warning 26 C.M.");
+				Widget::addRowToTable("Un conflit SVN a été détecté: Le media à modifier n'existe pas.",model,MSG_3);
 				response.setType(REJECT_FILE_INFO_FOR_CONFLICT);
 				response.getParameters()->insert("revision",QByteArray::number(svnRevision));
 			}
@@ -340,6 +349,7 @@ void ClientManager::receivedRequest(Request *r)
 			if(!depot->isMediaExists(realPath))
 			{
 				if(svnRevision==clientRevision)	qDebug("Warning 27 C.M.");
+				Widget::addRowToTable("Un conflit SVN a été détecté: Le media à supprimer n'existe pas.",model,MSG_3);
 				response.setType(REJECT_FILE_INFO_FOR_CONFLICT);
 				response.getParameters()->insert("revision",QByteArray::number(svnRevision));
 			}
@@ -348,12 +358,14 @@ void ClientManager::receivedRequest(Request *r)
 				bool result=depot->deleteMedia(realPath,user->login,user->password);
 				if(result)
 				{
+					Widget::addRowToTable("La requete a été acceptée et committée sur le SVN.",model,MSG_3);
 					response.setType(ACCEPT_FILE_INFO);
 					response.getParameters()->insert("revision",QByteArray::number(depot->getRevision()));
 				}
 				else
 				{
 					qDebug("Warning 23 C.M.");
+					Widget::addRowToTable("Une erreur s'est produite lors du commit. La requete a été rejettée.",model,MSG_3);
 					response.setType(REJECT_FILE_INFO_FOR_SVNERROR);
 					response.getParameters()->insert("revision",QByteArray::number(svnRevision));
 				}
@@ -365,8 +377,14 @@ void ClientManager::receivedRequest(Request *r)
 			r->getParameters()->insert("revision",QByteArray::number(depot->getRevision()));
 			for(int i=0;i<clients->size();i++)
 			{
-				if(clients->at(i)!=this)
-					clients->at(i)->sendDetectionRequest(new QByteArray(*(r->toXml())));
+				if(clients->at(i)!=this && clients->at(i)->getUser()!=NULL)
+				{
+					QString login=clients->at(i)->getUserLogin();
+					QString depotname=depot->getDepotName();
+					if(depotname.endsWith("/")) depotname=depotname.left(depotname.length()-1);
+					if(databaseManager->isUserLinkDepot(login,depotname))
+						clients->at(i)->sendDetectionRequest(new QByteArray(*(r->toXml())));
+				}
 			}
 		}
 		this->socket->sendMessage(response.toXml());
@@ -377,6 +395,23 @@ void ClientManager::receivedRequest(Request *r)
 
 
 
+QStandardItemModel *ClientManager::getModelClient()
+{
+	return model;
+}
+
+
+SqlUser *ClientManager::getUser()
+{
+	return user;
+}
+
+
+QString ClientManager::getUserLogin()
+{
+	if(!user) return "";
+	else return user->login;
+}
 
 
 ClientManager::~ClientManager()

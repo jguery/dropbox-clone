@@ -3,6 +3,10 @@
 
 
 
+QString APPLICATION_NAME="Clone-DropBox";
+
+
+
 //La méthode main pour tester le serveur
 ///////////////////////////////////////////
 
