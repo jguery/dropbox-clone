@@ -193,12 +193,7 @@ void Widget::createConfigSlot()
 
 // Les slots introduits par l'ajout de l'icône de notification
 
-void Widget::hideWidget(){
-    this->hide();
-}
-void Widget::showWidget(){
-    this->show();
-}
+
 
 
 
@@ -350,8 +345,8 @@ void Widget::buildNotification()
     notifIcon->setContextMenu(notifMenu);
 
     // Les connexions
-    connect(minimize,SIGNAL(triggered()),this,SLOT(hideWidget()));
-    connect(restore,SIGNAL(triggered()),this,SLOT(showWidget()));
+    connect(minimize,SIGNAL(triggered()),this,SLOT(hide()));
+    connect(restore,SIGNAL(triggered()),this,SLOT(show()));
     connect(quit,SIGNAL(triggered()),qApp,SLOT(quit()));
 
 

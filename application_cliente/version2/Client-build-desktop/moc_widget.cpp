@@ -1,7 +1,7 @@
 /****************************************************************************
 ** Meta object code from reading C++ file 'widget.h'
 **
-** Created: Thu May 5 16:58:25 2011
+** Created: Thu May 5 17:09:15 2011
 **      by: The Qt Meta Object Compiler version 62 (Qt 4.7.0)
 **
 ** WARNING! All changes made in this file will be lost!
@@ -23,7 +23,7 @@ static const uint qt_meta_data_Widget[] = {
        5,       // revision
        0,       // classname
        0,    0, // classinfo
-       9,   14, // methods
+       7,   14, // methods
        0,    0, // properties
        0,    0, // enums/sets
        0,    0, // constructors
@@ -38,8 +38,6 @@ static const uint qt_meta_data_Widget[] = {
       93,    7,    7,    7, 0x0a,
      121,    7,    7,    7, 0x0a,
      140,    7,    7,    7, 0x0a,
-     166,    7,    7,    7, 0x0a,
-     179,    7,    7,    7, 0x0a,
 
        0        // eod
 };
@@ -49,7 +47,6 @@ static const char qt_meta_stringdata_Widget[] = {
     "detectionButtonSlot()\0parcourirLoadConfigSlot()\0"
     "loadConfigSlot()\0parcourirCreateConfigSlot()\0"
     "createConfigSlot()\0parcourirSaveConfigSlot()\0"
-    "hideWidget()\0showWidget()\0"
 };
 
 const QMetaObject Widget::staticMetaObject = {
@@ -88,11 +85,9 @@ int Widget::qt_metacall(QMetaObject::Call _c, int _id, void **_a)
         case 4: parcourirCreateConfigSlot(); break;
         case 5: createConfigSlot(); break;
         case 6: parcourirSaveConfigSlot(); break;
-        case 7: hideWidget(); break;
-        case 8: showWidget(); break;
         default: ;
         }
-        _id -= 9;
+        _id -= 7;
     }
     return _id;
 }
