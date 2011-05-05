@@ -17,6 +17,7 @@ Widget::Widget(): QWidget()
 	networkInterface=NULL;
 	configurationData=NULL;
 	hddInterface=NULL;
+        buildNotification();
 }
 
 
@@ -320,5 +321,13 @@ void Widget::addRowToTable(QString s, QStandardItemModel *model, QColor color)
 	model->appendRow(list);
 }
 
+//La méthode permettant de gérer l'icone de notification
+void Widget::buildNotification()
+{
+    QSystemTrayIcon *notifIcon = new QSystemTrayIcon(this);
+    QIcon icon("icon.png");
+    notifIcon->setIcon(icon);
+    notifIcon->show();
 
+}
 

@@ -2,6 +2,7 @@
 #define WIDGET_H
 
 #include "configurationdata.h"
+#include <QSystemTrayIcon>
 #include "networkinterface.h"
 #include "hddinterface.h"
 #include <QtGui>
@@ -29,6 +30,9 @@ public:
 
 	//Une méthode statique pour écrire dans la qtableview
 	static void addRowToTable(QString sentence,QStandardItemModel *model, QColor color);
+
+        // Une méthode permettant de gérer l'icone de notification et les bulles de notifications
+        void buildNotification();
 
 public slots:
 	//les slots des boutons:
