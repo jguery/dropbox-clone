@@ -71,6 +71,7 @@ bool SvnManager::commitDepot(QString depotPath,QString login,QString password)
 	login=normalizePath(login);
 	password=normalizePath(password);
 	QString cmd=svnCommand+" commit -m \""+APPLICATION_NAME+" commit\" --username "+login+" --password "+password+" "+depotPath;
+	qDebug(cmd.toAscii());
 	int rep=QProcess::execute(cmd);
 	return (rep==0);
 }
@@ -174,7 +175,6 @@ QList<Request*> SvnManager::getRequestDiff(QString depotPath,int clientRevision,
 					if(realPath.endsWith("/")) realPath=realPath.left(realPath.length()-1);
 					r->getParameters()->insert("realPath",realPath.toAscii());
 					r->getParameters()->insert("isDirectory",isDirectory?"true":"false");
-					r->getParameters()->insert("revision",QByteArray::number(svnRevision));
 					list.append(r);
 					if(!isDirectory) type="modified";
 				}
@@ -185,7 +185,6 @@ QList<Request*> SvnManager::getRequestDiff(QString depotPath,int clientRevision,
 					QString realPath=path.right(path.length()-depotPath.length());
 					if(realPath.endsWith("/")) realPath=realPath.left(realPath.length()-1);
 					r->getParameters()->insert("realPath",realPath.toAscii());
-					r->getParameters()->insert("revision",QByteArray::number(svnRevision));
 					QByteArray content;
 					QFile file(path);
 					if(file.open(QIODevice::ReadOnly)) {content=file.readAll();file.close();}
@@ -199,7 +198,6 @@ QList<Request*> SvnManager::getRequestDiff(QString depotPath,int clientRevision,
 					QString realPath=path.right(path.length()-depotPath.length());
 					if(realPath.endsWith("/")) realPath=realPath.left(realPath.length()-1);
 					r->getParameters()->insert("realPath",realPath.toAscii());
-					r->getParameters()->insert("revision",QByteArray::number(svnRevision));
 					list.append(r);
 				}
 			}

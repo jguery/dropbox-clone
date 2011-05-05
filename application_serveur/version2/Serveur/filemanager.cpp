@@ -58,6 +58,21 @@ Depot *FileManager::getDepot(QString depotName)
 
 
 
+Depot *FileManager::depotContainer(QString mediaPath)
+{
+	mutex.lock();
+	Depot *d=NULL;
+	for(int i=0;i<depots->length();i++)
+	{
+		if(mediaPath.startsWith(depots->at(i)->getDepotName())) d=depots->at(i);
+	}
+	mutex.unlock();
+	return d;
+}
+
+
+
+
 
 bool FileManager::removeDepot(QString depotName)
 {

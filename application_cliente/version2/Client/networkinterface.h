@@ -49,8 +49,7 @@ public:
 	//Pour savoir si on est connecté
 	bool checkIsConnected();
 
-	//Bloquer le thread appelant tant qu'on ne se connecte pas
-	bool blockWhileDisconnected();
+	~NetworkInterface();
 
 signals:
 	void connected();
@@ -98,9 +97,6 @@ private:
 
 	//La condition pour synchroniser les messages
 	QWaitCondition waitMessages;
-
-	//Le mutex pour bloquer tant qu'on est pas connecté
-	QMutex blockDisconnectedMutex;
 
 	//Pour les réponses aux requetes envoyées par le client
 	Response *response;

@@ -43,13 +43,11 @@ void Widget::detectionButtonSlot()
 	if(configurationData==NULL || configurationData->getConfigurationFile()==NULL) return;
 	if(this->configurationData->getConfigurationFile()->isListenning())
 	{
-		this->configurationData->getConfigurationFile()->setListenning(false);;
-		this->detectionButton->setText(trUtf8("Démarer les détections"));
+		this->configurationData->getConfigurationFile()->setListenning(false);
 	}
 	else
 	{
 		this->configurationData->getConfigurationFile()->setListenning(true);
-		this->detectionButton->setText(trUtf8("Arreter les détections"));
 	}
 }
 
@@ -92,6 +90,9 @@ void Widget::parcourirSaveConfigSlot()
 
 void Widget::loadConfigSlot()
 {
+	delete networkInterface;networkInterface=NULL;
+	delete hddInterface;hddInterface=NULL;
+	delete configurationData;configurationData=NULL;
 	networkModel->removeRows(0,networkModel->rowCount());
 	transfertModel->removeRows(0,transfertModel->rowCount());
 	detectionModel->removeRows(0,detectionModel->rowCount());
@@ -130,6 +131,9 @@ void Widget::loadConfigSlot()
 
 void Widget::createConfigSlot()
 {
+	delete networkInterface;networkInterface=NULL;
+	delete hddInterface;hddInterface=NULL;
+	delete configurationData;configurationData=NULL;
 	networkModel->removeRows(0,networkModel->rowCount());
 	transfertModel->removeRows(0,transfertModel->rowCount());
 	detectionModel->removeRows(0,detectionModel->rowCount());
@@ -288,7 +292,7 @@ void Widget::buildInterface()
 	detectionView->setColumnWidth(0,650);
 	QObject::connect(detectionModel,SIGNAL(rowsInserted(QModelIndex,int,int)),detectionView,SLOT(scrollToBottom()));
 	layout3->addWidget(detectionView);
-	detectionButton=new QPushButton(trUtf8("Démarer les détections"));
+	detectionButton=new QPushButton(trUtf8("Démarer/Arreter les détections"));
 	QObject::connect(detectionButton,SIGNAL(clicked()),this,SLOT(detectionButtonSlot()));
 	layout3->addWidget(detectionButton);
 	detectionOnglet->setLayout(layout3);

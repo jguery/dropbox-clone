@@ -35,7 +35,6 @@ NetworkInterface::NetworkInterface(ConfigurationNetwork *configurationNetwork, C
 	this->waitReceiveRequestList=NULL;
 	this->receiveRequestList=new QList<Request*>();
 	this->response=NULL;
-	blockDisconnectedMutex.lock();
 
 	this->model = model;
 
@@ -169,7 +168,6 @@ void NetworkInterface::erreursSsl(const QList<QSslError> &errors)
 void NetworkInterface::disconnectedFromServer()
 {
 	this->isConnected=false;
-	blockDisconnectedMutex.lock();
 	response=new Response();
 	response->setType(NOT_CONNECT);
 	waitMessages.wakeAll();
@@ -186,17 +184,6 @@ bool NetworkInterface::checkIsConnected()
 	return isConnected;
 }
 
-
-
-//Bloquer le thread appelant tant qu'on est pas connecté
-//Retourne true si la socket etait déconnectée
-bool NetworkInterface::blockWhileDisconnected()
-{
-	bool b=blockDisconnectedMutex.tryLock();
-	if(!b) blockDisconnectedMutex.lock();
-	blockDisconnectedMutex.unlock();
-	return !b;
-}
 
 
 
@@ -234,7 +221,6 @@ void NetworkInterface::receiveMessageAction(QByteArray *message)
 		else
 		{
 			isConnected=true;
-			blockDisconnectedMutex.unlock();
 			emit identified();
 		}
 		return;
@@ -557,3 +543,9 @@ void NetworkInterface::setWaitReceiveRequestList(QWaitCondition *waitReceiveRequ
 
 
 
+
+NetworkInterface::~NetworkInterface()
+{
+	this->terminate();
+	delete socket;
+}

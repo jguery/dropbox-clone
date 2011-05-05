@@ -56,6 +56,11 @@ void HddInterface::run()
 {
 	forever
 	{
+		if(!networkInterface->checkIsConnected())
+		{
+			exec();
+		}
+
 		mutexWaitCondition.lock();
 		waitCondition.wait(&mutexWaitCondition,50);
 		mutexWaitCondition.unlock();

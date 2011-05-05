@@ -61,6 +61,7 @@ private:
 
 	//pour savoir si le mode permet d'envoyer des requetes
 	bool canSend;
+
 };
 
 #endif // HDDINTERFACE_H

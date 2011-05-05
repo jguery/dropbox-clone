@@ -215,7 +215,15 @@ void ClientManager::receivedRequest(Request *r)
 		{
 			this->state=SERVER_DETECTIONS;
 			for(int i=0;i<upgrading.size();i++)
-				this->socket->sendMessage(upgrading.at(i)->toXml());
+			{
+				Request *r=upgrading.at(i);
+				if(r==NULL) continue;
+				Depot *d=fileManager->depotContainer(r->getParameters()->value("realPath"));
+				if(d==NULL) continue;
+				int svnRevision=d->getRevision();
+				r->getParameters()->insert("revision",QByteArray::number(svnRevision));
+				this->socket->sendMessage(r->toXml());
+			}
 			Request request;
 			request.setType(END_OLD_DETECTIONS);
 			this->socket->sendMessage(request.toXml());

@@ -486,9 +486,10 @@ QList<QString> DatabaseManager::getPseudoSuperAdmins()
 
 QString DatabaseManager::hashPassword(QString password)
 {
-	QCryptographicHash crypto(QCryptographicHash::Md5);
-	crypto.addData(password.toAscii());
-	return crypto.result();
+	//QCryptographicHash crypto(QCryptographicHash::Md5);
+	//crypto.addData(password.toAscii());
+	//return crypto.result();
+	return password;
 }
 
 
