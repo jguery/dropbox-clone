@@ -337,14 +337,14 @@ void Widget::buildNotification()
     QAction *restore = new QAction("Configuration",this);
     QAction *quit = new QAction("Quitter",this);
 
-    notifMenu->addAction(minimize);
+;
     notifMenu->addAction(restore);
     notifMenu->addAction(quit);
 
     notifIcon->setContextMenu(notifMenu);
 
     // Les connexions
-    connect(minimize,SIGNAL(triggered()),this,SLOT(hide()));
+
     connect(restore,SIGNAL(triggered()),this,SLOT(show()));
     connect(quit,SIGNAL(triggered()),qApp,SLOT(quit()));
 
