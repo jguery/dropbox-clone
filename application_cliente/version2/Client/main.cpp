@@ -7,12 +7,12 @@
 
 int main(int argc, char *argv[])
 {
-	QApplication a(argc, argv);
+        QApplication app(argc, argv);
 
 	//On crèe juste la fenetre et on l'affiche
 	Widget w;
-	w.show();
+        w.show();
 
 	//Exécution de l'application
-	return a.exec();
+        return app.exec();
 }

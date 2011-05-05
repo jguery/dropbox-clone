@@ -44,6 +44,9 @@ public slots:
 	void parcourirCreateConfigSlot();
 	void createConfigSlot();
 	void parcourirSaveConfigSlot();
+        //Les slots de l'icone de notification
+        void hideWidget();
+        void showWidget();
 
 private:
 	//la configuration

@@ -18,6 +18,7 @@ Widget::Widget(): QWidget()
 	configurationData=NULL;
 	hddInterface=NULL;
         buildNotification();
+
 }
 
 
@@ -190,6 +191,14 @@ void Widget::createConfigSlot()
 }
 
 
+// Les slots introduits par l'ajout de l'icône de notification
+
+void Widget::hideWidget(){
+    this->hide();
+}
+void Widget::showWidget(){
+    this->show();
+}
 
 
 
@@ -327,6 +336,25 @@ void Widget::buildNotification()
     QSystemTrayIcon *notifIcon = new QSystemTrayIcon(this);
     QIcon icon("icon.png");
     notifIcon->setIcon(icon);
+
+    //Menu de l'icône
+    QMenu *notifMenu = new QMenu(this);
+    QAction *minimize = new QAction("Minimiser",this);
+    QAction *restore = new QAction("Restaurer",this);
+    QAction *quit = new QAction("Quitter",this);
+
+    notifMenu->addAction(minimize);
+    notifMenu->addAction(restore);
+    notifMenu->addAction(quit);
+
+    notifIcon->setContextMenu(notifMenu);
+
+    // Les connexions
+    connect(minimize,SIGNAL(triggered()),this,SLOT(hideWidget()));
+    connect(restore,SIGNAL(triggered()),this,SLOT(showWidget()));
+    connect(quit,SIGNAL(triggered()),qApp,SLOT(quit()));
+
+
     notifIcon->show();
 
 }
