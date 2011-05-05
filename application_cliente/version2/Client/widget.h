@@ -8,6 +8,7 @@
 #include <QtGui>
 #include <QSettings>
 
+
 /*
  Cette classe implémente une fenetre de test pour le client.
  Elle permet de voir tous les évenements par l'intermediaire d'une qtableview
@@ -33,6 +34,7 @@ public:
 
         // Une méthode permettant de gérer l'icone de notification et les bulles de notifications
         void buildNotification();
+        void closeEvent(QCloseEvent *e);//Intercepte la fermeture du programme pour le mettre en fond
 
 public slots:
 	//les slots des boutons:

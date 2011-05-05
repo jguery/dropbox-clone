@@ -199,7 +199,6 @@ void Widget::createConfigSlot()
 
 
 
-
 //Fonction qui crèe l'interface graphique
 //avec les trois onglets, les boutons, les tableview
 //et tout le bazard
@@ -335,7 +334,7 @@ void Widget::buildNotification()
     //Menu de l'icône
     QMenu *notifMenu = new QMenu(this);
     QAction *minimize = new QAction("Minimiser",this);
-    QAction *restore = new QAction("Restaurer",this);
+    QAction *restore = new QAction("Configuration",this);
     QAction *quit = new QAction("Quitter",this);
 
     notifMenu->addAction(minimize);
@@ -350,7 +349,12 @@ void Widget::buildNotification()
     connect(quit,SIGNAL(triggered()),qApp,SLOT(quit()));
 
 
+
     notifIcon->show();
 
 }
 
+void Widget::closeEvent(QCloseEvent *e){
+    e->ignore();
+    this->hide();
+}
