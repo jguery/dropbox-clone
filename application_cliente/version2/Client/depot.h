@@ -38,7 +38,7 @@ private:
 	//Pour savoir si le media est en lecture seule
 	bool readOnly;
 
-	//Pour le numero de révision du média
+	//Pour le numero de révision du dépôt
 	int revision;
 
 };

@@ -30,12 +30,12 @@ signals:
 	void receiveMessage(QByteArray *message);
 
 private slots:
-	//Slot privé qui sera appelé à chaque fois que des petits paquets sont recus
+	//Slot privé qui sera appelé à chaque fois que des petits paquets seront recus
 	void inputStream();
 
 private:
 	//Pour initialiser la communication ssl
-	bool initialiseSSL();
+	//bool initialiseSSL();
 
 	//attribut privé pour stocker la taille du message qui est entrain d'etre recu par paquet
 	qint64 blockSize;

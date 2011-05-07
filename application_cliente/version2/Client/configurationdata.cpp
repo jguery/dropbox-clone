@@ -497,7 +497,10 @@ void ConfigurationFile::putMediaDetection(Media *m)
 	detectMediaList->append(m);
 
 	int index=0;
-	//On recherche le rang du media
+	//On recherche le rang du state à traiter sur le media m
+	//Il est proportionnel au nombre de fois où m se retrouve dans le liste detectMediaList.
+	//S'il il est 3 fois, alors index=3 et on traite le premier changement apparu (chronologiquement),
+	//donc le dernier dans le liste detectionState du media (l'indice index-1 )
 	for(int i=0;i<detectMediaList->length();i++)
 		if(detectMediaList->at(i)==m) index++;
 
