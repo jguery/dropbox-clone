@@ -362,6 +362,6 @@ Message *Messages::parseMessage(QByteArray *message)
 		}
 	}
 	//Si on ne trouve aucune requete connue, on retourne NULL
-	//Dans les normes ca ne devrait jamais arrivé ;)
+	//Dans les normes ca ne devrait jamais arriver ;)
 	return NULL;
 }

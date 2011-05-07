@@ -253,7 +253,7 @@ int HddInterface::detectedCreatedMedia(Media *m)
 	}
 	else if(response==NOT_SEND)
 	{
-		Widget::addRowToTable("La requête n'a pas pu être envoi",model,MSG_3);
+		Widget::addRowToTable("La requête n'a pas pu être envoyé",model,MSG_3);
 	}
 	else if(response==NOT_TIMEOUT)
 	{
@@ -343,7 +343,7 @@ int HddInterface::detectedRemovedMedia(Media *m)
 	}
 	else if(response==NOT_SEND)
 	{
-		Widget::addRowToTable("La requête n'a pas pu être envoi",model,MSG_3);
+		Widget::addRowToTable("La requête n'a pas pu être envoyée",model,MSG_3);
 	}
 	else if(response==NOT_TIMEOUT)
 	{

@@ -102,6 +102,7 @@ public:
 	QHash<QString,QByteArray> *getParameters();
 	QByteArray *toXml();
 	bool isRequest();
+
 private:
 
 	ResponseEnum type;

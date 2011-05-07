@@ -201,15 +201,18 @@ void NetworkInterface::receiveMessageAction(QByteArray *message)
 		return;
 	}
 
+	//On n'est pas identifié, le message reçu est donc un message relatif à l'établissement de la connexion
 	if(!isConnected)
 	{
+		//Le message doit normalement être une réponse!
 		if(m->isRequest())
 		{
 			qDebug("Warning 4 N.I.");
 			return;
 		}
 		Response *response=(Response*)m;
-		ResponseEnum r=response->getType();
+		ResponseEnum r=response->getType();	//Type de la réponse
+
 		if(r==ACCEPT_IDENTIFICATION) Widget::addRowToTable("Identification acceptée",model,MSG_2);
 		else if(r==REJECT_IDENTIFICATION_FOR_PSEUDO) Widget::addRowToTable("Identification refusée pour pseudo, vous allez être déconnecté du serveur",model,MSG_2);
 		else if(r==REJECT_IDENTIFICATION_FOR_PASSWORD) Widget::addRowToTable("Identification refusée pour password, vous allez être déconnecté du serveur",model,MSG_2);
@@ -217,7 +220,8 @@ void NetworkInterface::receiveMessageAction(QByteArray *message)
 		else  qDebug("Warning 5 N.I.");
 
 		//Si echec d'identification, on se déconnecte
-		if(r!=ACCEPT_IDENTIFICATION) emit this->disconnectFromServerRequested();
+		if(r!=ACCEPT_IDENTIFICATION)
+			emit this->disconnectFromServerRequested();
 		else
 		{
 			isConnected=true;
@@ -274,7 +278,7 @@ bool NetworkInterface::sendEndOldDetections()
 	Request request;
 	request.setType(END_OLD_DETECTIONS);
 
-	//On crèe le message d'identification
+	//On crèe le message
 	QByteArray *message=request.toXml();
 	bool r=socket->sendMessage(message);
 	return r;
