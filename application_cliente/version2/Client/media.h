@@ -28,7 +28,7 @@ enum State
 /*
     Cette classe représente un média sur le disque dur.
 Cela peut être un repertoire ou un simple fichier
-Elle justement est héritée par les classes Dir et File
+Elle  est justement héritée par les classes Dir et File
 C'est une classe abstraite; elle possède des méthodes virtuelles
 qui seront implémentées par ses classes filles.
 NB: Un média est réprésenté par son localPath qui est son chemin sur le disque de l'user
@@ -47,7 +47,7 @@ protected:
 	//Le constructeur
 	Media(QString localPath,QString realPath,Dir *parent);
 
-	//Pour méthodes pour gérer les accès concurents à l'objet.
+	//Pour pour gérer les accès concurents à l'objet.
 	void lock();
 	void unlock();
 

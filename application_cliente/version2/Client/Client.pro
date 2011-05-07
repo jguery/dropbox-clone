@@ -9,6 +9,8 @@ QT       += core gui network xml
 TARGET = Client
 TEMPLATE = app
 
+CONFIG *= crypto
+
 
 SOURCES += main.cpp\
         widget.cpp \
@@ -20,7 +22,8 @@ SOURCES += main.cpp\
     dir.cpp \
     file.cpp \
     media.cpp \
-    depot.cpp
+    depot.cpp \
+    ciphertool.cpp
 
 HEADERS  += widget.h \
     socket.h \
@@ -31,4 +34,5 @@ HEADERS  += widget.h \
     dir.h \
     file.h \
     media.h \
-    depot.h
+    depot.h \
+    ciphertool.h

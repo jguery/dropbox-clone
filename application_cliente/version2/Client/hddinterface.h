@@ -22,7 +22,7 @@ public:
 	//Une méthode statique pour l'allocation d'un objet hddInterface
 	static HddInterface *createHddInterface(ConfigurationData *configurationData,NetworkInterface *networkInterface,QStandardItemModel *model);
 
-	//Les fonctions qui sont appélées lors d'une modif sur un média
+	//Les fonctions qui sont appelées lors d'une modif sur un média
 	int detectedRemovedMedia(Media *m);
 	int detectedCreatedMedia(Media *m);
 	int detectedUpdatedMedia(Media *m);

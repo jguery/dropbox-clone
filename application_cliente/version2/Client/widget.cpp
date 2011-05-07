@@ -315,6 +315,7 @@ void Widget::addRowToTable(QString s, QStandardItemModel *model, QColor color)
 	if(model==NULL) return;
 	//On récupère la liste des 2 colonnes de la lignes
 	QList<QStandardItem*> list;
+
 	QStandardItem *i1=new QStandardItem(trUtf8(s.toAscii()));
 	i1->setBackground(QBrush(color));
 	QStandardItem *i2=new QStandardItem(QTime::currentTime().toString("hh:mm:ss"));

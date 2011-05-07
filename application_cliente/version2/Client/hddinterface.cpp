@@ -3,7 +3,9 @@
 
 
 //Pour allouer un objet de type hddInterface
-HddInterface *HddInterface::createHddInterface(ConfigurationData *configurationData, NetworkInterface *networkInterface,QStandardItemModel *model)
+HddInterface *HddInterface::createHddInterface(ConfigurationData *configurationData,
+							     NetworkInterface *networkInterface,
+							     QStandardItemModel *model)
 {
 	//On vérifie qu'aucun des paramètres n'est NULL
 	if(configurationData==NULL || networkInterface==NULL || model==NULL)

@@ -473,7 +473,7 @@ void ConfigurationFile::putMediaDetection(Media *m)
 
 	if(m->getDetectionState()->last()!=MediaIsCreating && detectMediaList->length()>1)
 	{
-		//On supprime les détections précédantes qui sont annulées par celle ci
+		//On supprime les détections précédentes qui sont annulées par celle ci
 		//sauf la première qui est très probablement en cours de traitement par le thread HddInterface
 		int k=1;
 		for(int i=detectMediaList->length()-1;i>0;i--)
@@ -502,7 +502,7 @@ void ConfigurationFile::putMediaDetection(Media *m)
 		if(detectMediaList->at(i)==m) index++;
 
 	//On affiche la détection dans le model
-	Widget::addRowToTable(QString("Le ")+(m->isDirectory()?QString("repertoire"):QString("fichier"))+QString(" ")+m->getLocalPath()+QString(" est passé à l'état ")+Media::stateToString(m->getDetectionState()->at(index-1)),model,MSG_2);
+	Widget::addRowToTable(QString("Le ")+(m->isDirectory()?QString("repertoire "):QString("fichier "))+m->getLocalPath()+QString(" est passé à l'état ")+Media::stateToString(m->getDetectionState()->at(index-1)),model,MSG_2);
 
 	//On demande un enregistrement de la config
 	emit saveRequest();
@@ -729,7 +729,7 @@ QString ConfigurationData::getSavePath()
 bool ConfigurationData::save(QString savePath)
 {
 	//En appelant cette fonction, il y a possibilité de choisir un chemin
-	//différent de celui de this-savePath.
+	//différent de celui de this->savePath.
 	if(savePath=="")
 	{
 		savePath=this->savePath;

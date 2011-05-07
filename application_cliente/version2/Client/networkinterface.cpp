@@ -329,6 +329,7 @@ Response *NetworkInterface::sendDepotRevision(QString realPath,int revision)
 		response->setType(NOT_TIMEOUT);
 	}
 
+	qDebug() << response;
 	return response;
 }
 

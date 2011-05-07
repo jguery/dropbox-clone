@@ -35,7 +35,7 @@ public:
 
 	//Des accesseurs et mutateurs
 	QString getAddress();
-        QString getFullAddress();    //IP + port
+	QString getFullAddress();    //IP + port
 	int getPort();
 	void setAddress(QString address);
 	void setPort(int port);
@@ -179,7 +179,7 @@ private:
 	//le constructeur
 	ConfigurationFile(QList<Depot*> *depots,QStandardItemModel *model);
 
-	//La liste des changements détectés en cours de communication au serveur
+	//La liste des changements détectés dans les dépôts en cours de communication au serveur
 	QList<Media*> *detectMediaList;
 
 	//Un mutex pour gérer les accès concurrents à la liste précédente

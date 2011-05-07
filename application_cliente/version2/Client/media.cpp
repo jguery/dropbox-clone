@@ -93,8 +93,9 @@ QString Media::extractParentPath(QString path)
 {
 	if(path.endsWith("/")) path=path.left(path.length()-1);
 	QString parentPath;
-	if(path.lastIndexOf("/")>=0)
-		parentPath=path.left(path.lastIndexOf("/"));
+	int last = path.lastIndexOf("/");
+	if(last>=0)
+		parentPath=path.left(last);
 	return parentPath;
 }
 

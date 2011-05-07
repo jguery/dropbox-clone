@@ -127,7 +127,7 @@ Dir::Dir(QString localPath,QString realPath,Dir *parent): Media(localPath,realPa
 	if(dir.exists())
 		watcher->addPath(localPath);  //Le watcher ne surveille que ce repertoire
 
-	//On connecte son signal au slot
+	//On connecte les signaux aux slots
 	if(parent!=NULL) QObject::connect(this,SIGNAL(detectChangement(Media*)),parent,SIGNAL(detectChangement(Media*)),Qt::QueuedConnection);
 	QObject::connect(watcher,SIGNAL(directoryChanged(QString)),this,SLOT(directoryChangedAction()),Qt::QueuedConnection);
 	QObject::connect(this,SIGNAL(listenRequested()),this,SLOT(directoryChangedAction()),Qt::QueuedConnection);
@@ -149,7 +149,8 @@ Dir::Dir(QString localPath,QString realPath,Dir *parent): Media(localPath,realPa
 void Dir::directoryChangedAction()
 {
 	//Si on ne doit pas détecter les changements, on annule tout
-	if(listen==false) return ;
+	if(listen==false)
+		return ;
 
 	//On bloque l'accès
 	this->lock();
@@ -181,7 +182,7 @@ void Dir::directoryChangedAction()
 				//On prévient le parent du repertoire
 				emit detectChangement(f);
 
-				isChanged=true; //On a détecter un changement
+				isChanged=true; //On a détecté un changement
 
 				continue; //Prochain fichier
 			}
@@ -197,7 +198,7 @@ void Dir::directoryChangedAction()
 				//alors on previent le parent
 				emit detectChangement(f);
 
-				isChanged=true; //On a détecter un changement
+				isChanged=true; //On a détecté un changement
 			}
 		}
 
@@ -217,7 +218,7 @@ void Dir::directoryChangedAction()
 				//On prévient le parent
 				emit detectChangement(d);   //signal pour prévenir le parent
 
-				isChanged=true; //On a détecter un changement
+				isChanged=true; //On a détecté un changement
 
 				continue; //Prochain fichier
 			}
@@ -268,7 +269,7 @@ void Dir::directoryChangedAction()
 				d->setListenning(listen);
 			}
 
-			isChanged=true; //On a détecter un changement
+			isChanged=true; //On a détecté un changement
 
 			contenu1.append(p);
 		}
@@ -299,7 +300,7 @@ QList<Media*> *Dir::getOldDetections()
 bool Dir::hasBeenRemoved()
 {
 	QDir dir(this->getLocalPath());
-        if(!dir.exists())
+	if(!dir.exists())
             return true;
 	return false;
 }

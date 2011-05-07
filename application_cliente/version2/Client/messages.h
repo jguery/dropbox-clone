@@ -42,11 +42,14 @@ class Request: public Message
 {
 public:
 	Request();
+
 	void setType(RequestEnum type);
 	RequestEnum getType();
+
 	QHash<QString,QByteArray> *getParameters();
 	QByteArray *toXml();
 	bool isRequest();
+
 private:
 	RequestEnum type;
 	QHash<QString,QByteArray> *parameters;
@@ -93,12 +96,14 @@ class Response: public Message
 {
 public:
 	Response();
+
 	void setType(ResponseEnum type);
 	ResponseEnum getType();
 	QHash<QString,QByteArray> *getParameters();
 	QByteArray *toXml();
 	bool isRequest();
 private:
+
 	ResponseEnum type;
 	QHash<QString,QByteArray> *parameters;
 };

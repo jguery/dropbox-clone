@@ -218,8 +218,9 @@ QDomElement File::toXml(QDomDocument *document)
 	QStringList listDetectionState;
 	for(int i=0;i<this->getDetectionState()->length();i++)
 	{
-		if(this->getDetectionState()->at(i)!=MediaDefaultState)
-		listDetectionState.append(Media::stateToString(this->getDetectionState()->at(i)));
+		State currentState = this->getDetectionState()->at(i);
+		if(currentState!=MediaDefaultState)
+			listDetectionState.append(Media::stateToString(currentState));
 	}
 	element.setAttribute("detectionState",listDetectionState.join(","));
 
