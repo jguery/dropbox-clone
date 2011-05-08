@@ -86,13 +86,13 @@ private:
 	ConfigurationNetwork *configurationNetwork;
 	ConfigurationIdentification *configurationIdentification;
 
-	//La condition pour les requetes recus
+	//La condition pour les requetes recues
 	QWaitCondition *waitReceiveRequestList;
 
 	//La liste des requetes recus
 	QList<Request*> *receiveRequestList;
 
-	//Le mutex pour les accès concurents à la liste précédante
+	//Le mutex pour les accès concurents à la liste précédente
 	QMutex receiveRequestListMutex;
 
 	//La condition pour synchroniser les messages

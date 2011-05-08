@@ -471,17 +471,22 @@ void ConfigurationFile::putMediaDetection(Media *m)
 	//Si le dépot est en lecture seule, on laisse tomber
 	if(!d || d->isReadOnly()) return ;
 
+	//S'il y a plusieurs détection sur un même fichier, alors la dernière prévaut sur les autres
 	if(m->getDetectionState()->last()!=MediaIsCreating && detectMediaList->length()>1)
 	{
 		//On supprime les détections précédentes qui sont annulées par celle ci
-		//sauf la première qui est très probablement en cours de traitement par le thread HddInterface
-		int k=1;
+		//sauf la première (i=0) qui est très probablement en cours de traitement par le thread HddInterface
+		int k=0;
 		for(int i=detectMediaList->length()-1;i>0;i--)
 		{
 			Media *m1=detectMediaList->at(i);
-			if(m1!=m) continue;
+			if(m1!=m)		//Le changement ne porte pas sur le média m
+				continue;
+
 			QList<State> *list=m->getDetectionState();
-			if(list==NULL) continue;
+			if(list==NULL)
+				break;
+
 			State state1=list->at(list->size()-k-1);
 			if(state1==MediaIsUpdating)
 			{
