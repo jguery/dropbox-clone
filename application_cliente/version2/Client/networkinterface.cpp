@@ -101,7 +101,8 @@ void NetworkInterface::connectToServer()
 	if(!a) {Widget::addRowToTable("Echec: Connexion échouée",model,MSG_3);return;}
 
 	//On s'identifie
-	if(!this->sendIdentification()) emit this->disconnectFromServerRequested();
+	if(!this->sendIdentification())
+		emit this->disconnectFromServerRequested();
 }
 
 
@@ -210,6 +211,8 @@ void NetworkInterface::receiveMessageAction(QByteArray *message)
 			qDebug("Warning 4 N.I.");
 			return;
 		}
+		//Comme on n'est pas identifié, cette réponse n'est pas envoyé à hddInterface,
+		//pas besoin donc de la mettre dans l'attribut response de this
 		Response *response=(Response*)m;
 		ResponseEnum r=response->getType();	//Type de la réponse
 
@@ -530,7 +533,8 @@ void NetworkInterface::putReceiveRequestList(Request *r)
 	//On ajoute l'element
 	receiveRequestList->append(r);
 	//On reveille le thread de HddInterface
-	if(waitReceiveRequestList!=NULL) waitReceiveRequestList->wakeAll();
+	if(waitReceiveRequestList!=NULL)
+		waitReceiveRequestList->wakeAll();
 
 	//On libère l'objet
 	receiveRequestListMutex.unlock();

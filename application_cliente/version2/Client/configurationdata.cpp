@@ -469,7 +469,8 @@ void ConfigurationFile::putMediaDetection(Media *m)
 	Depot *d=this->getMediaDepot(m);
 
 	//Si le dépot est en lecture seule, on laisse tomber
-	if(!d || d->isReadOnly()) return ;
+	if(!d || d->isReadOnly())
+		return ;
 
 	//S'il y a plusieurs détection sur un même fichier, alors la dernière prévaut sur les autres
 	if(m->getDetectionState()->last()!=MediaIsCreating && detectMediaList->length()>1)
@@ -516,7 +517,8 @@ void ConfigurationFile::putMediaDetection(Media *m)
 	emit saveRequest();
 
 	//On reveille le thread de hddInterface
-	if(waitConditionDetect!=NULL) waitConditionDetect->wakeAll();
+	if(waitConditionDetect!=NULL)
+		waitConditionDetect->wakeAll();
 
 	//on déverrouille les accès
 	detectMediaListMutex.unlock();

@@ -200,7 +200,7 @@ QByteArray *Messages::createResponseMessage(ResponseEnum type, QString revision)
 {
 	QDomDocument document;
 
-	//On crèe un noeud avec le nom Identification
+	//On crèe un noeud avec le nom RESPONSE
 	QDomElement element=document.createElement("RESPONSE");
 
 	//On écrit le code de réponse

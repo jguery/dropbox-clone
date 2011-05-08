@@ -106,7 +106,7 @@ void HddInterface::run()
 
 
 
-//Lorsqu'on détecte un média
+//Lorsqu'on détecte une modification dans un média
 void HddInterface::detectedMedia(Media *m)
 {
 	State state=m->getDetectionState()->first();
