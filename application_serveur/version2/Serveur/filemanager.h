@@ -5,7 +5,6 @@
 #include "depot.h"
 #include "svnmanager.h"
 
-//Cette classe fait un truc pas du tout connu pcq on en a jamais parlé
 
 class FileManager
 {

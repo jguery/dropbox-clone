@@ -18,7 +18,7 @@ Socket::Socket() : QSslSocket()
 
 
 
-//Permet de renseigner du client avec qui le socket doir communiquer
+//Permet de renseigner le client avec qui le socket doit communiquer
 bool Socket::setDescriptor(int socketDescriptor)
 {
 	if(this->state()==QAbstractSocket::ConnectedState) return false;

@@ -139,7 +139,7 @@ void ClientManager::receiveMessageAction(QByteArray *message)
 // attention elle est longue :D
 void ClientManager::receivedRequest(Request *r)
 {
-	//Si la requete est inconnue, on envoi un message d'érreur
+	//Si la requete est inconnue, on envoi un message d'erreur
 	if(r==NULL)
 	{
 		Response response;
@@ -186,24 +186,30 @@ void ClientManager::receivedRequest(Request *r)
 	{
 		if(r->getType()==REVISION_FILE_INFO)
 		{
-			Widget::addRowToTable("Le client "+clientDescription+" a envoyé un message de révision de dépot.",model,MSG_2);
+			Widget::addRowToTable("Le client "+clientDescription+" a envoyé une requête de révision de dépot.",model,MSG_2);
 			QString realPath=r->getParameters()->value("realPath","");
 			QString revisionString=r->getParameters()->value("revision","");
 			int revision=revisionString.toInt();
 
 			SqlUtilisation *u=NULL;
+			//On cherche quel dépot concerne le changement de révision
 			for(int i=0;i<user->utilisations->length();i++)
 			{
-				if(realPath.startsWith(user->utilisations->at(i)->depotname))
-					u=user->utilisations->at(i);
+				uTemp = user->utilisations->at(i);
+				if(realPath.startsWith(uTemp->depotname))
+				{
+					u=uTemp;
+					break;
+				}
 			}
-			if(u==NULL)
+			if(u==NULL)	//Le dépot en paramètre de la requête n'existe pas
 			{
 				Widget::addRowToTable("Dépot introuvable",model,MSG_3);
-				Response response;response.setType(REJECT_FILE_INFO_FOR_RIGHT);
+				Response response; response.setType(REJECT_FILE_INFO_FOR_RIGHT);
 				this->socket->sendMessage(response.toXml());
 				return;
 			}
+
 			Depot *depot=this->fileManager->getDepot(u->depotname);
 			QList<Request*> list=depot->getUpgradingRequest(revision);
 			upgrading.append(list);
@@ -211,6 +217,8 @@ void ClientManager::receivedRequest(Request *r)
 			this->socket->sendMessage(response.toXml());
 			return;
 		}
+		//Le client a fini d'envoyer ses détection, le serveur peut à son tour lui en envoyer
+		//Il finit aussi en envoyer un END_OLD_DETECTIONS
 		else if(r->getType()==END_OLD_DETECTIONS)
 		{
 			this->state=SERVER_DETECTIONS;
@@ -227,11 +235,11 @@ void ClientManager::receivedRequest(Request *r)
 			Request request;
 			request.setType(END_OLD_DETECTIONS);
 			this->socket->sendMessage(request.toXml());
-			this->state=SYNCHRONIZED;
+			this->state=SYNCHRONIZED;	//Le client est à jour
 			return;
 		}
 	}
-	if(state==SERVER_DETECTIONS)
+	if(state==SERVER_DETECTIONS)	//Le serveur est entrain d'envoyer, il ne peut pas recevoir en même temps
 	{
 		Response response;response.setType(REJECT_FILE_INFO_FOR_RIGHT);
 		this->socket->sendMessage(response.toXml());
@@ -254,10 +262,15 @@ void ClientManager::receivedRequest(Request *r)
 		}
 
 		SqlUtilisation *u=NULL;
+		//On cherche quel dépot concerne le changement de révision
 		for(int i=0;i<user->utilisations->length();i++)
 		{
-			if(realPath.startsWith(user->utilisations->at(i)->depotname))
-				u=user->utilisations->at(i);
+			uTemp = user->utilisations->at(i);
+			if(realPath.startsWith(uTemp->depotname))
+			{
+				u=uTemp;
+				break;
+			}
 		}
 		if(u==NULL)
 		{
@@ -302,7 +315,7 @@ void ClientManager::receivedRequest(Request *r)
 				response.setType(REJECT_FILE_INFO_FOR_CONFLICT);
 				response.getParameters()->insert("revision",QByteArray::number(svnRevision));
 			}
-			else
+			else		//On rajoute enfin le fichier au dépot SVN
 			{
 				bool result=false;
 				if(r->getParameters()->value("isDirectory","")=="true")
@@ -339,7 +352,7 @@ void ClientManager::receivedRequest(Request *r)
 				else
 				{
 					qDebug("Warning 25 C.M.");
-					Widget::addRowToTable("Une erreur s'est produite lors du commit. La requete a été rejettée.",model,MSG_3);
+					Widget::addRowToTable("Une erreur s'est produite lors du commit. La requete a été rejetée.",model,MSG_3);
 					response.setType(REJECT_FILE_INFO_FOR_SVNERROR);
 					response.getParameters()->insert("revision",QByteArray::number(svnRevision));
 				}
@@ -373,12 +386,14 @@ void ClientManager::receivedRequest(Request *r)
 				else
 				{
 					qDebug("Warning 23 C.M.");
-					Widget::addRowToTable("Une erreur s'est produite lors du commit. La requete a été rejettée.",model,MSG_3);
+					Widget::addRowToTable("Une erreur s'est produite lors du commit. La requete a été rejetée.",model,MSG_3);
 					response.setType(REJECT_FILE_INFO_FOR_SVNERROR);
 					response.getParameters()->insert("revision",QByteArray::number(svnRevision));
 				}
 			}
 		}
+		//Si on accepte la modif recu du client,
+		//on l'envoie aux autres clients synchronisés sur ce dépot
 		if(response.getType()==ACCEPT_FILE_INFO)
 		{
 			r->getParameters()->remove("revision");
