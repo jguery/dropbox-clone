@@ -40,7 +40,7 @@ public:
 	//Pour l'exécution du thread
 	void run();
 
-	//Le destructeur
+	//Le destructeur (t'as pas des commentaires plus inutiles?)
 	~ClientManager();
 
 	void sendDetectionRequest(QByteArray *request);
@@ -52,14 +52,14 @@ private slots:
 	//Lorsqu'une requete est récue
 	void receivedRequest(Request *r);
 
-        //Lorsqu'un client est déconnecté
-        void clientDisconnected();
+	//Lorsqu'un client est déconnecté
+	void clientDisconnected();
 
-        //On recoit des erreurs lors de la connexion SSL
-        void erreursSsl(const QList<QSslError>&);
+	//On recoit des erreurs lors de la connexion SSL
+	void erreursSsl(const QList<QSslError>&);
 
 	//La connexion est cryptée
-        void connexionEncrypted();
+	void connexionEncrypted();
 
 	void sendDetection(QByteArray *request);
 
