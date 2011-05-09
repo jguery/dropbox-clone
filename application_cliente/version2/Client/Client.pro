@@ -9,7 +9,7 @@ QT       += core gui network xml
 TARGET = Client
 TEMPLATE = app
 
-CONFIG *= crypto
+CONFIG += crypto
 
 
 SOURCES += main.cpp\
