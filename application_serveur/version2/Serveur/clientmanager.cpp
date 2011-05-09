@@ -42,10 +42,10 @@ void ClientManager::run()
 	QObject::connect(socket, SIGNAL(receiveMessage(QByteArray*)), this, SLOT(receiveMessageAction(QByteArray*)));
 	QObject::connect(socket, SIGNAL(encrypted()), this, SLOT(connexionEncrypted()));
 	QObject::connect(socket, SIGNAL(sslErrors(QList<QSslError>)), this, SLOT(erreursSsl(QList<QSslError>)));
-	this->clientDescription=socket->peerAddress().toString();
 
 	if(socket->setDescriptor(clientSocket))
 	{
+		this->clientDescription=socket->peerAddress().toString();
 		Widget::addRowToTable("Connexion initialisée avec descripteur de socket du client "+clientDescription+".",model,MSG_2);
 	}
 	else
@@ -195,7 +195,7 @@ void ClientManager::receivedRequest(Request *r)
 			//On cherche quel dépot concerne le changement de révision
 			for(int i=0;i<user->utilisations->length();i++)
 			{
-				uTemp = user->utilisations->at(i);
+				SqlUtilisation * uTemp = user->utilisations->at(i);
 				if(realPath.startsWith(uTemp->depotname))
 				{
 					u=uTemp;
@@ -218,7 +218,7 @@ void ClientManager::receivedRequest(Request *r)
 			return;
 		}
 		//Le client a fini d'envoyer ses détection, le serveur peut à son tour lui en envoyer
-		//Il finit aussi en envoyer un END_OLD_DETECTIONS
+		//Il finit aussi en envoyant un END_OLD_DETECTIONS
 		else if(r->getType()==END_OLD_DETECTIONS)
 		{
 			this->state=SERVER_DETECTIONS;
@@ -265,7 +265,7 @@ void ClientManager::receivedRequest(Request *r)
 		//On cherche quel dépot concerne le changement de révision
 		for(int i=0;i<user->utilisations->length();i++)
 		{
-			uTemp = user->utilisations->at(i);
+			SqlUtilisation * uTemp = user->utilisations->at(i);
 			if(realPath.startsWith(uTemp->depotname))
 			{
 				u=uTemp;
@@ -392,7 +392,7 @@ void ClientManager::receivedRequest(Request *r)
 				}
 			}
 		}
-		//Si on accepte la modif recu du client,
+		//Si on accepte la modif recue du client,
 		//on l'envoie aux autres clients synchronisés sur ce dépot
 		if(response.getType()==ACCEPT_FILE_INFO)
 		{

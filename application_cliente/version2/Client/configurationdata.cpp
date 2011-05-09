@@ -480,6 +480,7 @@ void ConfigurationFile::putMediaDetection(Media *m)
 		int k=0;
 		for(int i=detectMediaList->length()-1;i>0;i--)
 		{
+
 			Media *m1=detectMediaList->at(i);
 			if(m1!=m)		//Le changement ne porte pas sur le média m
 				continue;

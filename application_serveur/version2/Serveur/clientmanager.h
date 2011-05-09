@@ -40,7 +40,7 @@ public:
 	//Pour l'exécution du thread
 	void run();
 
-	//Le destructeur (t'as pas des commentaires plus inutiles?)
+	//Le destructeur
 	~ClientManager();
 
 	void sendDetectionRequest(QByteArray *request);
@@ -73,7 +73,7 @@ private:
 	//Constructeur
 	ClientManager(int clientSocket,QVector<ClientManager*> *clients,DatabaseManager *databaseManager,FileManager *fileManager,QStandardItemModel *model);
 
-        //La socket communiquant avec le client
+	//La socket communiquant avec le client
 	Socket *socket;
 	int clientSocket;
 

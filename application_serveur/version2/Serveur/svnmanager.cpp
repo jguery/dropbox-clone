@@ -13,10 +13,12 @@ SvnManager *SvnManager::createSvnManager(QString svnServerPath,QString svnLogin,
 	QProcess p;
 	p.start(svnCommand);
 	p.waitForFinished();
-	if(p.error()==QProcess::FailedToStart) return NULL;
+	if(p.error()==QProcess::FailedToStart)
+		return NULL;
 	p.start(svnAdminCommand);
 	p.waitForFinished();
-	if(p.error()==QProcess::FailedToStart) return NULL;
+	if(p.error()==QProcess::FailedToStart)
+		return NULL;
 	return new SvnManager(svnServerPath,svnLogin,svnPassword,svnCommand,svnAdminCommand);
 }
 
