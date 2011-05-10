@@ -215,6 +215,7 @@ private:
 #ifndef CONFIGURATIONDATA_H
 #define CONFIGURATIONDATA_H
 
+#include "ciphertool.h"
 
 /*
  Cette classe regroupe toutes les configurations (network, identification et file)
@@ -227,7 +228,7 @@ class ConfigurationData: public QObject
 public:
 	//Des fonctions statiques pour créer l'objet
 	static ConfigurationData *createConfigurationData(ConfigurationNetwork *configurationNetwork,ConfigurationIdentification *configurationIdentification,ConfigurationFile *configurationFile,QString savePath="");
-	static ConfigurationData *loadConfigurationData(QString savePath,QStandardItemModel *model);
+	static ConfigurationData *loadConfigurationData(QString savePath,QString cle,QStandardItemModel *model);
 
 	//Les accesseurs et mutateurs de configurationNetwork
 	ConfigurationNetwork *getConfigurationNetwork();
@@ -267,6 +268,9 @@ private:
 
 	//le mutex pour ne pas que deux threads essaient de faire un save en même temps
 	QMutex saveMutex;
+
+	//Pour crypter et décrypter le fichier de configuration XML
+	CipherTool *cipherTool;
 };
 
 #endif // CONFIGURATIONDATA_H

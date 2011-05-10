@@ -262,7 +262,7 @@ void ClientManager::receivedRequest(Request *r)
 		}
 
 		SqlUtilisation *u=NULL;
-		//On cherche quel dépot concerne le changement de révision
+		//On cherche le dépot concerné par le changement de révision
 		for(int i=0;i<user->utilisations->length();i++)
 		{
 			SqlUtilisation * uTemp = user->utilisations->at(i);

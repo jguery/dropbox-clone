@@ -13,10 +13,10 @@
 class CipherTool: public QCA::Cipher
 {
 public:
-    CipherTool(QString &cle);
+    CipherTool(const QString &cle);
 
-    QByteArray * EncrypteByteArray(QCA::SecureArray &data);
-    QCA::SecureArray * DecrypteByteArray(QByteArray &data);
+    QByteArray * encrypteByteArray(const QCA::SecureArray &data);
+    QCA::SecureArray * decrypteByteArray(const QByteArray &data);
 
 private:
 
@@ -26,3 +26,4 @@ private:
 };
 
 #endif // CIPHERTOOL_H
+

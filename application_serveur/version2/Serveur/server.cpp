@@ -105,7 +105,7 @@ void Server::disconnectedClient(ClientManager *clientManager)
 			for(int i=1;i<onglets->count();i++)
 			{
 				QWidget *o=(QWidget*)(c->getModelClient()->parent());
-				onglets->removeTab(onglets->indexOf(o));
+				//onglets->removeTab(onglets->indexOf(o));
 				delete o;
 			}
 			delete c;

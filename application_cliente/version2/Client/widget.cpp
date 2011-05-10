@@ -17,7 +17,8 @@ Widget::Widget(): QWidget()
 	networkInterface=NULL;
 	configurationData=NULL;
 	hddInterface=NULL;
-        buildNotification();
+
+	buildNotification();
 
 }
 
@@ -102,7 +103,7 @@ void Widget::loadConfigSlot()
 	this->settings->setValue("loadConfigLineEdit",loadConfigLineEdit->text());
 
 	//On charge la configuration
-	this->configurationData=ConfigurationData::loadConfigurationData(loadConfigLineEdit->text(),detectionModel);
+	this->configurationData=ConfigurationData::loadConfigurationData(loadConfigLineEdit->text(),loadConfigMdpLineEdit->text(),detectionModel);
 	if(configurationData)  addRowToTable("La configuration a bien été chargée",detectionModel,MSG_1);
 	else addRowToTable("Echec du chargement de la configuration",detectionModel,MSG_1);
 
@@ -222,11 +223,12 @@ void Widget::buildInterface()
 	//Le premier groupbox sert à charger une configuration
 	QGroupBox *groupbox1 = new QGroupBox(trUtf8("Charger une configuration"), configOnglet);
 	loadConfigLineEdit=new QLineEdit(settings->value("loadConfigLineEdit","/home/hky/test/config1.xml").toString());QPushButton *parcourirLoad=new QPushButton("Parcourir");
+	loadConfigMdpLineEdit=new QLineEdit(""); loadConfigMdpLineEdit->setEchoMode(QLineEdit::Password);
 	QObject::connect(parcourirLoad,SIGNAL(clicked()),this,SLOT(parcourirLoadConfigSlot()));
 	QHBoxLayout *l1=new QHBoxLayout();l1->addWidget(loadConfigLineEdit);l1->addWidget(parcourirLoad);
 	QPushButton *loadButton=new QPushButton(trUtf8("Charger une configuration"));
 	QObject::connect(loadButton,SIGNAL(clicked()),this,SLOT(loadConfigSlot()));
-	QFormLayout *l2=new QFormLayout();l2->addRow("Chemin de la configuration",l1);l2->addWidget(loadButton);groupbox1->setLayout(l2);
+	QFormLayout *l2=new QFormLayout();l2->addRow("Chemin de la configuration",l1);l2->addRow("Mot de passe utilisateur",loadConfigMdpLineEdit);l2->addWidget(loadButton);groupbox1->setLayout(l2);
 
 	//Le deuxième groupbox sert à créer une configuration
 	QGroupBox *groupbox2 = new QGroupBox(trUtf8("Créer une configuration"), configOnglet);

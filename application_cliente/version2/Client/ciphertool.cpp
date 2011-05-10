@@ -1,20 +1,27 @@
 #include "ciphertool.h"
 
-CipherTool::CipherTool(QString &cle):
+CipherTool::CipherTool(const QString &cle):
 		QCA::Cipher("aes128",QCA::Cipher::CBC,QCA::Cipher::DefaultPadding)
 {
-	//Initialise l'API QCA
-	QCA::Initializer init;
+	// Création du tableau qui recevra le hash de "cle"
+	QCA::SecureArray hash;
+	// Instanciation du hasher
+	QCA::Hash hasher("sha1");
 
-	//Forme la clé, et un vecteur d'initialisation
-	key = new QCA::SymmetricKey(cle.toLocal8Bit());
-	iv = new QCA::InitializationVector(cle.toLocal8Bit());
+	// On ajoute la chaîne cle aux données à hasher
+	hasher.update (cle.toLocal8Bit());
+	// On écrit dans le tableau le hash
+	hash = hasher.final();
+
+	//Forme la clé, et un vecteur d'initialisation à partir du hash créé
+	key = new QCA::SymmetricKey(hash);
+	iv = new QCA::InitializationVector(hash);
 
 
 }
 
 
-QByteArray * CipherTool::EncrypteByteArray(QCA::SecureArray &data)
+QByteArray * CipherTool::encrypteByteArray(const QCA::SecureArray &data)
 {
 	//Prépare l'objet à encoder
 	setup(QCA::Encode, *key, *iv);
@@ -27,13 +34,12 @@ QByteArray * CipherTool::EncrypteByteArray(QCA::SecureArray &data)
 }
 
 
-QCA::SecureArray * CipherTool::DecrypteByteArray(QByteArray &data)
+QCA::SecureArray * CipherTool::decrypteByteArray(const QByteArray &data)
 {
-	//Prépare l'objet à encoder
+	//Prépare l'objet à décoder
 	setup(QCA::Decode, *key, *iv);
 
-	//Retourne directement le contenu codé
-	return ( new QCA::SecureArray(process(data)) );
+	QCA::SecureArray *dataDecoded = new QCA::SecureArray(process((QCA::SecureArray)data));
+	return dataDecoded;
 
 }
-

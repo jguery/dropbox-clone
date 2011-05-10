@@ -7,12 +7,15 @@
 
 int main(int argc, char *argv[])
 {
-        QApplication app(argc, argv);
+	//Initialise l'API QCA
+	QCA::Initializer init;
+
+	QApplication app(argc, argv);
 
 	//On crèe juste la fenetre et on l'affiche
 	Widget w;
-        w.show();
+	w.show();
 
 	//Exécution de l'application
-        return app.exec();
+	return app.exec();
 }

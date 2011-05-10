@@ -2,9 +2,9 @@
 #define WIDGET_H
 
 #include "configurationdata.h"
-#include <QSystemTrayIcon>
 #include "networkinterface.h"
 #include "hddinterface.h"
+#include <QSystemTrayIcon>
 #include <QtGui>
 #include <QSettings>
 
@@ -40,13 +40,15 @@ public slots:
 	//les slots des boutons:
 	void networkButtonSlot();
 	void detectionButtonSlot();
+
 	//Les slots des configs
 	void parcourirLoadConfigSlot();
 	void loadConfigSlot();
 	void parcourirCreateConfigSlot();
 	void createConfigSlot();
 	void parcourirSaveConfigSlot();
-        //Les slots de l'icone de notification
+
+	//Les slots de l'icone de notification
 
 private:
 	//la configuration
@@ -77,7 +79,7 @@ private:
 
 	//Onglet des configurations
 	QWidget *configOnglet;
-	QLineEdit *loadConfigLineEdit, *serverAddressLineEdit, *serverPortLineEdit, *loginLineEdit, *passwordLineEdit, *depotLocalPathLineEdit, *depotRealNameLineEdit, *saveConfigLineEdit;
+	QLineEdit *loadConfigLineEdit, *loadConfigMdpLineEdit, *serverAddressLineEdit, *serverPortLineEdit, *loginLineEdit, *passwordLineEdit, *depotLocalPathLineEdit, *depotRealNameLineEdit, *saveConfigLineEdit;
 	QPushButton *configButton;
 
 	//Les reglages

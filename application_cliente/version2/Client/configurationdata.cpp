@@ -612,7 +612,7 @@ ConfigurationData *ConfigurationData::createConfigurationData(ConfigurationNetwo
 
 
 //Pour charger toutes les config à partir du fichier xml
-ConfigurationData *ConfigurationData::loadConfigurationData(QString savePath,QStandardItemModel *model)
+ConfigurationData *ConfigurationData::loadConfigurationData(QString savePath, QString cle, QStandardItemModel *model)
 {
 	QFile file(savePath);
 	if(!file.open(QIODevice::ReadOnly))     //On tente d'ouvrir le fichier de config
@@ -621,8 +621,12 @@ ConfigurationData *ConfigurationData::loadConfigurationData(QString savePath,QSt
 		return NULL;
 	}
 
+	//Décrypte la config
+	CipherTool cipherTool(cle);
+	QCA::SecureArray *config = cipherTool.decrypteByteArray(file.readAll());
+
 	QDomDocument document;
-	if(!document.setContent(&file))         //On charge son contenu dans un objet QDomDocument
+	if(!document.setContent(config->toByteArray()))         //On charge son contenu dans un objet QDomDocument
 	{
 		file.close();
 		Widget::addRowToTable("Echec de format XML du fichier de configuration.",model,MSG_1);
@@ -686,6 +690,7 @@ ConfigurationData::ConfigurationData(ConfigurationNetwork *configurationNetwork,
 	this->configurationFile=configurationFile;
 	QObject::connect(configurationFile,SIGNAL(saveRequest()),this,SLOT(save()));
 	this->savePath=savePath;
+	this->cipherTool = new CipherTool(configurationIdentification->getPassword());
 }
 
 
@@ -772,8 +777,12 @@ bool ConfigurationData::save(QString savePath)
 		return false;
 	}
 
+	//On crypte le fichier de config
+	QCA::SecureArray tmp(document.toByteArray());
+	QByteArray * config = cipherTool->encrypteByteArray(tmp);
+
 	//On écrit ce doc xml dans un nouveau fichier (écrasé s'il existe déjà)
-	file.write(document.toByteArray());
+	file.write(*config);
 
 	file.close();
 
