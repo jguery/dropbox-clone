@@ -10,6 +10,7 @@ class FileManager
 {
 public:
 	static FileManager *createFileManager(QString filesPath,SvnManager *svnManager);
+
 	bool addDepot(QString depotName);
 	Depot *getDepot(QString depotName);
 	Depot *depotContainer(QString mediaPath);

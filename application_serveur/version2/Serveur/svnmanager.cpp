@@ -33,6 +33,7 @@ SvnManager::SvnManager(QString svnServerPath,QString svnLogin, QString svnPasswo
 	svnPassword=normalizePath(svnPassword);
 	svnCommand=normalizePath(svnCommand);
 	svnAdminCommand=normalizePath(svnAdminCommand);
+
 	this->svnServerPath=svnServerPath;
 	this->svnLogin=svnLogin;
 	this->svnPassword=svnPassword;
@@ -47,6 +48,7 @@ bool SvnManager::checkoutDepot(QString localPath,QString depotName)
 {
 	localPath=normalizePath(localPath);
 	depotName=normalizePath(depotName);
+
 	QString cmd=svnCommand+" checkout --username "+svnLogin+" --password "+svnPassword+" "+svnServerPath+depotName+" "+localPath;
 	int rep=QProcess::execute(cmd);
 	return (rep==0);
