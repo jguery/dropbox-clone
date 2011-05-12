@@ -63,9 +63,10 @@ File *File::loadFile(QDomNode noeud,Dir *parent)
 	//On ajoute les états qui ont étés chargés depuis le noeud xml
 	for(int i=0;i<listDetectionState.size();i++)
 	{
-		if(detectionStateString!="" && listDetectionState.at(i)!=Media::stateToString(MediaDefaultState))
+		State oneDetectionState=Media::stateFromString(listDetectionState.at(i));
+		if(oneDetectionState!=MediaDefaultState)
 		{
-			f->getDetectionState()->append(Media::stateFromString(listDetectionState.at(i)));
+			f->getDetectionState()->append(oneDetectionState);
 			f->getParent()->getOldDetections()->append(f);
 		}
 	}
@@ -97,7 +98,7 @@ QByteArray *File::hashFile(QString path)
 		f.close();
 	}
 
-	//On déclare le hasher en Sha1 (autres alternatives MD4 ou MD5
+	//On déclare le hasher en Sha1 (autres alternatives MD4 ou MD5)
 	QCryptographicHash hasher(QCryptographicHash::Sha1);
 	hasher.addData(content);  //On met les données à hasher
 
@@ -144,14 +145,22 @@ bool File::hasBeenUpdated()
 QByteArray File::getFileContent()
 {
 	QByteArray content;
+	this->lock();
 	//on ouvre le fichier en lecture
 	QFile f(this->getLocalPath());
 	if(!f.open(QIODevice::ReadOnly))
+	{
+		this->unlock();
 		return content;
+	}
 	content=f.readAll(); //On récupère le contenu du fichier
 	f.close();
+	this->unlock();
 	return content;
 }
+
+
+
 
 
 
@@ -161,8 +170,8 @@ bool File::putFileContent(QByteArray content)
 	this->lock();
 
 	//Récupère l'état d'écoute et stope l'écoute du dossier parent
-	bool listenState=getParent()->isListenning();
-	getParent()->setListenning(false);
+	bool listenState=this->getParent()->isListenning();
+	this->getParent()->setListenning(false);
 
 	QFile f(this->getLocalPath());
 	//on ouvre le fichier en écriture
@@ -183,11 +192,15 @@ bool File::putFileContent(QByteArray content)
 
 
 
+
+
 //Retourne false car ce n'est pas un repertoire ;)
 bool File::isDirectory()
 {
 	return false;
 }
+
+
 
 
 
@@ -216,12 +229,14 @@ QDomElement File::toXml(QDomDocument *document)
 
 	//On écrit ses attributs detectionState, revision et readOnly
 	QStringList listDetectionState;
+	this->lock();
 	for(int i=0;i<this->getDetectionState()->length();i++)
 	{
 		State currentState = this->getDetectionState()->at(i);
 		if(currentState!=MediaDefaultState)
 			listDetectionState.append(Media::stateToString(currentState));
 	}
+	this->unlock();
 	element.setAttribute("detectionState",listDetectionState.join(","));
 
 	//On ajoute sa signature dans le noeud xml
@@ -257,6 +272,7 @@ Media *File::findMediaByRealPath(QString realPath)
 		return this;
 	return NULL;
 }
+
 
 
 

@@ -8,6 +8,7 @@
 //****************************************************************
 
 Request::Request(): Message() {this->parameters=new QHash<QString,QByteArray>();}
+Request::~Request() {this->parameters->clear();delete this->parameters;}
 QHash<QString,QByteArray> *Request::getParameters() {return parameters;}
 RequestEnum Request::getType() {return type;}
 void Request::setType(RequestEnum type) {this->type=type;}
@@ -61,6 +62,7 @@ QByteArray *Request::toXml()
 //****************************************************************
 
 Response::Response(): Message() {this->parameters=new QHash<QString,QByteArray>();}
+Response::~Response() {this->parameters->clear();delete this->parameters;}
 QHash<QString,QByteArray> *Response::getParameters() {return parameters;}
 ResponseEnum Response::getType() {return type;}
 void Response::setType(ResponseEnum type) {this->type=type;}
@@ -213,6 +215,9 @@ QByteArray *Messages::createResponseMessage(ResponseEnum type, QString revision)
 }
 
 
+
+
+
 //Pour terminer un envoi d'anciennes détections
 QByteArray *Messages::createEndOldDetections()
 {
@@ -246,16 +251,17 @@ Message *Messages::parseMessage(QByteArray *message)
 		{
 			//On récupère le type de la requête
 			QString type=list.at(i).toElement().attribute("type","");
+
+			//On récupère le realPath et la revision
+			QString realPath=list.at(i).toElement().attribute("realPath","");
+			QString revision=list.at(i).toElement().attribute("revision","");
+
 			Request *request=new Request();
 
 			//si c'est un message de modification de fichier ou repertoire
 			if(type=="UPDATED")
 			{
 				request->setType(UPDATE_FILE_INFO);
-
-				//On récupère le realPath et la revision
-				QString realPath=list.at(i).toElement().attribute("realPath","");
-				QString revision=list.at(i).toElement().attribute("revision","");
 
 				//On récupère le contenu du fichier
 				QByteArray fileContent;
@@ -278,9 +284,7 @@ Message *Messages::parseMessage(QByteArray *message)
 			{
 				request->setType(CREATE_FILE_INFO);
 
-				//On récupère le realPath, la révision et isDirectory
-				QString realPath=list.at(i).toElement().attribute("realPath","");
-				QString revision=list.at(i).toElement().attribute("revision","");
+				//On récupère le isDirectory
 				QString isDirectory=list.at(i).toElement().attribute("isDirectory");
 
 				//On écrit un message à retourner
@@ -295,10 +299,6 @@ Message *Messages::parseMessage(QByteArray *message)
 			{
 				request->setType(REMOVE_FILE_INFO);
 
-				//On récupère le realPath et la revision
-				QString realPath=list.at(i).toElement().attribute("realPath","");
-				QString revision=list.at(i).toElement().attribute("revision","");
-
 				//On écrit un message à retourner
 				request->getParameters()->insert("realPath",realPath.toAscii());
 				request->getParameters()->insert("revision",revision.toAscii());
@@ -309,10 +309,6 @@ Message *Messages::parseMessage(QByteArray *message)
 			else if(type=="REVISION_FILE_INFO")
 			{
 				request->setType(REVISION_FILE_INFO);
-
-				//On récupère le realPath et la revision
-				QString realPath=list.at(i).toElement().attribute("realPath","");
-				QString revision=list.at(i).toElement().attribute("revision","");
 
 				//On écrit un message à retourner
 				request->getParameters()->insert("realPath",realPath.toAscii());

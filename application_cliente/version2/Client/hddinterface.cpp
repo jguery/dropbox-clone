@@ -2,6 +2,23 @@
 #include "widget.h"
 
 
+
+/*les types de conflits
+
+  créé mais le parent n'existe pas ===> message de desynchronisation
+  créé mais existe déjà ===> ok
+
+  modifié mais n'existe pas et le parent existe ===> message de desynchronisation
+  modifié mais n'existe pas et le parent n'existe pas ===> message de desynchronisation
+
+  supprimé mais n'existe pas ===> ok
+
+  */
+
+
+
+
+
 //Pour allouer un objet de type hddInterface
 HddInterface *HddInterface::createHddInterface(ConfigurationData *configurationData,
 							     NetworkInterface *networkInterface,

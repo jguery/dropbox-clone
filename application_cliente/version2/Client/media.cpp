@@ -59,8 +59,6 @@ void Media::setParent(Dir *parent)
 
 
 
-
-
 //l'accesseur d'accès à la liste des détections en cours de traitement
 QList<State> *Media::getDetectionState()
 {
@@ -70,12 +68,13 @@ QList<State> *Media::getDetectionState()
 
 
 
-
 //Pour réserver l'objet
 void Media::lock()
 {
     this->mutex->lock();
 }
+
+
 
 
 //Pour le libérer
@@ -102,6 +101,8 @@ QString Media::extractParentPath(QString path)
 
 
 
+
+
 //méthode statique qui extrait d'un chemin, son nom
 //si c'est un repertoire, le nom retourné contient bien un "/" final
 QString Media::extractName(QString path)
@@ -114,6 +115,9 @@ QString Media::extractName(QString path)
 	if(path.endsWith("/")) name=name+"/";
 	return name;
 }
+
+
+
 
 
 
@@ -131,6 +135,9 @@ State Media::stateFromString(QString stateString)
 
 
 
+
+
+
 //Méthode qui convertit une state en une QString
 QString Media::stateToString(State state)
 {
@@ -144,8 +151,14 @@ QString Media::stateToString(State state)
 
 
 
+
+
+
 //destructeur
 Media::~Media()
 {
+	this->lock();
+	this->unlock();
+	detectionState->clear();
 	delete detectionState;
 }

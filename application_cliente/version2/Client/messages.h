@@ -42,6 +42,7 @@ class Request: public Message
 {
 public:
 	Request();
+	~Request();
 
 	void setType(RequestEnum type);
 	RequestEnum getType();
@@ -96,6 +97,7 @@ class Response: public Message
 {
 public:
 	Response();
+	~Response();
 
 	void setType(ResponseEnum type);
 	ResponseEnum getType();

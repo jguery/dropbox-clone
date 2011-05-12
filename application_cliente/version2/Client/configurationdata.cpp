@@ -222,7 +222,9 @@ ConfigurationFile *ConfigurationFile::createConfigurationFile(QList<Depot*> *dep
 	}
 
 	//On crèe la configuration et on la retourne
-	ConfigurationFile *config=new ConfigurationFile(depots,model);
+	ConfigurationFile *config=new ConfigurationFile(model);
+	if(config==NULL) return NULL;
+	for(int i=0;i<depots->length();i++) config->addDepot(depots->at(i));
 	return config;
 }
 
@@ -235,9 +237,6 @@ ConfigurationFile *ConfigurationFile::createConfigurationFile(QList<Depot*> *dep
 //préalablement enregistrée dans un config.xml, grâce à ConfigurationData::save
 ConfigurationFile *ConfigurationFile::loadConfigurationFile(QDomNode noeud,QStandardItemModel *model)
 {
-	//On alloue la liste des dépots dans laquelle seront chargées les dépots lues
-	QList<Depot*> *depots=new QList<Depot*>();
-
 	//On vérifie que le nom du noeud est bien ConfigurationFile
 	QDomElement element=noeud.toElement();
 	if(element.tagName()!="ConfigurationFile")
@@ -245,6 +244,10 @@ ConfigurationFile *ConfigurationFile::loadConfigurationFile(QDomNode noeud,QStan
 		Widget::addRowToTable("Erreur lors du chargement de la configuration de fichier.",model,MSG_1);
 		return NULL;
 	}
+
+	//On cree la configuration et on s'assure qu'elle est créé
+	ConfigurationFile *config=new ConfigurationFile(model);
+	if(config==NULL) return NULL;
 
 	//Parcours l'ensemble des éléments fils de l'élement "COnfigurationFile"
 	//Ce sont donc des dépots qui contiennent des fichiers et des dossiers (toute l'arborescence à synchroniser enfaite)
@@ -262,11 +265,10 @@ ConfigurationFile *ConfigurationFile::loadConfigurationFile(QDomNode noeud,QStan
 		}
 
 		//On l'ajoute à la liste de dépots
-		depots->append(d);
+		config->addDepot(d);
 	}
 
-	//On crèe l'objet et on le retourne
-	ConfigurationFile *config=new ConfigurationFile(depots,model);
+	//On le retourne
 	return config;
 }
 
@@ -275,21 +277,123 @@ ConfigurationFile *ConfigurationFile::loadConfigurationFile(QDomNode noeud,QStan
 
 
 //Constructeur
-ConfigurationFile::ConfigurationFile(QList<Depot*> *depots,QStandardItemModel *model) : QObject()
+ConfigurationFile::ConfigurationFile(QStandardItemModel *model) : QObject()
 {
 	//On fait les initialisations
-	this->depots=depots;
+	this->depots=new QList<Depot*>();
+	this->depotsMutex=new QMutex(QMutex::Recursive);
+
+	//La liste des détections en cours
 	this->detectMediaList=new QList<Media*>();
+	this->detectMediaListMutex=new QMutex(QMutex::Recursive);
+
 	this->waitConditionDetect=NULL;
 	this->isListen=false;
 	this->model=model;
 
-	//On connecte les détections des dépots à la méthode putMediaDetection
-	for(int i=0;i<depots->length();i++)
-	{
-		QObject::connect(depots->at(i),SIGNAL(detectChangement(Media*)),this,SLOT(putMediaDetection(Media*)),Qt::QueuedConnection);
-	}
+	//On s'occupe du watcher
+	this->watcher=new QFileSystemWatcher(this);
+	QObject::connect(watcher,SIGNAL(directoryChanged(QString)),this,SLOT(depotHasProbablyBeenRemoved()),Qt::QueuedConnection);
 	Widget::addRowToTable("Le module de détections a bien été allouée",model,MSG_1);
+}
+
+
+
+
+//Pour détecter les dépots supprimés
+void ConfigurationFile::depotHasProbablyBeenRemoved()
+{
+	bool found=false;
+	//On parcours les dépots
+	this->depotsMutex->lock();
+	for(int i=0;i<depots->size();i++)
+	{
+		//On récupère un dépot
+		Depot *d=depots->at(i);
+		if(d->hasBeenRemoved()) //Si il a été supprimé
+		{
+			depots->removeAt(i); //On le supprime de la liste
+			i--; //Attention pour le parcours de la boucle car un element est supprimé
+			d->setListenning(false); //On l'empeche de détecter
+			emit depotHasBeenRemoved(d); //On émet le signal
+			found=true;
+		}
+	}
+	this->depotsMutex->unlock();
+}
+
+
+
+
+
+bool ConfigurationFile::removeDepot(QString localPath)
+{
+	if(localPath.endsWith("/")) localPath=localPath.left(localPath.length()-1);
+	bool found=false;
+	this->depotsMutex->lock();
+	for(int i=0;i<depots->size();i++)
+	{
+		//On récupère un dépot
+		Depot *d=depots->at(i);
+		if(d->getLocalPath()==localPath) //Si c'est le dépot à supprimer
+		{
+			depots->removeAt(i); //On le supprime de la liste
+			i--; //Attention pour le parcours de la boucle car un element est supprimé
+			d->setListenning(false); //On l'empeche de détecter
+			emit depotHasBeenRemoved(d); //On émet le signal
+			found=true;
+		}
+	}
+	return found;
+}
+
+
+
+
+
+//Pour ajouter des dépots
+bool ConfigurationFile::addDepot(Depot *depot)
+{
+	if(depot==NULL) return false;
+	this->depotsMutex->lock();
+	if(!depots->contains(depot))
+	{
+		for(int i=0;i<depots->size();i++)
+		{
+			if(depots->at(i)->getLocalPath().startsWith(depot->getLocalPath()+"/")
+			|| depot->getLocalPath().startsWith(depots->at(i)->getLocalPath()+"/"))
+			{
+				depotsMutex->unlock();
+				return false;
+			}
+		}
+		depots->append(depot);
+		watcher->addPath(Media::extractParentPath(depot->getLocalPath()));
+		QObject::connect(depot,SIGNAL(detectChangement(Media*)),this,SLOT(putMediaDetection(Media*)),Qt::QueuedConnection);
+		depot->setListenning(this->isListen);
+	}
+	this->depotsMutex->unlock();
+	return true;
+}
+
+
+
+
+//Pour créer et ajouter des dépots
+bool ConfigurationFile::addCreatingDepot(QString localPath,QString realPath,int revision,bool readOnly)
+{
+	Depot *depot=Depot::createDepot(localPath,realPath,revision,readOnly);
+	return this->addDepot(depot);
+}
+
+
+
+
+//Pour charger et ajouter des dépots
+bool ConfigurationFile::addLoadingDepot(QDomNode noeud)
+{
+	Depot *depot=Depot::loadDepot(noeud);
+	return this->addDepot(depot);
 }
 
 
@@ -311,6 +415,7 @@ QDomElement ConfigurationFile::toXml(QDomDocument *document)
 	//On crèe le noeud xml avec le nom ConfigurationFile
 	QDomElement element=document->createElement("ConfigurationFile");
 
+	depotsMutex->lock();
 	//On parcours les dépots de la configuration
 	for(int i=0;i<depots->size();i++)
 	{
@@ -318,6 +423,7 @@ QDomElement ConfigurationFile::toXml(QDomDocument *document)
 		QDomElement e=depots->at(i)->toXml(document);
 		element.appendChild(e);
 	}
+	depotsMutex->unlock();
 
 	//On retourne le noeud
 	return element;
@@ -332,16 +438,23 @@ Media *ConfigurationFile::findMediaByLocalPath(QString localPath)
 {
 	QList<Depot*>::iterator i;
 
+	depotsMutex->lock();
 	//On parcours la liste des dépots
 	for(i=depots->begin(); i!=depots->end(); i++)
 	{
 		//On recherche le localPath dans l'arborescence de ce dépot
 		Media *find=(*i)->findMediaByLocalPath(localPath);
 		if(find!=NULL)
+		{
+			depotsMutex->unlock();
 			return find;
+		}
 	}
+	depotsMutex->unlock();
 	return NULL;
 }
+
+
 
 
 
@@ -350,16 +463,22 @@ Media *ConfigurationFile::findMediaByRealPath(QString realPath)
 {
 	QList<Depot*>::iterator i;
 
+	depotsMutex->lock();
 	//On parcours la liste des dépots
 	for(i=depots->begin(); i!=depots->end(); i++)
 	{
 		//On recherche le realPath dans l'arborescence de ce dépot
 		Media *find=(*i)->findMediaByRealPath(realPath);
 		if(find!=NULL)
+		{
+			depotsMutex->unlock();
 			return find;
+		}
 	}
+	depotsMutex->unlock();
 	return NULL;
 }
+
 
 
 
@@ -372,16 +491,23 @@ Depot *ConfigurationFile::getMediaDepot(Media *m)
 
 
 
+
 //Pour récupérer le dépot auquel appartient un media
 Depot *ConfigurationFile::getMediaDepot(QString realPath)
 {
+	depotsMutex->lock();
 	for(int i=0;i<depots->length();i++)
 	{
 		if(realPath.startsWith(depots->at(i)->getRealPath()+"/"))
+		{
+			depotsMutex->unlock();
 			return depots->at(i);
+		}
 	}
+	depotsMutex->unlock();
 	return NULL;
 }
+
 
 
 
@@ -389,8 +515,14 @@ Depot *ConfigurationFile::getMediaDepot(QString realPath)
 QHash<QString,int> ConfigurationFile::getDepotsRevisions()
 {
 	QHash<QString,int> hash;
+	depotsMutex->lock();
+
+	//On parcours et on récupère le realPath et la révision
 	for(int i=0;i<depots->length();i++)
 		hash.insert(depots->at(i)->getRealPath(),depots->at(i)->getRevision());
+	depotsMutex->unlock();
+
+	//On retourne le hash
 	return hash;
 }
 
@@ -401,7 +533,7 @@ QHash<QString,int> ConfigurationFile::getDepotsRevisions()
 Media *ConfigurationFile::getMediaDetection()
 {
 	//On verrouille d'abord l'accès aux autres threads
-	detectMediaListMutex.lock();
+	detectMediaListMutex->lock();
 
 	//On récupère le premier media de la liste (s'il existe)
 	Media *m=NULL;
@@ -411,7 +543,7 @@ Media *ConfigurationFile::getMediaDetection()
 	}
 
 	//On déverrouille
-	detectMediaListMutex.unlock();
+	detectMediaListMutex->unlock();
 
 	//On retourne l'objet
 	return m;
@@ -423,12 +555,12 @@ Media *ConfigurationFile::getMediaDetection()
 int ConfigurationFile::getNumberMediaDetection()
 {
 	//On verrouille d'abord l'accès aux autres threads
-	detectMediaListMutex.lock();
+	detectMediaListMutex->lock();
 
 	int nb=detectMediaList->size();
 
 	//On déverrouille
-	detectMediaListMutex.unlock();
+	detectMediaListMutex->unlock();
 
 	//On retourne le nombre
 	return nb;
@@ -441,7 +573,7 @@ int ConfigurationFile::getNumberMediaDetection()
 void ConfigurationFile::removeMediaDetection()
 {
 	//On verrouille l'objet
-	detectMediaListMutex.lock();
+	detectMediaListMutex->lock();
 
 	//On supprime le premier media de la file
 	if(detectMediaList->size()>0)
@@ -449,11 +581,12 @@ void ConfigurationFile::removeMediaDetection()
 		Media *m=detectMediaList->first();
 		//On enlève son etat de détection correspondant
 		m->getDetectionState()->removeFirst();
+		//On enleve de la liste
 		detectMediaList->removeFirst();
 	}
 
 	//On déverouille l'objet
-	detectMediaListMutex.unlock();
+	detectMediaListMutex->unlock();
 }
 
 
@@ -463,7 +596,7 @@ void ConfigurationFile::removeMediaDetection()
 void ConfigurationFile::putMediaDetection(Media *m)
 {
 	//On vérrouille les autres accès
-	detectMediaListMutex.lock();
+	detectMediaListMutex->lock();
 
 	//On recherche le dépot auquel appartient le media m
 	Depot *d=this->getMediaDepot(m);
@@ -478,23 +611,20 @@ void ConfigurationFile::putMediaDetection(Media *m)
 		//On supprime les détections précédentes qui sont annulées par celle ci
 		//sauf la première (i=0) qui est très probablement en cours de traitement par le thread HddInterface
 		int k=0;
-		for(int i=detectMediaList->length()-1;i>0;i--)
+		QList<State> *list=m->getDetectionState();
+		for(int i=0;i<list->size()-1;i++)
 		{
-
-			Media *m1=detectMediaList->at(i);
-			if(m1!=m)		//Le changement ne porte pas sur le média m
-				continue;
-
-			QList<State> *list=m->getDetectionState();
-			if(list==NULL)
-				break;
-
-			State state1=list->at(list->size()-k-1);
-			if(state1==MediaIsUpdating)
+			k=detectMediaList->indexOf(m,k);
+			if(k==0)
 			{
-				detectMediaList->removeAt(i);
-				list->removeAt(list->size()-k-1);
-				i++;
+				k++;
+				continue;
+			}
+
+			if(list->at(i)==MediaIsUpdating)
+			{
+				list->removeAt(i);i--;
+				detectMediaList->removeAt(k);
 			}
 			else k++;
 		}
@@ -522,7 +652,7 @@ void ConfigurationFile::putMediaDetection(Media *m)
 		waitConditionDetect->wakeAll();
 
 	//on déverrouille les accès
-	detectMediaListMutex.unlock();
+	detectMediaListMutex->unlock();
 }
 
 
@@ -548,11 +678,13 @@ void ConfigurationFile::setListenning(bool listen)
 	else
 		Widget::addRowToTable("Le module de détection a été désactivé",model,MSG_3);
 
+	depotsMutex->lock();
 	//On parcours tous les dépots et on appelle récursivement la fonction setListenning
 	for(i=depots->begin(); i!=depots->end(); i++)
 	{
 		(*i)->setListenning(listen);
 	}
+	depotsMutex->unlock();
 
 	//on met à jour l'attribut
 	this->isListen=listen;
@@ -565,6 +697,7 @@ void ConfigurationFile::setListenning(bool listen)
 //Destructeur
 ConfigurationFile::~ConfigurationFile()
 {
+	depotsMutex->lock();
 	//On parcours la liste des dépots et on des supprime
 	for(int i=0; i<depots->length(); i++)
 	{
@@ -576,6 +709,7 @@ ConfigurationFile::~ConfigurationFile()
 
 	//On la supprime
 	delete depots;
+	depotsMutex->unlock();
 }
 
 
@@ -609,6 +743,9 @@ ConfigurationData *ConfigurationData::createConfigurationData(ConfigurationNetwo
 
 	return config;
 }
+
+
+
 
 
 //Pour charger toutes les config à partir du fichier xml
@@ -790,6 +927,8 @@ bool ConfigurationData::save(QString savePath)
 
 	return true;
 }
+
+
 
 
 //Destructeur

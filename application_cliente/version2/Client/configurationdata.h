@@ -167,23 +167,36 @@ public:
 	//Destructeur
 	~ConfigurationFile();
 
+	//Pour ajouter et supprimer des dépots:
+	bool addDepot(Depot *depot);
+	bool addCreatingDepot(QString localPath,QString realPath,int revision,bool readOnly);
+	bool addLoadingDepot(QDomNode noeud);
+
+	bool removeDepot(QString localPath);
+
 private slots:
 	//Un slot pour stocker tous les changements détectés dans une liste
 	void putMediaDetection(Media *media);
+
+	//Un slot pour détecter les dépots supprimés
+	void depotHasProbablyBeenRemoved();
 
 signals:
 	//Pour demander un enregistrement du fichier de config
 	void saveRequest();
 
+	//Pour signaler qu'un dépot a été supprimé
+	void depotHasBeenRemoved(Depot *depot);
+
 private:
 	//le constructeur
-	ConfigurationFile(QList<Depot*> *depots,QStandardItemModel *model);
+	ConfigurationFile(QStandardItemModel *model);
 
 	//La liste des changements détectés dans les dépôts en cours de communication au serveur
 	QList<Media*> *detectMediaList;
 
 	//Un mutex pour gérer les accès concurrents à la liste précédente
-	QMutex detectMediaListMutex;
+	QMutex *detectMediaListMutex;
 
 	//Pour reveiller le thread du hddInterface lorsqu'une détection est arrivée
 	QWaitCondition *waitConditionDetect;
@@ -193,9 +206,13 @@ private:
 
 	//La liste des dépots à surveiller
 	QList<Depot*> *depots;
+	QMutex *depotsMutex;
 
 	//Le modèle
 	QStandardItemModel *model;
+
+	//Le watcher pour détecter les suppressions de dépot
+	QFileSystemWatcher *watcher;
 };
 
 #endif // CONFIGURATIONFILE_H

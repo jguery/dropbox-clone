@@ -58,9 +58,10 @@ Dir *Dir::loadDir(QDomNode noeud,Dir *parent)
 	//On ajoute des états de détection
 	for(int i=0;i<listDetectionState.size();i++)
 	{
-		if(detectionStateString!="" && listDetectionState.at(i)!=Media::stateToString(MediaDefaultState))
+		State oneDetectionState=Media::stateFromString(listDetectionState.at(i));
+		if(oneDetectionState!=MediaDefaultState)
 		{
-			dir->getDetectionState()->append(Media::stateFromString(listDetectionState.at(i)));
+			dir->getDetectionState()->append(oneDetectionState);
 			dir->getParent()->getOldDetections()->append(dir);
 		}
 	}
@@ -152,6 +153,13 @@ void Dir::directoryChangedAction()
 	if(listen==false)
 		return ;
 
+	//On détermine si le repertoire a été supprimé
+	if(this->hasBeenRemoved())
+	{
+		qDebug(this->getLocalPath().toAscii());
+		return;
+	}
+
 	//On bloque l'accès
 	this->lock();
 
@@ -211,9 +219,6 @@ void Dir::directoryChangedAction()
 			{
 				//On le place à l'état de suppression
 				d->getDetectionState()->append(MediaIsRemoving);
-
-				//Il ne détecte plus rien
-				d->setListenning(false);
 
 				//On prévient le parent
 				emit detectChangement(d);   //signal pour prévenir le parent
@@ -313,6 +318,7 @@ int Dir::numberSubMedia()
 {
 	//On bloque l'accès
 	this->lock();
+
 	int nb=subMedias->size();
 
 	//On relache l'accès
@@ -438,7 +444,6 @@ bool Dir::delSubMedia(Media *m)
 //Retourne le code xml du repertoire et de ses sous medias
 QDomElement Dir::toXml(QDomDocument *document)
 {
-	this->lock();
 	//On crèe le noeud xml avec le nom "dir"
 	QDomElement element=document->createElement("dir");
 
@@ -446,6 +451,7 @@ QDomElement Dir::toXml(QDomDocument *document)
 	element.setAttribute("localPath",this->getLocalPath());
 	element.setAttribute("realPath",this->getRealPath());
 
+	this->lock();
 	//On écrit ses attributs detectionState, revision et readOnly
 	QStringList listDetectionState;
 	for(int i=0;i<this->getDetectionState()->length();i++)
