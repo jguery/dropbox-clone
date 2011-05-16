@@ -1,8 +1,8 @@
 /****************************************************************************
 ** Meta object code from reading C++ file 'configurationdata.h'
 **
-** Created: Tue May 10 11:10:53 2011
-**      by: The Qt Meta Object Compiler version 62 (Qt 4.6.2)
+** Created: Mon May 16 21:09:03 2011
+**      by: The Qt Meta Object Compiler version 62 (Qt 4.7.0)
 **
 ** WARNING! All changes made in this file will be lost!
 *****************************************************************************/
@@ -11,7 +11,7 @@
 #if !defined(Q_MOC_OUTPUT_REVISION)
 #error "The header file 'configurationdata.h' doesn't include <QObject>."
 #elif Q_MOC_OUTPUT_REVISION != 62
-#error "This file was generated using the moc from 4.6.2. It"
+#error "This file was generated using the moc from 4.7.0. It"
 #error "cannot be used with the include files from this version of Qt."
 #error "(The moc has changed too much.)"
 #endif
@@ -20,28 +20,32 @@ QT_BEGIN_MOC_NAMESPACE
 static const uint qt_meta_data_ConfigurationFile[] = {
 
  // content:
-       4,       // revision
+       5,       // revision
        0,       // classname
        0,    0, // classinfo
-       2,   14, // methods
+       4,   14, // methods
        0,    0, // properties
        0,    0, // enums/sets
        0,    0, // constructors
        0,       // flags
-       1,       // signalCount
+       2,       // signalCount
 
  // signals: signature, parameters, type, tag, flags
       19,   18,   18,   18, 0x05,
+      39,   33,   18,   18, 0x05,
 
  // slots: signature, parameters, type, tag, flags
-      39,   33,   18,   18, 0x08,
+      73,   67,   18,   18, 0x08,
+      99,   18,   18,   18, 0x08,
 
        0        // eod
 };
 
 static const char qt_meta_stringdata_ConfigurationFile[] = {
-    "ConfigurationFile\0\0saveRequest()\0media\0"
+    "ConfigurationFile\0\0saveRequest()\0depot\0"
+    "depotHasBeenRemoved(Depot*)\0media\0"
     "putMediaDetection(Media*)\0"
+    "depotHasProbablyBeenRemoved()\0"
 };
 
 const QMetaObject ConfigurationFile::staticMetaObject = {
@@ -74,10 +78,12 @@ int ConfigurationFile::qt_metacall(QMetaObject::Call _c, int _id, void **_a)
     if (_c == QMetaObject::InvokeMetaMethod) {
         switch (_id) {
         case 0: saveRequest(); break;
-        case 1: putMediaDetection((*reinterpret_cast< Media*(*)>(_a[1]))); break;
+        case 1: depotHasBeenRemoved((*reinterpret_cast< Depot*(*)>(_a[1]))); break;
+        case 2: putMediaDetection((*reinterpret_cast< Media*(*)>(_a[1]))); break;
+        case 3: depotHasProbablyBeenRemoved(); break;
         default: ;
         }
-        _id -= 2;
+        _id -= 4;
     }
     return _id;
 }
@@ -87,10 +93,17 @@ void ConfigurationFile::saveRequest()
 {
     QMetaObject::activate(this, &staticMetaObject, 0, 0);
 }
+
+// SIGNAL 1
+void ConfigurationFile::depotHasBeenRemoved(Depot * _t1)
+{
+    void *_a[] = { 0, const_cast<void*>(reinterpret_cast<const void*>(&_t1)) };
+    QMetaObject::activate(this, &staticMetaObject, 1, _a);
+}
 static const uint qt_meta_data_ConfigurationData[] = {
 
  // content:
-       4,       // revision
+       5,       // revision
        0,       // classname
        0,    0, // classinfo
        2,   14, // methods
