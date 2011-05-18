@@ -284,6 +284,8 @@ void Widget::showCreateConfig()
 }
 
 
+
+
 void Widget::validerCreateConfig()
 {
 	model->removeRows(0,model->rowCount());
